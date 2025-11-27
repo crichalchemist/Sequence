@@ -1,0 +1,44 @@
+.DS_Store
+.idea/
+.vscode/
+.python-version
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+
+# Build outputs
+build/
+dist/
+
+# Data and generated artifacts
+output/
+output_central/
+data/output/
+data/histdata/
+yfinance_output/
+yfinance_output_m1/
+yfinance_output1x/
+forex research/
+
+# Model exports and checkpoints
+models/*.onnx
+models/*.pt
+models/*.pth
+*.onnx
+*.pt
+*.pth
+
+# Archives and logs
+*.zip
+*.tar
+*.tar.gz
+*.log

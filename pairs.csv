@@ -1,0 +1,36 @@
+currency_pair_name,pair,history_first_trading_month
+Euro / US Dollar,eurusd,2010-01
+Euro / British Pound,eurgbp,2010-01
+Euro / Japanese Yen,eurjpy,2010-01
+Euro / Swiss Franc,eurchf,2010-01
+Euro / Australian Dollar,euraud,2010-01
+Euro / Canadian Dollar,eurcad,2010-01
+Euro / New Zealand Dollar,eurnzd,2010-01
+British Pound / US Dollar,gbpusd,2010-01
+British Pound / Japanese Yen,gbpjpy,2010-01
+British Pound / Swiss Franc,gbpchf,2010-01
+British Pound / Canadian Dollar,gbpcad,2010-01
+British Pound / Australian Dollar,gbpaud,2010-01
+British Pound / New Zealand Dollar,gbpnzd,2010-01
+US Dollar / Japanese Yen,usdjpy,2010-01
+US Dollar / Swiss Franc,usdchf,2010-01
+US Dollar / Canadian Dollar,usdcad,2010-01
+Australian Dollar / US Dollar,audusd,2010-01
+Australian Dollar / Japanese Yen,audjpy,2010-01
+Australian Dollar / Canadian Dollar,audcad,2010-01
+Australian Dollar / Swiss Franc,audchf,2010-01
+Australian Dollar / New Zealand Dollar,audnzd,2010-01
+New Zealand Dollar / US Dollar,nzdusd,2010-01
+New Zealand Dollar / Japanese Yen,nzdjpy,2010-01
+New Zealand Dollar / Canadian Dollar,nzdcad,2010-01
+New Zealand Dollar / Swiss Franc,nzdchf,2010-01
+Canadian Dollar / Swiss Franc,cadchf,2010-01
+Canadian Dollar / Japanese Yen,cadjpy,2010-01
+Swiss Franc / Japanese Yen,chfjpy,2010-01
+US Dollar / Brazilian Real,usdbrl,2010-01
+US Dollar / Russian Rouble,usdrub,2010-01
+US Dollar / Indian Rupee,usdinr,2010-01
+US Dollar / Chinese Yuan,usdcny,2010-01
+US Dollar / South African Rand,usdzar,2010-01
+US Dollar / Turkish Lira,usdtry,2010-01
+Gold / US Dollar,xauusd,2010-01
