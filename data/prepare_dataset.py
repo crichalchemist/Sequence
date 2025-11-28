@@ -42,10 +42,12 @@ def _load_pair_data(pair: str, input_root: Path, years: Optional[List[str]]) -> 
         raise FileNotFoundError(f"No data folder for pair {pair} under {input_root}")
 
     zips = sorted(pair_dir.glob("*.zip"))
+    csvs = sorted(pair_dir.glob("*.csv"))
     if years:
         zips = [z for z in zips if any(y in z.name for y in years)]
-    if not zips:
-        raise FileNotFoundError(f"No zip files found for pair {pair} with years={years}")
+        csvs = [c for c in csvs if any(y in c.name for y in years)]
+    if not zips and not csvs:
+        raise FileNotFoundError(f"No data files found for pair {pair} with years={years}")
 
     frames = []
     for zpath in zips:
@@ -62,6 +64,22 @@ def _load_pair_data(pair: str, input_root: Path, years: Optional[List[str]]) -> 
                 )
                 df["source_file"] = zpath.name
                 frames.append(df)
+    for cpath in csvs:
+        try:
+            df = pd.read_csv(cpath)
+            if {"datetime", "open", "high", "low", "close", "volume"}.issubset(df.columns):
+                df = df[["datetime", "open", "high", "low", "close", "volume"]]
+            else:
+                # Fallback to legacy format without header; assume comma-delimited.
+                df = pd.read_csv(
+                    cpath,
+                    header=None,
+                    names=["datetime", "open", "high", "low", "close", "volume"],
+                )
+            df["source_file"] = cpath.name
+            frames.append(df)
+        except Exception as exc:
+            print(f"[warn] failed to load CSV {cpath}: {exc}")
     if not frames:
         raise RuntimeError("No CSV data loaded; check zip contents.")
 
