@@ -26,6 +26,22 @@ jobs:
       - name: Sanity compile
         run: python -m compileall .
 
+      - name: Import smoke test
+        run: |
+          python - <<'PY'
+          import importlib
+          modules = [
+              "data.download_gdelt",
+              "utils.run_training_pipeline",
+              "train.run_finetune_novasky",
+              "train.run_finetune_novasky_lora",
+              "eval.run_evaluation",
+          ]
+          for m in modules:
+              importlib.import_module(m)
+          print("import smoke ok")
+          PY
+
   tests:
     runs-on: ubuntu-latest
     needs: lint-and-sanity
