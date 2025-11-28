@@ -140,6 +140,11 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Override output directory for yfinance download (defaults to input-root).",
     )
+    parser.add_argument(
+        "--normalize-yfinance",
+        action="store_true",
+        help="After yfinance download, upsample to synthetic 1-minute bars.",
+    )
     return parser.parse_args()
 
 
@@ -204,6 +209,30 @@ def run_yfinance_download(args) -> None:
         subprocess.run(cmd, check=True, cwd=ROOT)
     except Exception as exc:  # pragma: no cover - defensive
         print(f"[warn] yfinance download failed: {exc}")
+
+
+def normalize_yfinance(args) -> None:
+    if not args.normalize_yfinance:
+        return
+    script = ROOT / "data" / "normalize_yfinance_to_m1.py"
+    if not script.exists():
+        print("[warn] yfinance normalization script not found; skipping.")
+        return
+    output_root = args.yf_output_root or args.input_root
+    cmd = [
+        sys.executable,
+        str(script),
+        "--input-root",
+        str(output_root),
+        "--output-root",
+        str(output_root),
+        "--pairs",
+        args.pairs,
+    ]
+    try:
+        subprocess.run(cmd, check=True, cwd=ROOT)
+    except Exception as exc:  # pragma: no cover - defensive
+        print(f"[warn] yfinance normalization failed: {exc}")
 
 
 def run_histdata_download(args) -> None:
@@ -299,6 +328,7 @@ def main() -> None:
         run_histdata_download(args)
     if args.run_yfinance_download:
         run_yfinance_download(args)
+        normalize_yfinance(args)
     if args.run_histdata_download:
         run_histdata_download(args)
 
