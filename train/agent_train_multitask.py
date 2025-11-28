@@ -26,15 +26,32 @@ def _compute_losses(
 
     losses["direction"] = ce(outputs["direction_logits"], targets["direction_class"])
     losses["volatility"] = ce(outputs["volatility_logits"], targets["vol_class"])
+    losses["trend"] = ce(outputs["trend_logits"], targets["trend_class"])
+    losses["vol_regime"] = ce(outputs["vol_regime_logits"], targets["vol_regime_class"])
+    losses["candle_pattern"] = ce(outputs["candle_pattern_logits"], targets["candle_class"])
     losses["return"] = mse(outputs["return"].squeeze(-1), targets["return_reg"])
     losses["next_close"] = mse(outputs["next_close"].squeeze(-1), targets["next_close_reg"])
+    losses["max_return"] = mse(outputs["max_return"].squeeze(-1), targets["max_return"])
+    losses["topk_returns"] = mse(outputs["topk_returns"], targets["topk_returns"])
+    losses["topk_prices"] = mse(outputs["topk_prices"], targets["topk_prices"])
+    if "sell_now" in outputs and "sell_now" in targets:
+        bce = torch.nn.BCEWithLogitsLoss()
+        losses["sell_now"] = bce(outputs["sell_now"].squeeze(-1), targets["sell_now"].float())
 
     total = (
         loss_weights.direction_cls * losses["direction"]
         + loss_weights.vol_cls * losses["volatility"]
+        + loss_weights.trend_cls * losses["trend"]
+        + loss_weights.vol_regime_cls * losses["vol_regime"]
+        + loss_weights.candle_pattern_cls * losses["candle_pattern"]
         + loss_weights.return_reg * losses["return"]
         + loss_weights.next_close_reg * losses["next_close"]
+        + loss_weights.max_return_reg * losses["max_return"]
+        + loss_weights.topk_return_reg * losses["topk_returns"]
+        + loss_weights.topk_price_reg * losses["topk_prices"]
     )
+    if "sell_now" in losses:
+        total = total + loss_weights.sell_now_cls * losses["sell_now"]
     return total, {k: v.item() for k, v in losses.items()}
 
 
@@ -57,7 +74,16 @@ def _evaluate(
     risk_manager: RiskManager | None = None,
 ) -> Dict[str, float]:
     model.eval()
-    totals = {"loss": 0.0, "dir_acc": 0.0, "vol_acc": 0.0, "ret_rmse": 0.0, "close_rmse": 0.0}
+    totals = {
+        "loss": 0.0,
+        "dir_acc": 0.0,
+        "vol_acc": 0.0,
+        "trend_acc": 0.0,
+        "vol_regime_acc": 0.0,
+        "candle_acc": 0.0,
+        "ret_rmse": 0.0,
+        "close_rmse": 0.0,
+    }
     batches = 0
     with torch.no_grad():
         for batch in loader:
@@ -78,6 +104,11 @@ def _evaluate(
             totals["loss"] += loss.item()
             totals["dir_acc"] += _classification_accuracy(outputs["direction_logits"], targets["direction_class"])
             totals["vol_acc"] += _classification_accuracy(outputs["volatility_logits"], targets["vol_class"])
+            totals["trend_acc"] += _classification_accuracy(outputs["trend_logits"], targets["trend_class"])
+            totals["vol_regime_acc"] += _classification_accuracy(
+                outputs["vol_regime_logits"], targets["vol_regime_class"]
+            )
+            totals["candle_acc"] += _classification_accuracy(outputs["candle_pattern_logits"], targets["candle_class"])
             totals["ret_rmse"] += _rmse(outputs["return"], targets["return_reg"])
             totals["close_rmse"] += _rmse(outputs["next_close"], targets["next_close_reg"])
             batches += 1
@@ -105,7 +136,15 @@ def train_multitask(
 
     optimizer = torch.optim.Adam(model.parameters(), lr=cfg.learning_rate, weight_decay=cfg.weight_decay)
 
-    history = {"train_loss": [], "val_loss": [], "val_dir_acc": [], "val_vol_acc": []}
+    history = {
+        "train_loss": [],
+        "val_loss": [],
+        "val_dir_acc": [],
+        "val_vol_acc": [],
+        "val_trend_acc": [],
+        "val_vol_regime_acc": [],
+        "val_candle_acc": [],
+    }
     best_loss = float("inf")
     best_state = None
 
@@ -143,6 +182,9 @@ def train_multitask(
         history["val_loss"].append(val_metrics["loss"])
         history["val_dir_acc"].append(val_metrics["dir_acc"])
         history["val_vol_acc"].append(val_metrics["vol_acc"])
+        history["val_trend_acc"].append(val_metrics["trend_acc"])
+        history["val_vol_regime_acc"].append(val_metrics["vol_regime_acc"])
+        history["val_candle_acc"].append(val_metrics["candle_acc"])
 
         is_better = val_metrics["loss"] < best_loss
         if is_better:
@@ -155,6 +197,8 @@ def train_multitask(
             f"epoch {epoch}/{cfg.epochs} train_loss {train_epoch_loss:.4f} "
             f"val_loss {val_metrics['loss']:.4f} "
             f"val_dir_acc {val_metrics['dir_acc']:.4f} val_vol_acc {val_metrics['vol_acc']:.4f} "
+            f"val_trend_acc {val_metrics['trend_acc']:.4f} val_vol_regime_acc {val_metrics['vol_regime_acc']:.4f} "
+            f"val_candle_acc {val_metrics['candle_acc']:.4f} "
             f"val_ret_rmse {val_metrics['ret_rmse']:.6f} val_close_rmse {val_metrics['close_rmse']:.6f}"
         )
 

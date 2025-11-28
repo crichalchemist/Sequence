@@ -16,7 +16,12 @@ from models.signal_policy import ExecutionPolicy, SignalModel
 
 def _to_device(batch, device):
     x, y = batch
-    return x.to(device), y.to(device)
+    x = x.to(device)
+    if isinstance(y, dict):
+        y = {k: v.to(device) for k, v in y.items()}
+    else:
+        y = y.to(device)
+    return x, y
 
 
 def _classification_metrics(logits: torch.Tensor, targets: torch.Tensor) -> float:
@@ -31,16 +36,62 @@ def _regression_rmse(preds: torch.Tensor, targets: torch.Tensor) -> float:
     return torch.sqrt(mse).item()
 
 
+def _select_outputs(outputs: Dict[str, torch.Tensor], task_type: str) -> torch.Tensor:
+    if task_type == "classification":
+        return outputs["direction_logits"]
+    return outputs["return"]
+
+
 def _align_regression(preds: torch.Tensor, targets: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
     preds = preds.squeeze(-1)
     targets = targets.squeeze(-1)
     return preds, targets
 
 
+def _compute_losses(
+    outputs: Dict[str, torch.Tensor], targets: Dict[str, torch.Tensor], cfg: TrainingConfig, task_type: str
+) -> Tuple[torch.Tensor, Dict[str, float]]:
+    ce = torch.nn.CrossEntropyLoss()
+    mse = torch.nn.MSELoss()
+    primary_out = outputs["primary"]
+    primary_target = targets["primary"]
+    if task_type == "regression":
+        primary_out, primary_target = _align_regression(primary_out, primary_target)
+        primary_loss = mse(primary_out, primary_target)
+    else:
+        primary_loss = ce(primary_out, primary_target)
+
+    losses = {"primary": primary_loss.item()}
+    total_loss = primary_loss
+
+    max_return = outputs["max_return"].squeeze(-1)
+    max_ret_loss = mse(max_return, targets["max_return"])
+    total_loss = total_loss + cfg.max_return_weight * max_ret_loss
+    losses["max_return"] = max_ret_loss.item()
+
+    topk_ret_loss = mse(outputs["topk_returns"], targets["topk_returns"])
+    total_loss = total_loss + cfg.topk_return_weight * topk_ret_loss
+    losses["topk_returns"] = topk_ret_loss.item()
+
+    topk_price_loss = mse(outputs["topk_prices"], targets["topk_prices"])
+    total_loss = total_loss + cfg.topk_price_weight * topk_price_loss
+    losses["topk_prices"] = topk_price_loss.item()
+
+    if "sell_now" in outputs and "sell_now" in targets and cfg.sell_now_weight > 0:
+        bce = torch.nn.BCEWithLogitsLoss()
+        sell_logits = outputs["sell_now"].squeeze(-1)
+        sell_target = targets["sell_now"].float()
+        sell_loss = bce(sell_logits, sell_target)
+        total_loss = total_loss + cfg.sell_now_weight * sell_loss
+        losses["sell_now"] = sell_loss.item()
+
+    return total_loss, losses
+
+
 def _evaluate(
     model: HybridCNNLSTMAttention,
     loader: DataLoader,
-    loss_fn,
+    cfg: TrainingConfig,
     device,
     task_type: str,
     risk_manager: RiskManager | None = None,
@@ -60,14 +111,20 @@ def _evaluate(
                 else:
                     logits, reasons = risk_manager.apply_regression_output(logits, context)
                 risk_manager.log_events(reasons, prefix="eval")
+            outputs, _ = model(x)
+            loss, _ = _compute_losses(outputs, y, cfg, task_type)
+            logits = _select_outputs(outputs, task_type)
             if task_type == "regression":
                 logits, y = _align_regression(logits, y)
             loss = loss_fn(logits, y)
             total_loss += loss.item()
-            if task_type == "classification":
-                metric_accum += _classification_metrics(logits, y)
+            primary_out = outputs["primary"]
+            primary_target = y["primary"]
+            if task_type == "regression":
+                primary_out, primary_target = _align_regression(primary_out, primary_target)
+                metric_accum += _regression_rmse(primary_out, primary_target)
             else:
-                metric_accum += _regression_rmse(logits, y)
+                metric_accum += _classification_metrics(primary_out, primary_target)
             batches += 1
     return total_loss / max(1, batches), metric_accum / max(1, batches)
 
@@ -77,7 +134,6 @@ def train_model(
     train_loader: DataLoader,
     val_loader: DataLoader,
     cfg: TrainingConfig,
-    loss_fn=None,
     scheduler=None,
     task_type: str = "classification",
     risk_manager: RiskManager | None = None,
@@ -117,6 +173,9 @@ def train_model(
                 else:
                     logits, reasons = risk_manager.apply_regression_output(logits, context)
                 risk_manager.log_events(reasons, prefix=f"epoch {epoch} step {step}")
+            outputs, _ = model(x)
+            loss, _ = _compute_losses(outputs, y, cfg, task_type)
+            logits = _select_outputs(outputs, task_type)
             if task_type == "regression":
                 logits, y = _align_regression(logits, y)
             loss = loss_fn(logits, y)
@@ -137,6 +196,7 @@ def train_model(
         val_loss, val_metric = _evaluate(
             model, val_loader, loss_fn, device, task_type, risk_manager=risk_manager
         )
+        val_loss, val_metric = _evaluate(model, val_loader, cfg, device, task_type)
 
         history["train_loss"].append(train_epoch_loss)
         history["val_loss"].append(val_loss)
