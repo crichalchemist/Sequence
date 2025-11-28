@@ -32,6 +32,18 @@ class ModelConfig:
 
 
 @dataclass
+class SignalModelConfig(ModelConfig):
+    """
+    Configuration for the hybrid signal encoder that feeds the execution policy.
+    """
+
+    use_direction_head: bool = True
+    use_forecast_head: bool = True
+    forecast_output_dim: int = 1
+    signal_dropout: float = 0.1
+
+
+@dataclass
 class TrainingConfig:
     batch_size: int = 64
     epochs: int = 20
@@ -42,6 +54,35 @@ class TrainingConfig:
     log_every: int = 50
     checkpoint_path: str = "models/best_model.pt"
     risk: RiskConfig = field(default_factory=RiskConfig)
+
+
+@dataclass
+class PolicyConfig:
+    """
+    Configuration for the PPO/A3C-style execution policy head.
+    """
+
+    input_dim: int
+    hidden_dim: int = 128
+    num_actions: int = 3
+    value_hidden_dim: Optional[int] = None
+    dropout: float = 0.1
+
+
+@dataclass
+class RLTrainingConfig:
+    """
+    Training configuration for policy optimization that consumes signal outputs.
+    """
+
+    epochs: int = 5
+    learning_rate: float = 3e-4
+    entropy_coef: float = 0.01
+    value_coef: float = 0.5
+    gamma: float = 0.99
+    grad_clip: Optional[float] = 1.0
+    detach_signal: bool = True
+    checkpoint_path: str = "models/best_policy.pt"
 
 
 @dataclass
