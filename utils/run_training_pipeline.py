@@ -14,6 +14,7 @@ Example (with optional GDELT download first):
 """
 
 import argparse
+import os
 import subprocess
 import sys
 from datetime import datetime
@@ -116,6 +117,16 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="After a pair finishes training/eval, delete its input zip files to reclaim disk.",
     )
+    parser.add_argument(
+        "--run-histdata-download",
+        action="store_true",
+        help="Download HistData zips before training using data/download_all_fx_data.py (respects pairs/years).",
+    )
+    parser.add_argument(
+        "--histdata-output-root",
+        default=None,
+        help="Override output directory for HistData download (defaults to input-root).",
+    )
     return parser.parse_args()
 
 
@@ -151,6 +162,35 @@ def cleanup_pair_zips(pair: str, input_root: Path, years: Optional[str]) -> None
             print(f"[warn] could not delete {zp}: {exc}")
     if removed:
         print(f"[info] deleted {removed} zip(s) for {pair} under {target_dir}")
+
+
+def run_histdata_download(args) -> None:
+    script = ROOT / "data" / "download_all_fx_data.py"
+    if not script.exists():
+        print("[warn] HistData downloader script not found; skipping.")
+        return
+    env = os.environ.copy()
+    output_root = args.histdata_output_root or args.input_root
+    env["FX_DATA_OUTPUT"] = str(output_root)
+    try:
+        # Respect pairs by trimming pairs.csv if pairs was provided.
+        if args.pairs:
+            pairs_set = {p.strip().lower() for p in args.pairs.split(",") if p.strip()}
+            pairs_csv = ROOT / "pairs.csv"
+            if pairs_csv.exists():
+                tmp_csv = Path(env.get("TMPDIR", "/tmp")) / "pairs_filtered.csv"
+                with open(pairs_csv, "r") as src, open(tmp_csv, "w") as dst:
+                    for i, line in enumerate(src):
+                        if i == 0:
+                            dst.write(line)
+                            continue
+                        parts = line.strip().split(",")
+                        if len(parts) >= 2 and parts[1].lower() in pairs_set:
+                            dst.write(line + "\n")
+                env["PAIRS_CSV"] = str(tmp_csv)
+        subprocess.run([sys.executable, str(script)], check=True, env=env, cwd=ROOT)
+    except Exception as exc:  # pragma: no cover - defensive
+        print(f"[warn] HistData download failed: {exc}")
 
 
 def maybe_offer_game(enabled: bool) -> None:
@@ -213,6 +253,8 @@ def main() -> None:
             run_gdelt_download(args)
         except Exception as exc:  # pragma: no cover - defensive
             print(f"[warn] GDELT download failed: {exc}")
+    if args.run_histdata_download:
+        run_histdata_download(args)
 
     # Offer the optional mini-game once before training starts.
     maybe_offer_game(args.offer_game)
