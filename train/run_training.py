@@ -130,6 +130,7 @@ def main():
             sell_now_weight=args.sell_now_weight,
             checkpoint_path=str(signal_ckpt),
         )
+        train_cfg.risk.enabled = not args.disable_risk
 
         signal_model = SignalModel(signal_cfg)
         signal_history = pretrain_signal_model(

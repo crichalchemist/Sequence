@@ -94,6 +94,7 @@ def _evaluate(
     cfg: TrainingConfig,
     device,
     task_type: str,
+    risk_manager: RiskManager | None = None,
 ) -> Tuple[float, float]:
     model.eval()
     total_loss = 0.0
@@ -102,6 +103,14 @@ def _evaluate(
     with torch.no_grad():
         for batch in loader:
             x, y = _to_device(batch, device)
+            logits, _ = model(x)
+            context = risk_manager.build_context(x=x) if risk_manager else None
+            if risk_manager:
+                if task_type == "classification":
+                    logits, reasons = risk_manager.apply_classification_logits(logits, context)
+                else:
+                    logits, reasons = risk_manager.apply_regression_output(logits, context)
+                risk_manager.log_events(reasons, prefix="eval")
             outputs, _ = model(x)
             loss, _ = _compute_losses(outputs, y, cfg, task_type)
             logits = _select_outputs(outputs, task_type)
@@ -127,12 +136,19 @@ def train_model(
     cfg: TrainingConfig,
     scheduler=None,
     task_type: str = "classification",
+    risk_manager: RiskManager | None = None,
 ) -> Dict[str, List[float]]:
     device_str = cfg.device
     if device_str.startswith("cuda") and not torch.cuda.is_available():
         device_str = "cpu"
     device = torch.device(device_str)
     model.to(device)
+
+    if risk_manager is None and getattr(cfg, "risk", None) and cfg.risk.enabled:
+        risk_manager = RiskManager(cfg.risk)
+
+    if loss_fn is None:
+        loss_fn = torch.nn.CrossEntropyLoss() if task_type == "classification" else torch.nn.MSELoss()
 
     optimizer = torch.optim.Adam(
         model.parameters(), lr=cfg.learning_rate, weight_decay=cfg.weight_decay
@@ -147,6 +163,16 @@ def train_model(
         running_loss = 0.0
         for step, batch in enumerate(train_loader, start=1):
             x, y = _to_device(batch, device)
+            logits, _ = model(x)
+            context = risk_manager.build_context(x=x) if risk_manager else None
+            if risk_manager:
+                if task_type == "classification":
+                    logits, reasons = risk_manager.apply_classification_logits(logits, context)
+                    actions = logits.argmax(dim=1)
+                    risk_manager.record_actions(actions)
+                else:
+                    logits, reasons = risk_manager.apply_regression_output(logits, context)
+                risk_manager.log_events(reasons, prefix=f"epoch {epoch} step {step}")
             outputs, _ = model(x)
             loss, _ = _compute_losses(outputs, y, cfg, task_type)
             logits = _select_outputs(outputs, task_type)
@@ -167,6 +193,9 @@ def train_model(
             scheduler.step()
 
         train_epoch_loss = running_loss / max(1, len(train_loader))
+        val_loss, val_metric = _evaluate(
+            model, val_loader, loss_fn, device, task_type, risk_manager=risk_manager
+        )
         val_loss, val_metric = _evaluate(model, val_loader, cfg, device, task_type)
 
         history["train_loss"].append(train_epoch_loss)

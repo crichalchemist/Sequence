@@ -12,7 +12,8 @@ def _collect_outputs(
     model: HybridCNNLSTMAttention,
     loader: DataLoader,
     device: torch.device,
-    task_type: str,
+    risk_manager: RiskManager | None = None,
+    task_type: str = "classification",
 ) -> Tuple[np.ndarray, np.ndarray]:
     model.eval()
     preds: List[np.ndarray] = []
@@ -20,6 +21,15 @@ def _collect_outputs(
     with torch.no_grad():
         for x, y in loader:
             x = x.to(device)
+            y = y.to(device)
+            logits, _ = model(x)
+            if risk_manager:
+                context = risk_manager.build_context(x=x)
+                if task_type == "classification":
+                    logits, reasons = risk_manager.apply_classification_logits(logits, context)
+                else:
+                    logits, reasons = risk_manager.apply_regression_output(logits, context)
+                risk_manager.log_events(reasons, prefix="eval")
             if isinstance(y, dict):
                 y_primary = y["primary"].to(device)
             else:
@@ -82,9 +92,15 @@ def regression_metrics(preds: np.ndarray, targets: np.ndarray) -> Dict[str, floa
 
 
 def evaluate_model(
-    model: HybridCNNLSTMAttention, loader: DataLoader, task_type: str = "classification"
+    model: HybridCNNLSTMAttention,
+    loader: DataLoader,
+    task_type: str = "classification",
+    risk_manager: RiskManager | None = None,
 ) -> Dict[str, float]:
     device = next(model.parameters()).device
+    logits_or_preds, targets = _collect_outputs(
+        model, loader, device, risk_manager=risk_manager, task_type=task_type
+    )
     logits_or_preds, targets = _collect_outputs(model, loader, device, task_type)
     if task_type == "classification":
         return classification_metrics(logits_or_preds, targets)
