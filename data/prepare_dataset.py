@@ -20,6 +20,7 @@ if str(ROOT) not in sys.path:
 from config.config import DataConfig, FeatureConfig
 from data.agent_data import DataAgent
 from features.agent_features import build_feature_frame
+from features.intrinsic_time import build_intrinsic_time_bars
 
 
 def parse_args():
@@ -29,6 +30,9 @@ def parse_args():
     parser.add_argument("--years", default=None, help="Comma-separated list of years to include (e.g., 2018,2019). Default: all")
     parser.add_argument("--t-in", type=int, default=120, help="Lookback window length")
     parser.add_argument("--t-out", type=int, default=10, help="Forecast horizon in minutes")
+    parser.add_argument("--lookahead-window", type=int, default=None, help="Lookahead window for auxiliary targets")
+    parser.add_argument("--top-k", type=int, default=3, help="Top-K future returns/prices to supervise")
+    parser.add_argument("--predict-sell-now", action="store_true", help="Whether to create a sell-now classification label")
     parser.add_argument("--target-type", choices=["classification", "regression"], default="classification")
     parser.add_argument("--flat-threshold", type=float, default=0.0001, help="Flat class threshold for log returns")
     parser.add_argument("--train-ratio", type=float, default=0.7, help="Train fraction (time-ordered)")
@@ -45,6 +49,23 @@ def parse_args():
     parser.add_argument("--long-vol-window", type=int, default=50, help="Long window for volatility clustering")
     parser.add_argument("--spread-windows", default="20", help="Comma-separated windows for normalized spread stats")
     parser.add_argument("--imbalance-smoothing", type=int, default=5, help="Rolling mean window for wick/body imbalance")
+    parser.add_argument(
+        "--intrinsic-time",
+        action="store_true",
+        help="Convert minute bars to intrinsic-time bars via directional-change events.",
+    )
+    parser.add_argument(
+        "--dc-threshold-up",
+        type=float,
+        default=0.001,
+        help="Fractional increase needed to flag an upward directional change (e.g., 0.001=0.1%).",
+    )
+    parser.add_argument(
+        "--dc-threshold-down",
+        type=float,
+        default=None,
+        help="Fractional decrease needed to flag a downward directional change. Defaults to dc-threshold-up.",
+    )
     return parser.parse_args()
 
 
@@ -145,6 +166,19 @@ def process_pair(pair: str, args):
         exclude_groups=exclude_groups,
     )
     feature_df = build_feature_frame(raw_df, config=feature_cfg)
+    df_for_features = raw_df
+    if args.intrinsic_time:
+        df_for_features = build_intrinsic_time_bars(
+            raw_df,
+            up_threshold=args.dc_threshold_up,
+            down_threshold=args.dc_threshold_down,
+        )
+        print(
+            f"[intrinsic] reduced {len(raw_df):,} -> {len(df_for_features):,} bars using "
+            f"DC thresholds up={args.dc_threshold_up}, down={args.dc_threshold_down or args.dc_threshold_up}"
+        )
+
+    feature_df = build_feature_frame(df_for_features)
     feature_df["datetime"] = pd.to_datetime(feature_df["datetime"])
 
     train_range, val_range, test_range = _compute_time_ranges(
@@ -160,6 +194,9 @@ def process_pair(pair: str, args):
         target_type=args.target_type,
         t_in=args.t_in,
         t_out=args.t_out,
+        lookahead_window=args.lookahead_window,
+        top_k_predictions=args.top_k,
+        predict_sell_now=args.predict_sell_now,
         train_range=train_range,
         val_range=val_range,
         test_range=test_range,

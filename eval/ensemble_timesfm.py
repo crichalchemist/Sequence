@@ -198,8 +198,8 @@ def main():
             for seq, close_seq in zip(sequences, close_windows):
                 x = torch.tensor(seq, dtype=torch.float32, device=device).unsqueeze(0)
                 with torch.no_grad():
-                    out, _ = hybrid(x)
-                hybrid_ret = out.squeeze().item()
+                    outputs, _ = hybrid(x)
+                hybrid_ret = outputs["return"].squeeze().item()
 
                 tfm_forecast = tfm_model.forecast_naive(horizon=args.t_out, inputs=[close_seq])[0]
                 if tfm_forecast is None or len(tfm_forecast) == 0:

@@ -5,10 +5,15 @@ import torch
 from torch.utils.data import DataLoader
 
 from models.agent_hybrid import HybridCNNLSTMAttention
+from models.signal_policy import SignalPolicyAgent
 
 
 def _collect_outputs(
-    model: HybridCNNLSTMAttention, loader: DataLoader, device: torch.device
+    model: HybridCNNLSTMAttention,
+    loader: DataLoader,
+    device: torch.device,
+    risk_manager: RiskManager | None = None,
+    task_type: str = "classification",
 ) -> Tuple[np.ndarray, np.ndarray]:
     model.eval()
     preds: List[np.ndarray] = []
@@ -18,7 +23,25 @@ def _collect_outputs(
             x = x.to(device)
             y = y.to(device)
             logits, _ = model(x)
+            if risk_manager:
+                context = risk_manager.build_context(x=x)
+                if task_type == "classification":
+                    logits, reasons = risk_manager.apply_classification_logits(logits, context)
+                else:
+                    logits, reasons = risk_manager.apply_regression_output(logits, context)
+                risk_manager.log_events(reasons, prefix="eval")
+            if isinstance(y, dict):
+                y_primary = y["primary"].to(device)
+            else:
+                y_primary = y.to(device)
+            outputs, _ = model(x)
+            logits = outputs["primary"]
             preds.append(logits.detach().cpu().numpy())
+            targets.append(y_primary.detach().cpu().numpy())
+            y = y.to(device)
+            outputs, _ = model(x)
+            head = outputs["direction_logits"] if task_type == "classification" else outputs["return"]
+            preds.append(head.detach().cpu().numpy())
             targets.append(y.detach().cpu().numpy())
     return np.concatenate(preds), np.concatenate(targets)
 
@@ -69,10 +92,43 @@ def regression_metrics(preds: np.ndarray, targets: np.ndarray) -> Dict[str, floa
 
 
 def evaluate_model(
-    model: HybridCNNLSTMAttention, loader: DataLoader, task_type: str = "classification"
+    model: HybridCNNLSTMAttention,
+    loader: DataLoader,
+    task_type: str = "classification",
+    risk_manager: RiskManager | None = None,
 ) -> Dict[str, float]:
     device = next(model.parameters()).device
-    logits_or_preds, targets = _collect_outputs(model, loader, device)
+    logits_or_preds, targets = _collect_outputs(
+        model, loader, device, risk_manager=risk_manager, task_type=task_type
+    )
+    logits_or_preds, targets = _collect_outputs(model, loader, device, task_type)
     if task_type == "classification":
         return classification_metrics(logits_or_preds, targets)
     return regression_metrics(logits_or_preds, targets)
+
+
+def evaluate_policy_agent(
+    agent: SignalPolicyAgent, loader: DataLoader, task_type: str = "classification"
+) -> Dict[str, float]:
+    device = next(agent.parameters()).device
+    agent.eval()
+    total = 0
+    correct = 0
+    value_sum = 0.0
+    with torch.no_grad():
+        for x, y in loader:
+            x = x.to(device)
+            y = y.to(device)
+            out = agent(x, detach_signal=True)
+            actions = out["policy_logits"].argmax(dim=1)
+            if task_type == "classification":
+                correct += (actions == y).sum().item()
+                total += y.numel()
+            else:
+                target_actions = (y.squeeze(-1) > 0).long()
+                correct += (actions == target_actions).sum().item()
+                total += target_actions.numel()
+            value_sum += out["value"].detach().cpu().sum().item()
+
+    accuracy = correct / total if total > 0 else 0.0
+    return {"action_accuracy": accuracy, "avg_value": value_sum / max(1, total)}

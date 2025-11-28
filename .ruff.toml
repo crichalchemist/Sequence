@@ -1,0 +1,4 @@
+# Exclude the vendored TimesFM stub files, which are Git LFS pointers and not valid TOML/Python.
+exclude = [
+    "models/timesFM",
+]

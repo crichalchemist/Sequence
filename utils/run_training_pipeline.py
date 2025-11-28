@@ -32,6 +32,7 @@ from config.config import ModelConfig, TrainingConfig  # noqa: E402
 from data.prepare_dataset import process_pair  # noqa: E402
 from eval.agent_eval import evaluate_model  # noqa: E402
 from models.agent_hybrid import build_model  # noqa: E402
+from risk.risk_manager import RiskManager  # noqa: E402
 from train.agent_train import train_model  # noqa: E402
 
 
@@ -63,6 +64,23 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--flat-threshold", type=float, default=0.0001)
     parser.add_argument("--train-ratio", type=float, default=0.7)
     parser.add_argument("--val-ratio", type=float, default=0.15)
+    parser.add_argument(
+        "--intrinsic-time",
+        action="store_true",
+        help="Convert minute bars to intrinsic-time bars via directional-change events before feature building.",
+    )
+    parser.add_argument(
+        "--dc-threshold-up",
+        type=float,
+        default=0.001,
+        help="Fractional increase needed to flag an upward directional change (e.g., 0.001=0.1%).",
+    )
+    parser.add_argument(
+        "--dc-threshold-down",
+        type=float,
+        default=None,
+        help="Fractional decrease needed to flag a downward directional change. Defaults to dc-threshold-up.",
+    )
     parser.add_argument("--batch-size", type=int, default=64)
     parser.add_argument("--epochs", type=int, default=10)
     parser.add_argument("--learning-rate", type=float, default=1e-3)
@@ -90,6 +108,11 @@ def parse_args() -> argparse.Namespace:
         help="Skip offering the optional training mini-game.",
     )
     parser.set_defaults(no_pause=True, offer_game=True)
+    parser.add_argument(
+        "--disable-risk",
+        action="store_true",
+        help="Disable risk manager gating during training and evaluation.",
+    )
     parser.add_argument(
         "--run-gdelt-download",
         action="store_true",
@@ -429,6 +452,8 @@ def main() -> None:
             device=str(device),
             checkpoint_path=str(ckpt_path),
         )
+        train_cfg.risk.enabled = not args.disable_risk
+        risk_manager = RiskManager(train_cfg.risk) if train_cfg.risk.enabled else None
 
         model = build_model(model_cfg, task_type=args.task_type).to(device)
         history = None
@@ -449,6 +474,7 @@ def main() -> None:
                     val_loader,
                     train_cfg,
                     task_type=args.task_type,
+                    risk_manager=risk_manager,
                 )
                 print(f"[done] training {pair_name}; history keys: {list(history.keys())}")
             except KeyboardInterrupt:
@@ -458,7 +484,9 @@ def main() -> None:
                 continue
 
         if not args.skip_eval:
-            metrics = evaluate_model(model, test_loader, task_type=args.task_type)
+            metrics = evaluate_model(
+                model, test_loader, task_type=args.task_type, risk_manager=risk_manager
+            )
             print(f"[eval] {pair_name}: {metrics}")
 
         if args.delete_input_zips:
