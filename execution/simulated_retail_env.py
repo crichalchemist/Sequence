@@ -55,6 +55,7 @@ class ExecutionConfig:
     """Configuration for the simulated retail execution environment."""
 
     initial_mid_price: float = 100.0
+    initial_cash: float = 50_000.0
     spread: float = 0.02  # dollars
     price_drift: float = 0.0
     price_volatility: float = 0.05
@@ -78,6 +79,8 @@ class ExecutionConfig:
             raise ValueError("Lot size must be positive")
         if self.price_volatility < 0:
             raise ValueError("Price volatility must be non-negative")
+        if self.initial_cash < 0:
+            raise ValueError("Initial cash must be non-negative")
 
 
 @dataclass
@@ -171,7 +174,7 @@ class SimulatedRetailExecutionEnv:
 
         self.step_count = 0
         self.mid_price = self.config.initial_mid_price
-        self.cash = 0.0
+        self.cash = self.config.initial_cash
         self.realized_pnl = 0.0
         self.inventory = 0.0
         self._slippage_paid = 0.0
@@ -186,7 +189,7 @@ class SimulatedRetailExecutionEnv:
         self.positions.clear()
         self.step_count = 0
         self.mid_price = self.config.initial_mid_price
-        self.cash = 0.0
+        self.cash = self.config.initial_cash
         self.realized_pnl = 0.0
         self.inventory = 0.0
         self._slippage_paid = 0.0
