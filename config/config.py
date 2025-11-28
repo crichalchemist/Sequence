@@ -55,6 +55,9 @@ class MultiTaskModelConfig:
     dropout: float = 0.1
     num_dir_classes: int = 3
     num_vol_classes: int = 2
+    num_trend_classes: int = 3
+    num_vol_regime_classes: int = 3
+    num_candle_classes: int = 4
 
 
 @dataclass
@@ -83,6 +86,9 @@ class MultiTaskLossWeights:
     return_reg: float = 1.0
     next_close_reg: float = 1.0
     vol_cls: float = 1.0
+    trend_cls: float = 1.0
+    vol_regime_cls: float = 1.0
+    candle_pattern_cls: float = 1.0
 
 
 @dataclass
