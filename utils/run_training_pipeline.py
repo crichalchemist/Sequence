@@ -127,6 +127,19 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Override output directory for HistData download (defaults to input-root).",
     )
+    parser.add_argument(
+        "--run-yfinance-download",
+        action="store_true",
+        help="Download FX data from yfinance before training (pairs and date range required).",
+    )
+    parser.add_argument("--yf-start", default=None, help="Start date for yfinance download (YYYY-MM-DD).")
+    parser.add_argument("--yf-end", default=None, help="End date for yfinance download (YYYY-MM-DD).")
+    parser.add_argument("--yf-interval", default="1m", help="yfinance interval (e.g., 1m, 5m, 1h).")
+    parser.add_argument(
+        "--yf-output-root",
+        default=None,
+        help="Override output directory for yfinance download (defaults to input-root).",
+    )
     return parser.parse_args()
 
 
@@ -162,6 +175,35 @@ def cleanup_pair_zips(pair: str, input_root: Path, years: Optional[str]) -> None
             print(f"[warn] could not delete {zp}: {exc}")
     if removed:
         print(f"[info] deleted {removed} zip(s) for {pair} under {target_dir}")
+
+
+def run_yfinance_download(args) -> None:
+    script = ROOT / "data" / "download_yfinance_fx.py"
+    if not script.exists():
+        print("[warn] yfinance downloader script not found; skipping.")
+        return
+    output_root = args.yf_output_root or args.input_root
+    if not args.yf_start or not args.yf_end:
+        print("[warn] yfinance download requires --yf-start and --yf-end; skipping.")
+        return
+    cmd = [
+        sys.executable,
+        str(script),
+        "--pairs",
+        args.pairs,
+        "--start",
+        args.yf_start,
+        "--end",
+        args.yf_end,
+        "--interval",
+        args.yf_interval,
+        "--output-root",
+        str(output_root),
+    ]
+    try:
+        subprocess.run(cmd, check=True, cwd=ROOT)
+    except Exception as exc:  # pragma: no cover - defensive
+        print(f"[warn] yfinance download failed: {exc}")
 
 
 def run_histdata_download(args) -> None:
@@ -253,6 +295,10 @@ def main() -> None:
             run_gdelt_download(args)
         except Exception as exc:  # pragma: no cover - defensive
             print(f"[warn] GDELT download failed: {exc}")
+    if args.run_histdata_download:
+        run_histdata_download(args)
+    if args.run_yfinance_download:
+        run_yfinance_download(args)
     if args.run_histdata_download:
         run_histdata_download(args)
 
