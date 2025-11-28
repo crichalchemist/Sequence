@@ -1,5 +1,6 @@
 """
-End-to-end training entrypoint for the multi-head model (direction cls, return reg, next-close reg, vol cls).
+End-to-end training entrypoint for the multi-head model (direction cls, trend cls,
+return reg, next-close reg, vol cls, vol regime cls, candle-pattern cls).
 
   python train/run_training_multitask.py \\
     --pairs eurusd,eurgbp,eurjpy,eurchf,euraud,eurcad,eurnzd,gbpusd,gbpjpy,gbpchf,gbpcad,gbpaud,gbpnzd,usdjpy,usdchf,usdcad,audusd,audjpy,audcad,audchf,audnzd,nzdusd,nzdjpy,nzdcad,nzdchf,cadchf,cadjpy,chfjpy,usdbrl,usdrub,usdinr,usdcny,usdzar,usdtry,xauusd \\
@@ -57,6 +58,9 @@ def parse_args():
     parser.add_argument("--loss-w-topk-return", type=float, default=1.0)
     parser.add_argument("--loss-w-topk-price", type=float, default=1.0)
     parser.add_argument("--loss-w-sell-now", type=float, default=1.0)
+    parser.add_argument("--loss-w-trend", type=float, default=1.0)
+    parser.add_argument("--loss-w-vol-regime", type=float, default=1.0)
+    parser.add_argument("--loss-w-candle", type=float, default=1.0)
     return parser.parse_args()
 
 
@@ -126,6 +130,9 @@ def main():
             topk_return_reg=args.loss_w_topk_return,
             topk_price_reg=args.loss_w_topk_price,
             sell_now_cls=args.loss_w_sell_now,
+            trend_cls=args.loss_w_trend,
+            vol_regime_cls=args.loss_w_vol_regime,
+            candle_pattern_cls=args.loss_w_candle,
         )
 
         model = build_multitask_model(model_cfg)

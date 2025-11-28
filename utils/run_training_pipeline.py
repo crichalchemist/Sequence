@@ -63,6 +63,23 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--flat-threshold", type=float, default=0.0001)
     parser.add_argument("--train-ratio", type=float, default=0.7)
     parser.add_argument("--val-ratio", type=float, default=0.15)
+    parser.add_argument(
+        "--intrinsic-time",
+        action="store_true",
+        help="Convert minute bars to intrinsic-time bars via directional-change events before feature building.",
+    )
+    parser.add_argument(
+        "--dc-threshold-up",
+        type=float,
+        default=0.001,
+        help="Fractional increase needed to flag an upward directional change (e.g., 0.001=0.1%).",
+    )
+    parser.add_argument(
+        "--dc-threshold-down",
+        type=float,
+        default=None,
+        help="Fractional decrease needed to flag a downward directional change. Defaults to dc-threshold-up.",
+    )
     parser.add_argument("--batch-size", type=int, default=64)
     parser.add_argument("--epochs", type=int, default=10)
     parser.add_argument("--learning-rate", type=float, default=1e-3)

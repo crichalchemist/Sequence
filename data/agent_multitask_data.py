@@ -81,6 +81,9 @@ class MultiTaskDataAgent:
         targets_topk_returns: List[np.ndarray] = []
         targets_topk_prices: List[np.ndarray] = []
         targets_sell_now: List[int] = []
+        targets_trend_cls: List[int] = []
+        targets_vol_regime_cls: List[int] = []
+        targets_candle_cls: List[int] = []
 
         last_idx = len(df) - max(t_out, lookahead)
         for idx in range(t_in - 1, last_idx):
@@ -117,6 +120,39 @@ class MultiTaskDataAgent:
             future_vol = float(np.std(future_ret_window))
             vol_label = 1 if (future_vol - past_vol) > self.cfg.vol_min_change else 0
 
+            trend_avg_return = float(np.mean(future_ret_window))
+            trend_label = int(_label_from_return(trend_avg_return, self.cfg.flat_threshold))
+
+            vol_delta = future_vol - past_vol
+            if vol_delta > self.cfg.vol_min_change:
+                vol_regime_label = 2
+            elif vol_delta < -self.cfg.vol_min_change:
+                vol_regime_label = 0
+            else:
+                vol_regime_label = 1
+
+            candle_row = df.iloc[idx]
+            open_price = float(candle_row["open"])
+            high_price = float(candle_row["high"])
+            low_price = float(candle_row["low"])
+            close_price = float(candle_row["close"])
+            range_size = max(high_price - low_price, 1e-8)
+            body = close_price - open_price
+            body_ratio = abs(body) / range_size
+            upper_wick = high_price - max(open_price, close_price)
+            lower_wick = min(open_price, close_price) - low_price
+
+            if body_ratio < 0.1:
+                candle_label = 0  # doji/indecision
+            elif body > 0 and body_ratio > 0.55:
+                candle_label = 1  # strong bullish body
+            elif body < 0 and body_ratio > 0.55:
+                candle_label = 2  # strong bearish body
+            elif lower_wick / range_size > 0.35:
+                candle_label = 3  # hammer/long lower wick
+            else:
+                candle_label = 3
+
             sequences.append(seq)
             targets_dir_cls.append(direction_label)
             targets_ret_reg.append(return_target)
@@ -127,6 +163,9 @@ class MultiTaskDataAgent:
             targets_topk_prices.append(topk_prices)
             if self.cfg.predict_sell_now:
                 targets_sell_now.append(int(max_future_return <= 0.0))
+            targets_trend_cls.append(trend_label)
+            targets_vol_regime_cls.append(vol_regime_label)
+            targets_candle_cls.append(candle_label)
 
         if not sequences:
             raise ValueError("No sequences created; check t_in/t_out and data length.")
@@ -139,6 +178,9 @@ class MultiTaskDataAgent:
             "max_return": np.array(targets_max_return),
             "topk_returns": np.stack(targets_topk_returns),
             "topk_prices": np.stack(targets_topk_prices),
+            "trend_class": np.array(targets_trend_cls),
+            "vol_regime_class": np.array(targets_vol_regime_cls),
+            "candle_class": np.array(targets_candle_cls),
         }
         if self.cfg.predict_sell_now:
             targets["sell_now"] = np.array(targets_sell_now)

@@ -8,11 +8,14 @@ from models.agent_hybrid import TemporalAttention
 
 class MultiHeadHybrid(nn.Module):
     """
-    Shared CNN + LSTM + temporal attention encoder with four heads:
+    Shared CNN + LSTM + temporal attention encoder with seven heads:
     1) direction classification
     2) return regression
     3) next close regression
     4) volatility direction classification
+    5) trend classification
+    6) volatility regime classification
+    7) candle-pattern classification
     """
 
     def __init__(self, cfg: MultiTaskModelConfig):
@@ -46,6 +49,9 @@ class MultiHeadHybrid(nn.Module):
         self.head_topk_returns = nn.Linear(attn_input_dim, cfg.top_k_predictions)
         self.head_topk_prices = nn.Linear(attn_input_dim, cfg.top_k_predictions)
         self.head_sell_now = nn.Linear(attn_input_dim, 1) if cfg.predict_sell_now else None
+        self.head_trend = nn.Linear(attn_input_dim, cfg.num_trend_classes)
+        self.head_vol_regime = nn.Linear(attn_input_dim, cfg.num_vol_regime_classes)
+        self.head_candle = nn.Linear(attn_input_dim, cfg.num_candle_classes)
 
     def forward(self, x: torch.Tensor):
         # x: [B, T, F]
@@ -66,6 +72,9 @@ class MultiHeadHybrid(nn.Module):
             "max_return": self.head_max_return(context),
             "topk_returns": self.head_topk_returns(context),
             "topk_prices": self.head_topk_prices(context),
+            "trend_logits": self.head_trend(context),
+            "vol_regime_logits": self.head_vol_regime(context),
+            "candle_pattern_logits": self.head_candle(context),
         }
         if self.head_sell_now is not None:
             outputs["sell_now"] = self.head_sell_now(context)

@@ -20,6 +20,7 @@ if str(ROOT) not in sys.path:
 from config.config import DataConfig
 from data.agent_data import DataAgent
 from features.agent_features import build_feature_frame
+from features.intrinsic_time import build_intrinsic_time_bars
 
 
 def parse_args():
@@ -36,6 +37,23 @@ def parse_args():
     parser.add_argument("--flat-threshold", type=float, default=0.0001, help="Flat class threshold for log returns")
     parser.add_argument("--train-ratio", type=float, default=0.7, help="Train fraction (time-ordered)")
     parser.add_argument("--val-ratio", type=float, default=0.15, help="Validation fraction (time-ordered)")
+    parser.add_argument(
+        "--intrinsic-time",
+        action="store_true",
+        help="Convert minute bars to intrinsic-time bars via directional-change events.",
+    )
+    parser.add_argument(
+        "--dc-threshold-up",
+        type=float,
+        default=0.001,
+        help="Fractional increase needed to flag an upward directional change (e.g., 0.001=0.1%).",
+    )
+    parser.add_argument(
+        "--dc-threshold-down",
+        type=float,
+        default=None,
+        help="Fractional decrease needed to flag a downward directional change. Defaults to dc-threshold-up.",
+    )
     return parser.parse_args()
 
 
@@ -114,7 +132,19 @@ def process_pair(pair: str, args):
         input_root = (ROOT / input_root).resolve()
 
     raw_df = _load_pair_data(pair, input_root, years)
-    feature_df = build_feature_frame(raw_df)
+    df_for_features = raw_df
+    if args.intrinsic_time:
+        df_for_features = build_intrinsic_time_bars(
+            raw_df,
+            up_threshold=args.dc_threshold_up,
+            down_threshold=args.dc_threshold_down,
+        )
+        print(
+            f"[intrinsic] reduced {len(raw_df):,} -> {len(df_for_features):,} bars using "
+            f"DC thresholds up={args.dc_threshold_up}, down={args.dc_threshold_down or args.dc_threshold_up}"
+        )
+
+    feature_df = build_feature_frame(df_for_features)
     feature_df["datetime"] = pd.to_datetime(feature_df["datetime"])
 
     train_range, val_range, test_range = _compute_time_ranges(

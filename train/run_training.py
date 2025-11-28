@@ -20,10 +20,18 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from config.config import ModelConfig, TrainingConfig
-from data.prepare_dataset import process_pair
-from models.agent_hybrid import build_model
-from train.agent_train import train_model
+from config.config import (  # noqa: E402
+    PolicyConfig,
+    RLTrainingConfig,
+    SignalModelConfig,
+    TrainingConfig,
+)
+from data.prepare_dataset import process_pair  # noqa: E402
+from models.signal_policy import ExecutionPolicy, SignalModel  # noqa: E402
+from train.agent_train import (  # noqa: E402
+    pretrain_signal_model,
+    train_execution_policy,
+)
 
 
 def parse_args():
@@ -50,6 +58,13 @@ def parse_args():
     parser.add_argument("--topk-return-weight", type=float, default=1.0)
     parser.add_argument("--topk-price-weight", type=float, default=1.0)
     parser.add_argument("--sell-now-weight", type=float, default=1.0)
+    parser.add_argument("--signal-checkpoint-path", default="models/signal_{pair}.pt")
+    parser.add_argument("--policy-checkpoint-path", default="models/policy_{pair}.pt")
+    parser.add_argument("--pretrain-epochs", type=int, default=5, help="epochs for signal pretraining")
+    parser.add_argument("--policy-epochs", type=int, default=5, help="epochs for execution policy training")
+    parser.add_argument("--entropy-coef", type=float, default=0.01)
+    parser.add_argument("--value-coef", type=float, default=0.5)
+    parser.add_argument("--detach-signal", action="store_true", help="freeze signal encoder during policy training")
     return parser.parse_args()
 
 
@@ -89,23 +104,22 @@ def main():
         val_loader = loaders["val"]
         num_features = next(iter(train_loader))[0].shape[-1]
 
-        # Derive checkpoint path per pair unless user overrides.
-        if args.checkpoint_path == "models/best_model.pt":
-            ckpt_path = Path("models") / f"{pair}_best_model.pt"
-        else:
-            ckpt_path = Path(args.checkpoint_path)
-        ckpt_path.parent.mkdir(parents=True, exist_ok=True)
+        signal_ckpt = Path(args.signal_checkpoint_path.format(pair=pair))
+        policy_ckpt = Path(args.policy_checkpoint_path.format(pair=pair))
+        signal_ckpt.parent.mkdir(parents=True, exist_ok=True)
+        policy_ckpt.parent.mkdir(parents=True, exist_ok=True)
 
-        model_cfg = ModelConfig(
+        signal_cfg = SignalModelConfig(
             num_features=num_features,
             num_classes=3 if args.task_type == "classification" else None,
             lookahead_window=args.lookahead_window,
             top_k_predictions=args.top_k,
             predict_sell_now=args.predict_sell_now,
+            output_dim=1,
         )
-        train_cfg = TrainingConfig(
+        pretrain_cfg = TrainingConfig(
             batch_size=args.batch_size,
-            epochs=args.epochs,
+            epochs=args.pretrain_epochs,
             learning_rate=args.learning_rate,
             weight_decay=args.weight_decay,
             device=device,
@@ -114,18 +128,41 @@ def main():
             topk_return_weight=args.topk_return_weight,
             topk_price_weight=args.topk_price_weight,
             sell_now_weight=args.sell_now_weight,
+            checkpoint_path=str(signal_ckpt),
         )
 
-        model = build_model(model_cfg, task_type=args.task_type)
-        history = train_model(
-            model,
+        signal_model = SignalModel(signal_cfg)
+        signal_history = pretrain_signal_model(
+            signal_model,
             train_loader,
             val_loader,
-            train_cfg,
+            pretrain_cfg,
             task_type=args.task_type,
         )
-        results[pair_name] = history
-        print(f"[done] {pair_name} training complete.")
+
+        policy_cfg = PolicyConfig(
+            input_dim=signal_model.signal_dim,
+            num_actions=3 if args.task_type == "classification" else 2,
+        )
+        rl_cfg = RLTrainingConfig(
+            epochs=args.policy_epochs,
+            learning_rate=args.learning_rate,
+            entropy_coef=args.entropy_coef,
+            value_coef=args.value_coef,
+            detach_signal=args.detach_signal,
+            checkpoint_path=str(policy_ckpt),
+        )
+        policy_head = ExecutionPolicy(policy_cfg)
+        train_execution_policy(
+            signal_model,
+            policy_head,
+            train_loader,
+            rl_cfg,
+            task_type=args.task_type,
+        )
+
+        results[pair_name] = {"signal_history": signal_history}
+        print(f"[done] {pair_name} signal+policy training complete.")
 
     return results
 

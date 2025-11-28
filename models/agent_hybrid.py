@@ -22,7 +22,7 @@ class TemporalAttention(nn.Module):
 
 class HybridCNNLSTMAttention(nn.Module):
     """
-    CNN + LSTM + temporal attention hybrid model.
+    CNN + BiLSTM + temporal attention hybrid model with multi-head outputs.
     """
 
     def __init__(self, cfg: ModelConfig, task_type: str = "classification"):
@@ -43,26 +43,26 @@ class HybridCNNLSTMAttention(nn.Module):
             hidden_size=cfg.hidden_size_lstm,
             num_layers=cfg.num_layers_lstm,
             batch_first=True,
+            bidirectional=cfg.bidirectional,
         )
 
-        attn_input_dim = cfg.hidden_size_lstm + cfg.cnn_num_filters
+        lstm_factor = 2 if cfg.bidirectional else 1
+        attn_input_dim = lstm_factor * cfg.hidden_size_lstm + cfg.cnn_num_filters
         self.attention = TemporalAttention(attn_input_dim, cfg.attention_dim)
 
-        head_input = attn_input_dim
-        if task_type == "classification":
-            output_dim = cfg.num_classes or 3
-        else:
-            output_dim = cfg.output_dim
         self.dropout = nn.Dropout(cfg.dropout)
         self.fc = nn.Linear(head_input, output_dim)
         self.head_max_return = nn.Linear(head_input, 1)
         self.head_topk_returns = nn.Linear(head_input, cfg.top_k_predictions)
         self.head_topk_prices = nn.Linear(head_input, cfg.top_k_predictions)
         self.head_sell_now = nn.Linear(head_input, 1) if cfg.predict_sell_now else None
+        self.head_direction = nn.Linear(attn_input_dim, cfg.num_dir_classes)
+        self.head_return = nn.Linear(attn_input_dim, cfg.return_dim)
+        self.head_volatility = nn.Linear(attn_input_dim, cfg.num_volatility_classes)
 
     def forward(self, x: torch.Tensor):
         # x: [B, T, F]
-        lstm_out, _ = self.lstm(x)  # [B, T, H_lstm]
+        lstm_out, _ = self.lstm(x)  # [B, T, H_lstm * (1 or 2)]
 
         cnn_in = x.permute(0, 2, 1)  # [B, F, T]
         cnn_features = F.relu(self.cnn(cnn_in)).permute(0, 2, 1)  # [B, T, H_cnn]
@@ -83,4 +83,24 @@ class HybridCNNLSTMAttention(nn.Module):
 
 
 def build_model(cfg: ModelConfig, task_type: str = "classification") -> HybridCNNLSTMAttention:
+            "direction_logits": self.head_direction(context),
+            "return": self.head_return(context),
+            "volatility_logits": self.head_volatility(context),
+        }
+        return outputs, attn_weights
+
+
+def build_model(
+    cfg: ModelConfig,
+    task_type: str = "classification",
+    num_dir_classes: int | None = None,
+    num_volatility_classes: int | None = None,
+    return_dim: int | None = None,
+) -> HybridCNNLSTMAttention:
+    if num_dir_classes is not None:
+        cfg.num_dir_classes = num_dir_classes
+    if num_volatility_classes is not None:
+        cfg.num_volatility_classes = num_volatility_classes
+    if return_dim is not None:
+        cfg.return_dim = return_dim
     return HybridCNNLSTMAttention(cfg, task_type=task_type)
