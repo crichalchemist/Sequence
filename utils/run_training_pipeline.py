@@ -20,6 +20,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
+from copy import deepcopy
 
 import torch
 
@@ -145,6 +146,13 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="After yfinance download, upsample to synthetic 1-minute bars.",
     )
+    parser.add_argument(
+        "--no-auto-download",
+        dest="auto_download_missing",
+        action="store_false",
+        help="Disable automatic download when pair data is missing.",
+    )
+    parser.set_defaults(auto_download_missing=True)
     return parser.parse_args()
 
 
@@ -180,6 +188,19 @@ def cleanup_pair_zips(pair: str, input_root: Path, years: Optional[str]) -> None
             print(f"[warn] could not delete {zp}: {exc}")
     if removed:
         print(f"[info] deleted {removed} zip(s) for {pair} under {target_dir}")
+
+
+def has_local_data(pair: str, input_root: Path, years: Optional[str]) -> bool:
+    pair_dir = Path(input_root) / pair
+    if not pair_dir.exists():
+        return False
+    zips = list(pair_dir.glob("*.zip"))
+    csvs = list(pair_dir.glob("*.csv"))
+    if years:
+        filt = {y.strip() for y in years.split(",") if y.strip()}
+        zips = [z for z in zips if any(y in z.name for y in filt)]
+        csvs = [c for c in csvs if any(y in c.name for y in filt)]
+    return bool(zips or csvs)
 
 
 def run_yfinance_download(args) -> None:
@@ -236,6 +257,26 @@ def normalize_yfinance(args) -> None:
         subprocess.run(cmd, check=True, cwd=ROOT)
     except Exception as exc:  # pragma: no cover - defensive
         print(f"[warn] yfinance normalization failed: {exc}")
+
+
+def auto_download_if_missing(pair: str, args) -> None:
+    if not args.auto_download_missing:
+        return
+    if has_local_data(pair, Path(args.input_root), args.years):
+        return
+    print(f"[info] No local data found for {pair}; triggering downloads.")
+    tmp_args = deepcopy(args)
+    tmp_args.pairs = pair
+    # Run histdata if requested globally.
+    if args.run_histdata_download:
+        run_histdata_download(tmp_args)
+    # Run yfinance if requested and start/end provided.
+    if args.run_yfinance_download:
+        if not (args.yf_start and args.yf_end):
+            print("[warn] yfinance download skipped: --yf-start/--yf-end required.")
+        else:
+            run_yfinance_download(tmp_args)
+            normalize_yfinance(tmp_args)
 
 
 def run_histdata_download(args) -> None:
@@ -332,8 +373,6 @@ def main() -> None:
     if args.run_yfinance_download:
         run_yfinance_download(args)
         normalize_yfinance(args)
-    if args.run_histdata_download:
-        run_histdata_download(args)
 
     # Offer the optional mini-game once before training starts.
     maybe_offer_game(args.offer_game)
@@ -350,6 +389,9 @@ def main() -> None:
     while pair_queue:
         pair = pair_queue.pop(0)
         print(f"\n=== Running pair: {pair} ===")
+
+        # Auto-download if the pair folder is missing or empty.
+        auto_download_if_missing(pair, args)
 
         class PrepArgs:
             pairs = pair
