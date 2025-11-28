@@ -1,0 +1,51 @@
+import importlib
+import subprocess
+import sys
+from pathlib import Path
+
+import pytest
+
+
+def test_imports():
+    modules = [
+        "data.download_gdelt",
+        "utils.run_training_pipeline",
+        "train.run_finetune_novasky",
+        "train.run_finetune_novasky_lora",
+        "eval.run_evaluation",
+    ]
+    for mod in modules:
+        importlib.import_module(mod)
+
+
+def docker_available() -> bool:
+    try:
+        import docker
+
+        client = docker.from_env()
+        client.ping()
+        return True
+    except Exception:
+        return False
+
+
+@pytest.mark.skipif(not docker_available(), reason="Docker/Testcontainers not available")
+def test_testcontainers_echo():
+    from testcontainers.core.container import DockerContainer
+
+    with DockerContainer("alpine:3.18").with_command("echo ok") as container:
+        output = container.get_logs().decode("utf-8")
+        assert "ok" in output.lower()
+
+
+def test_training_pipeline_help(tmp_path: Path):
+    # Ensure the CLI can render help without accessing data.
+    result = subprocess.run(
+        [sys.executable, "utils/run_training_pipeline.py", "--help"],
+        cwd=Path(__file__).resolve().parents[1],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        check=True,
+    )
+    assert "usage" in result.stdout.lower()
