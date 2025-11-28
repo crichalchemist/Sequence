@@ -5,6 +5,7 @@ import torch
 from torch.utils.data import DataLoader
 
 from models.agent_hybrid import HybridCNNLSTMAttention
+from models.signal_policy import SignalPolicyAgent
 
 
 def _collect_outputs(
@@ -76,3 +77,30 @@ def evaluate_model(
     if task_type == "classification":
         return classification_metrics(logits_or_preds, targets)
     return regression_metrics(logits_or_preds, targets)
+
+
+def evaluate_policy_agent(
+    agent: SignalPolicyAgent, loader: DataLoader, task_type: str = "classification"
+) -> Dict[str, float]:
+    device = next(agent.parameters()).device
+    agent.eval()
+    total = 0
+    correct = 0
+    value_sum = 0.0
+    with torch.no_grad():
+        for x, y in loader:
+            x = x.to(device)
+            y = y.to(device)
+            out = agent(x, detach_signal=True)
+            actions = out["policy_logits"].argmax(dim=1)
+            if task_type == "classification":
+                correct += (actions == y).sum().item()
+                total += y.numel()
+            else:
+                target_actions = (y.squeeze(-1) > 0).long()
+                correct += (actions == target_actions).sum().item()
+                total += target_actions.numel()
+            value_sum += out["value"].detach().cpu().sum().item()
+
+    accuracy = correct / total if total > 0 else 0.0
+    return {"action_accuracy": accuracy, "avg_value": value_sum / max(1, total)}
