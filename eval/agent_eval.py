@@ -20,6 +20,14 @@ def _collect_outputs(
     with torch.no_grad():
         for x, y in loader:
             x = x.to(device)
+            if isinstance(y, dict):
+                y_primary = y["primary"].to(device)
+            else:
+                y_primary = y.to(device)
+            outputs, _ = model(x)
+            logits = outputs["primary"]
+            preds.append(logits.detach().cpu().numpy())
+            targets.append(y_primary.detach().cpu().numpy())
             y = y.to(device)
             outputs, _ = model(x)
             head = outputs["direction_logits"] if task_type == "classification" else outputs["return"]

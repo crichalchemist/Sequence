@@ -41,17 +41,30 @@ class NormalizationStats:
 
 
 class SequenceDataset(Dataset):
-    def __init__(self, sequences: np.ndarray, targets: np.ndarray, target_type: str):
+    def __init__(
+        self,
+        sequences: np.ndarray,
+        targets: Dict[str, np.ndarray],
+        target_type: str,
+    ):
         self.sequences = torch.as_tensor(sequences, dtype=torch.float32)
-        target_dtype = torch.long if target_type == "classification" else torch.float32
-        self.targets = torch.as_tensor(targets, dtype=target_dtype)
+        self.targets = {
+            "primary": torch.as_tensor(
+                targets["primary"], dtype=(torch.long if target_type == "classification" else torch.float32)
+            ),
+            "max_return": torch.as_tensor(targets["max_return"], dtype=torch.float32),
+            "topk_returns": torch.as_tensor(targets["topk_returns"], dtype=torch.float32),
+            "topk_prices": torch.as_tensor(targets["topk_prices"], dtype=torch.float32),
+        }
+        if "sell_now" in targets:
+            self.targets["sell_now"] = torch.as_tensor(targets["sell_now"], dtype=torch.long)
 
     def __len__(self) -> int:
         return len(self.sequences)
 
     def __getitem__(self, idx: int):
         x = self.sequences[idx]
-        y = self.targets[idx]
+        y = {k: v[idx] for k, v in self.targets.items()}
         return x, y
 
 
@@ -85,15 +98,22 @@ class DataAgent:
 
     def _build_windows(
         self, df: pd.DataFrame, feature_cols: List[str], norm_stats: NormalizationStats
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> Tuple[np.ndarray, Dict[str, np.ndarray]]:
         t_in, t_out = self.cfg.t_in, self.cfg.t_out
+        lookahead = self.cfg.lookahead_window or t_out
+        top_k = max(1, self.cfg.top_k_predictions)
         features = norm_stats.apply(df[feature_cols].to_numpy(dtype=np.float32))
         future_log_ret = _compute_future_log_return(df["close"], t_out).to_numpy()
 
         sequences: List[np.ndarray] = []
-        targets: List[float] = []
+        primary_targets: List[float] = []
+        max_return_targets: List[float] = []
+        topk_returns_targets: List[np.ndarray] = []
+        topk_prices_targets: List[np.ndarray] = []
+        sell_now_targets: List[int] = []
 
-        last_idx = len(df) - t_out
+        last_idx = len(df) - max(t_out, lookahead)
+        log_close = np.log(df["close"].to_numpy())
         for idx in range(t_in - 1, last_idx):
             start = idx - t_in + 1
             end = idx + 1
@@ -105,13 +125,38 @@ class DataAgent:
                 target = int(_label_from_return(target_return, self.cfg.flat_threshold))
             else:
                 target = float(target_return)
+
+            future_returns = log_close[idx + 1 : idx + lookahead + 1] - log_close[idx]
+            if len(future_returns) < lookahead or np.isnan(future_returns).any():
+                continue
+            max_future_return = float(np.max(future_returns))
+            sorted_returns = np.sort(future_returns)[::-1]
+            topk_returns = sorted_returns[:top_k]
+            if len(topk_returns) < top_k:
+                topk_returns = np.pad(topk_returns, (0, top_k - len(topk_returns)), constant_values=sorted_returns[-1])
+            topk_prices = np.exp(topk_returns) * df["close"].iloc[idx]
+
             sequences.append(seq)
-            targets.append(target)
+            primary_targets.append(target)
+            max_return_targets.append(max_future_return)
+            topk_returns_targets.append(topk_returns)
+            topk_prices_targets.append(topk_prices)
+            if self.cfg.predict_sell_now:
+                sell_now_targets.append(int(max_future_return <= 0.0))
 
         if not sequences:
             raise ValueError("No sequences created; check t_in/t_out and data length.")
 
-        return np.stack(sequences), np.array(targets)
+        targets: Dict[str, np.ndarray] = {
+            "primary": np.array(primary_targets),
+            "max_return": np.array(max_return_targets),
+            "topk_returns": np.stack(topk_returns_targets),
+            "topk_prices": np.stack(topk_prices_targets),
+        }
+        if self.cfg.predict_sell_now:
+            targets["sell_now"] = np.array(sell_now_targets)
+
+        return np.stack(sequences), targets
 
     def build_datasets(self, df: pd.DataFrame) -> Dict[str, SequenceDataset]:
         feature_cols = self.cfg.feature_columns or [

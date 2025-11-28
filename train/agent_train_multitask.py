@@ -30,6 +30,12 @@ def _compute_losses(
     losses["candle_pattern"] = ce(outputs["candle_pattern_logits"], targets["candle_class"])
     losses["return"] = mse(outputs["return"].squeeze(-1), targets["return_reg"])
     losses["next_close"] = mse(outputs["next_close"].squeeze(-1), targets["next_close_reg"])
+    losses["max_return"] = mse(outputs["max_return"].squeeze(-1), targets["max_return"])
+    losses["topk_returns"] = mse(outputs["topk_returns"], targets["topk_returns"])
+    losses["topk_prices"] = mse(outputs["topk_prices"], targets["topk_prices"])
+    if "sell_now" in outputs and "sell_now" in targets:
+        bce = torch.nn.BCEWithLogitsLoss()
+        losses["sell_now"] = bce(outputs["sell_now"].squeeze(-1), targets["sell_now"].float())
 
     total = (
         loss_weights.direction_cls * losses["direction"]
@@ -39,7 +45,12 @@ def _compute_losses(
         + loss_weights.candle_pattern_cls * losses["candle_pattern"]
         + loss_weights.return_reg * losses["return"]
         + loss_weights.next_close_reg * losses["next_close"]
+        + loss_weights.max_return_reg * losses["max_return"]
+        + loss_weights.topk_return_reg * losses["topk_returns"]
+        + loss_weights.topk_price_reg * losses["topk_prices"]
     )
+    if "sell_now" in losses:
+        total = total + loss_weights.sell_now_cls * losses["sell_now"]
     return total, {k: v.item() for k, v in losses.items()}
 
 

@@ -41,6 +41,9 @@ def parse_args():
     parser.add_argument("--input-root", default="output_central", help="Root containing Central-time zips")
     parser.add_argument("--t-in", type=int, default=120)
     parser.add_argument("--t-out", type=int, default=10)
+    parser.add_argument("--lookahead-window", type=int, default=None, help="Lookahead for auxiliary targets")
+    parser.add_argument("--top-k", type=int, default=3, help="Top-K future returns/prices predictions")
+    parser.add_argument("--predict-sell-now", action="store_true", help="Enable sell-now auxiliary head")
     parser.add_argument("--task-type", choices=["classification", "regression"], default="classification")
     parser.add_argument("--flat-threshold", type=float, default=0.0001)
     parser.add_argument("--train-ratio", type=float, default=0.7)
@@ -51,6 +54,10 @@ def parse_args():
     parser.add_argument("--weight-decay", type=float, default=0.0)
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--checkpoint-path", default="models/best_model.pt")
+    parser.add_argument("--max-return-weight", type=float, default=1.0)
+    parser.add_argument("--topk-return-weight", type=float, default=1.0)
+    parser.add_argument("--topk-price-weight", type=float, default=1.0)
+    parser.add_argument("--sell-now-weight", type=float, default=1.0)
     parser.add_argument("--signal-checkpoint-path", default="models/signal_{pair}.pt")
     parser.add_argument("--policy-checkpoint-path", default="models/policy_{pair}.pt")
     parser.add_argument("--pretrain-epochs", type=int, default=5, help="epochs for signal pretraining")
@@ -79,6 +86,9 @@ def main():
             years = args.years
             t_in = args.t_in
             t_out = args.t_out
+            lookahead_window = args.lookahead_window
+            top_k = args.top_k
+            predict_sell_now = args.predict_sell_now
             target_type = args.task_type
             flat_threshold = args.flat_threshold
             train_ratio = args.train_ratio
@@ -102,6 +112,9 @@ def main():
         signal_cfg = SignalModelConfig(
             num_features=num_features,
             num_classes=3 if args.task_type == "classification" else None,
+            lookahead_window=args.lookahead_window,
+            top_k_predictions=args.top_k,
+            predict_sell_now=args.predict_sell_now,
             output_dim=1,
         )
         pretrain_cfg = TrainingConfig(
@@ -110,6 +123,11 @@ def main():
             learning_rate=args.learning_rate,
             weight_decay=args.weight_decay,
             device=device,
+            checkpoint_path=str(ckpt_path),
+            max_return_weight=args.max_return_weight,
+            topk_return_weight=args.topk_return_weight,
+            topk_price_weight=args.topk_price_weight,
+            sell_now_weight=args.sell_now_weight,
             checkpoint_path=str(signal_ckpt),
         )
 
