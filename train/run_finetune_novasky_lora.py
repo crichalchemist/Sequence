@@ -188,7 +188,28 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--lora-dropout", type=float, default=0.05)
     parser.add_argument("--lora-target-modules", default=",".join(DEFAULT_TARGET_MODULES), help="Comma-separated target modules.")
     parser.add_argument("--bnb-nf4", action="store_true", help="Use NF4 quantization (default).")
-    return parser.parse_args()
+    parser.add_argument(
+        "--trust-remote-code",
+        action="store_true",
+        help=(
+            "Load custom code from the model repository. Remote code executes during model/tokenizer load and can be malicious; "
+            "only enable after reviewing the source. Requires --trust-remote-code-confirm."
+        ),
+    )
+    parser.add_argument(
+        "--trust-remote-code-confirm",
+        action="store_true",
+        help=(
+            "Explicit acknowledgement that remote code was reviewed and the security risk is accepted. "
+            "Needed alongside --trust-remote-code."
+        ),
+    )
+    args = parser.parse_args()
+    if args.trust_remote_code and not args.trust_remote_code_confirm:
+        parser.error(
+            "--trust-remote-code requested without --trust-remote-code-confirm; refusing to load unreviewed remote code."
+        )
+    return args
 
 
 def main() -> None:
@@ -196,7 +217,9 @@ def main() -> None:
     dataset_names = [d.strip() for d in args.datasets.split(",") if d.strip()]
     target_modules = [m.strip() for m in args.lora_target_modules.split(",") if m.strip()]
 
-    tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path, trust_remote_code=True, use_fast=False)
+    tokenizer = AutoTokenizer.from_pretrained(
+        args.model_name_or_path, trust_remote_code=args.trust_remote_code, use_fast=False
+    )
     if tokenizer.pad_token_id is None:
         tokenizer.pad_token = tokenizer.eos_token
 
@@ -219,7 +242,7 @@ def main() -> None:
         args.model_name_or_path,
         torch_dtype=torch_dtype,
         device_map="auto",
-        trust_remote_code=True,
+        trust_remote_code=args.trust_remote_code,
         quantization_config=quant_config,
     )
 
