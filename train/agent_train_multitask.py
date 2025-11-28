@@ -5,6 +5,7 @@ from torch.utils.data import DataLoader
 
 from config.config import MultiTaskLossWeights, TrainingConfig
 from models.agent_multitask import MultiHeadHybrid
+from risk.risk_manager import RiskManager
 
 
 def _to_device(batch, device):
@@ -53,6 +54,7 @@ def _evaluate(
     loader: DataLoader,
     loss_weights: MultiTaskLossWeights,
     device,
+    risk_manager: RiskManager | None = None,
 ) -> Dict[str, float]:
     model.eval()
     totals = {"loss": 0.0, "dir_acc": 0.0, "vol_acc": 0.0, "ret_rmse": 0.0, "close_rmse": 0.0}
@@ -61,6 +63,17 @@ def _evaluate(
         for batch in loader:
             x, targets = _to_device(batch, device)
             outputs, _ = model(x)
+            if risk_manager:
+                context = risk_manager.build_context(x=x)
+                outputs["direction_logits"], reasons = risk_manager.apply_classification_logits(
+                    outputs["direction_logits"], context
+                )
+                outputs["return"], ret_reasons = risk_manager.apply_regression_output(outputs["return"], context)
+                outputs["next_close"], close_reasons = risk_manager.apply_regression_output(
+                    outputs["next_close"], context
+                )
+                all_reasons = sorted(set(reasons + ret_reasons + close_reasons))
+                risk_manager.log_events(all_reasons, prefix="eval")
             loss, _ = _compute_losses(outputs, targets, loss_weights)
             totals["loss"] += loss.item()
             totals["dir_acc"] += _classification_accuracy(outputs["direction_logits"], targets["direction_class"])
@@ -79,12 +92,16 @@ def train_multitask(
     val_loader: DataLoader,
     cfg: TrainingConfig,
     loss_weights: MultiTaskLossWeights,
+    risk_manager: RiskManager | None = None,
 ) -> Dict[str, List[float]]:
     device_str = cfg.device
     if device_str.startswith("cuda") and not torch.cuda.is_available():
         device_str = "cpu"
     device = torch.device(device_str)
     model.to(device)
+
+    if risk_manager is None and getattr(cfg, "risk", None) and cfg.risk.enabled:
+        risk_manager = RiskManager(cfg.risk)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=cfg.learning_rate, weight_decay=cfg.weight_decay)
 
@@ -98,6 +115,18 @@ def train_multitask(
         for step, batch in enumerate(train_loader, start=1):
             x, targets = _to_device(batch, device)
             outputs, _ = model(x)
+            if risk_manager:
+                context = risk_manager.build_context(x=x)
+                outputs["direction_logits"], reasons = risk_manager.apply_classification_logits(
+                    outputs["direction_logits"], context
+                )
+                outputs["return"], ret_reasons = risk_manager.apply_regression_output(outputs["return"], context)
+                outputs["next_close"], close_reasons = risk_manager.apply_regression_output(
+                    outputs["next_close"], context
+                )
+                all_reasons = sorted(set(reasons + ret_reasons + close_reasons))
+                risk_manager.record_actions(outputs["direction_logits"].argmax(dim=1))
+                risk_manager.log_events(all_reasons, prefix=f"epoch {epoch} step {step}")
             loss, per_task = _compute_losses(outputs, targets, loss_weights)
             loss.backward()
             if cfg.grad_clip:
@@ -109,7 +138,7 @@ def train_multitask(
                 print(f"epoch {epoch} step {step} loss {running_loss / step:.4f} tasks {per_task}")
 
         train_epoch_loss = running_loss / max(1, len(train_loader))
-        val_metrics = _evaluate(model, val_loader, loss_weights, device)
+        val_metrics = _evaluate(model, val_loader, loss_weights, device, risk_manager=risk_manager)
         history["train_loss"].append(train_epoch_loss)
         history["val_loss"].append(val_metrics["loss"])
         history["val_dir_acc"].append(val_metrics["dir_acc"])

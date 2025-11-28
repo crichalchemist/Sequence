@@ -24,6 +24,7 @@ from config.config import ModelConfig
 from data.prepare_dataset import process_pair
 from eval.agent_eval import evaluate_model
 from models.agent_hybrid import build_model
+from risk.risk_manager import RiskManager
 
 
 def parse_args():
@@ -39,6 +40,7 @@ def parse_args():
     parser.add_argument("--val-ratio", type=float, default=0.15)
     parser.add_argument("--checkpoint-path", default="models/best_model.pt", help="Path to model checkpoint")
     parser.add_argument("--device", default="cuda")
+    parser.add_argument("--disable-risk", action="store_true", help="Disable risk manager gating during evaluation")
     return parser.parse_args()
 
 
@@ -52,6 +54,7 @@ def main():
     device = torch.device(device)
 
     results = {}
+    risk_manager = None if args.disable_risk else RiskManager()
     for pair in pairs:
         class PrepArgs:
             pairs = pair
@@ -86,7 +89,9 @@ def main():
         state = torch.load(ckpt_path, map_location=device)
         model.load_state_dict(state)
 
-        metrics = evaluate_model(model, test_loader, task_type=args.task_type)
+        metrics = evaluate_model(
+            model, test_loader, task_type=args.task_type, risk_manager=risk_manager
+        )
         results[pair_name] = metrics
         print(f"[eval] {pair_name}: {metrics}")
 

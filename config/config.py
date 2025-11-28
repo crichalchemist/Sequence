@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from typing import List, Optional, Tuple
 
+from risk.risk_manager import RiskConfig
+
 
 @dataclass
 class DataConfig:
@@ -39,6 +41,7 @@ class TrainingConfig:
     grad_clip: Optional[float] = 1.0
     log_every: int = 50
     checkpoint_path: str = "models/best_model.pt"
+    risk: RiskConfig = field(default_factory=RiskConfig)
 
 
 @dataclass

@@ -50,6 +50,11 @@ def parse_args():
     parser.add_argument("--loss-w-return", type=float, default=1.0)
     parser.add_argument("--loss-w-next-close", type=float, default=1.0)
     parser.add_argument("--loss-w-vol", type=float, default=1.0)
+    parser.add_argument(
+        "--disable-risk",
+        action="store_true",
+        help="Disable risk manager gating during multi-task training.",
+    )
     return parser.parse_args()
 
 
@@ -102,6 +107,7 @@ def main():
             device=device,
             checkpoint_path=str(ckpt_path),
         )
+        train_cfg.risk.enabled = not args.disable_risk
         loss_weights = MultiTaskLossWeights(
             direction_cls=args.loss_w_direction,
             return_reg=args.loss_w_return,

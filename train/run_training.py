@@ -43,6 +43,11 @@ def parse_args():
     parser.add_argument("--weight-decay", type=float, default=0.0)
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--checkpoint-path", default="models/best_model.pt")
+    parser.add_argument(
+        "--disable-risk",
+        action="store_true",
+        help="Disable risk manager gating during training and validation.",
+    )
     return parser.parse_args()
 
 
@@ -98,6 +103,7 @@ def main():
             device=device,
             checkpoint_path=str(ckpt_path),
         )
+        train_cfg.risk.enabled = not args.disable_risk
 
         model = build_model(model_cfg, task_type=args.task_type)
         history = train_model(
