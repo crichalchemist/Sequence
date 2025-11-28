@@ -104,7 +104,7 @@ def _compute_time_ranges(df: pd.DataFrame, train_ratio: float, val_ratio: float)
     return train_range, val_range, test_range
 
 
-def process_pair(pair: str, args):
+def process_pair(pair: str, args, batch_size: Optional[int] = None):
     years = args.years.split(",") if args.years else None
     input_root = Path(args.input_root)
     if not input_root.is_absolute():
@@ -135,13 +135,15 @@ def process_pair(pair: str, args):
 
     agent = DataAgent(data_cfg)
     datasets = agent.build_datasets(feature_df)
-    loaders = DataAgent.build_dataloaders(datasets, batch_size=64)
+    effective_batch_size = batch_size if batch_size is not None else getattr(args, "batch_size", 64)
+    loaders = DataAgent.build_dataloaders(datasets, batch_size=effective_batch_size)
 
     print(f"Pair: {pair}")
     print(f"Rows after features: {len(feature_df):,}")
     print(f"Features: {len(feature_cols)} -> {feature_cols}")
     for split, ds in datasets.items():
-        print(f"{split}: {len(ds):,} windows")
+        loader = loaders[split]
+        print(f"{split}: {len(ds):,} windows (batch_size={loader.batch_size})")
     print("Dataloaders ready (train/val/test).")
     return pair, loaders
 

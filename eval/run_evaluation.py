@@ -37,6 +37,7 @@ def parse_args():
     parser.add_argument("--flat-threshold", type=float, default=0.0001)
     parser.add_argument("--train-ratio", type=float, default=0.7)
     parser.add_argument("--val-ratio", type=float, default=0.15)
+    parser.add_argument("--batch-size", type=int, default=64)
     parser.add_argument("--checkpoint-path", default="models/best_model.pt", help="Path to model checkpoint")
     parser.add_argument("--device", default="cuda")
     return parser.parse_args()
@@ -63,9 +64,10 @@ def main():
             flat_threshold = args.flat_threshold
             train_ratio = args.train_ratio
             val_ratio = args.val_ratio
+            batch_size = args.batch_size
 
         try:
-            pair_name, loaders = process_pair(pair, PrepArgs)
+            pair_name, loaders = process_pair(pair, PrepArgs, batch_size=args.batch_size)
         except Exception as exc:
             print(f"[error] data prep failed for {pair}: {exc}")
             continue
