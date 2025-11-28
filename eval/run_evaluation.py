@@ -33,6 +33,9 @@ def parse_args():
     parser.add_argument("--input-root", default="output_central", help="Root containing Central-time zips")
     parser.add_argument("--t-in", type=int, default=120)
     parser.add_argument("--t-out", type=int, default=10)
+    parser.add_argument("--lookahead-window", type=int, default=None, help="Lookahead for auxiliary targets")
+    parser.add_argument("--top-k", type=int, default=3, help="Top-K future returns/prices predictions")
+    parser.add_argument("--predict-sell-now", action="store_true", help="Enable sell-now auxiliary head")
     parser.add_argument("--task-type", choices=["classification", "regression"], default="classification")
     parser.add_argument("--flat-threshold", type=float, default=0.0001)
     parser.add_argument("--train-ratio", type=float, default=0.7)
@@ -59,6 +62,9 @@ def main():
             years = args.years
             t_in = args.t_in
             t_out = args.t_out
+            lookahead_window = args.lookahead_window
+            top_k = args.top_k
+            predict_sell_now = args.predict_sell_now
             target_type = args.task_type
             flat_threshold = args.flat_threshold
             train_ratio = args.train_ratio
@@ -76,6 +82,9 @@ def main():
         model_cfg = ModelConfig(
             num_features=num_features,
             num_classes=3 if args.task_type == "classification" else None,
+            lookahead_window=args.lookahead_window,
+            top_k_predictions=args.top_k,
+            predict_sell_now=args.predict_sell_now,
         )
         model = build_model(model_cfg, task_type=args.task_type).to(device)
 

@@ -32,6 +32,9 @@ def parse_args():
     parser.add_argument("--input-root", default="output_central", help="Root containing Central-time zips")
     parser.add_argument("--t-in", type=int, default=120)
     parser.add_argument("--t-out", type=int, default=10)
+    parser.add_argument("--lookahead-window", type=int, default=None, help="Lookahead for auxiliary tasks")
+    parser.add_argument("--top-k", type=int, default=3, help="Top-K future returns/prices predictions")
+    parser.add_argument("--predict-sell-now", action="store_true", help="Enable sell-now auxiliary head")
     parser.add_argument("--flat-threshold", type=float, default=0.0001)
     parser.add_argument("--vol-min-change", type=float, default=0.0)
     parser.add_argument("--train-ratio", type=float, default=0.7)
@@ -50,6 +53,10 @@ def parse_args():
     parser.add_argument("--loss-w-return", type=float, default=1.0)
     parser.add_argument("--loss-w-next-close", type=float, default=1.0)
     parser.add_argument("--loss-w-vol", type=float, default=1.0)
+    parser.add_argument("--loss-w-max-return", type=float, default=1.0)
+    parser.add_argument("--loss-w-topk-return", type=float, default=1.0)
+    parser.add_argument("--loss-w-topk-price", type=float, default=1.0)
+    parser.add_argument("--loss-w-sell-now", type=float, default=1.0)
     return parser.parse_args()
 
 
@@ -69,6 +76,9 @@ def main():
             years = args.years
             t_in = args.t_in
             t_out = args.t_out
+            lookahead_window = args.lookahead_window
+            top_k = args.top_k
+            predict_sell_now = args.predict_sell_now
             flat_threshold = args.flat_threshold
             vol_min_change = args.vol_min_change
             train_ratio = args.train_ratio
@@ -93,7 +103,12 @@ def main():
             ckpt_path = Path(args.checkpoint_path)
         ckpt_path.parent.mkdir(parents=True, exist_ok=True)
 
-        model_cfg = MultiTaskModelConfig(num_features=num_features)
+        model_cfg = MultiTaskModelConfig(
+            num_features=num_features,
+            lookahead_window=args.lookahead_window,
+            top_k_predictions=args.top_k,
+            predict_sell_now=args.predict_sell_now,
+        )
         train_cfg = TrainingConfig(
             batch_size=args.batch_size,
             epochs=args.epochs,
@@ -107,6 +122,10 @@ def main():
             return_reg=args.loss_w_return,
             next_close_reg=args.loss_w_next_close,
             vol_cls=args.loss_w_vol,
+            max_return_reg=args.loss_w_max_return,
+            topk_return_reg=args.loss_w_topk_return,
+            topk_price_reg=args.loss_w_topk_price,
+            sell_now_cls=args.loss_w_sell_now,
         )
 
         model = build_multitask_model(model_cfg)

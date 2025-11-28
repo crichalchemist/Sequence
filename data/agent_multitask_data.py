@@ -22,7 +22,9 @@ class MultiTaskNormalizationStats:
 class MultiTaskSequenceDataset(Dataset):
     def __init__(self, sequences: np.ndarray, targets: Dict[str, np.ndarray]):
         self.sequences = torch.as_tensor(sequences, dtype=torch.float32)
-        self.targets = {k: torch.as_tensor(v, dtype=(torch.long if "class" in k else torch.float32)) for k, v in targets.items()}
+        self.targets = {
+            k: torch.as_tensor(v, dtype=(torch.long if "class" in k else torch.float32)) for k, v in targets.items()
+        }
 
     def __len__(self) -> int:
         return len(self.sequences)
@@ -63,6 +65,8 @@ class MultiTaskDataAgent:
         self, df: pd.DataFrame, feature_cols: List[str], norm_stats: MultiTaskNormalizationStats
     ) -> Tuple[np.ndarray, Dict[str, np.ndarray]]:
         t_in, t_out = self.cfg.t_in, self.cfg.t_out
+        lookahead = self.cfg.lookahead_window or t_out
+        top_k = max(1, self.cfg.top_k_predictions)
         features = norm_stats.apply(df[feature_cols].to_numpy(dtype=np.float32))
 
         log_close = np.log(df["close"].to_numpy())
@@ -73,8 +77,12 @@ class MultiTaskDataAgent:
         targets_ret_reg: List[float] = []
         targets_next_close: List[float] = []
         targets_vol_cls: List[int] = []
+        targets_max_return: List[float] = []
+        targets_topk_returns: List[np.ndarray] = []
+        targets_topk_prices: List[np.ndarray] = []
+        targets_sell_now: List[int] = []
 
-        last_idx = len(df) - t_out
+        last_idx = len(df) - max(t_out, lookahead)
         for idx in range(t_in - 1, last_idx):
             start_seq = idx - t_in + 1
             end_seq = idx + 1
@@ -88,6 +96,16 @@ class MultiTaskDataAgent:
             direction_label = int(_label_from_return(future_log_ret, self.cfg.flat_threshold))
             return_target = float(future_log_ret)
             next_close_target = float(future_close)
+
+            future_returns = log_close[idx + 1 : idx + lookahead + 1] - log_close[idx]
+            if len(future_returns) < lookahead or np.isnan(future_returns).any():
+                continue
+            max_future_return = float(np.max(future_returns))
+            sorted_returns = np.sort(future_returns)[::-1]
+            topk_returns = sorted_returns[:top_k]
+            if len(topk_returns) < top_k:
+                topk_returns = np.pad(topk_returns, (0, top_k - len(topk_returns)), constant_values=sorted_returns[-1])
+            topk_prices = np.exp(topk_returns) * df["close"].iloc[idx]
 
             past_ret_window = log_returns[idx - t_out + 1 : idx + 1]
             future_ret_window = log_returns[idx + 1 : idx + t_out + 1]
@@ -104,6 +122,11 @@ class MultiTaskDataAgent:
             targets_ret_reg.append(return_target)
             targets_next_close.append(next_close_target)
             targets_vol_cls.append(vol_label)
+            targets_max_return.append(max_future_return)
+            targets_topk_returns.append(topk_returns)
+            targets_topk_prices.append(topk_prices)
+            if self.cfg.predict_sell_now:
+                targets_sell_now.append(int(max_future_return <= 0.0))
 
         if not sequences:
             raise ValueError("No sequences created; check t_in/t_out and data length.")
@@ -113,7 +136,12 @@ class MultiTaskDataAgent:
             "return_reg": np.array(targets_ret_reg),
             "next_close_reg": np.array(targets_next_close),
             "vol_class": np.array(targets_vol_cls),
+            "max_return": np.array(targets_max_return),
+            "topk_returns": np.stack(targets_topk_returns),
+            "topk_prices": np.stack(targets_topk_prices),
         }
+        if self.cfg.predict_sell_now:
+            targets["sell_now"] = np.array(targets_sell_now)
         return np.stack(sequences), targets
 
     def build_datasets(self, df: pd.DataFrame) -> Dict[str, MultiTaskSequenceDataset]:

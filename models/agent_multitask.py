@@ -42,6 +42,10 @@ class MultiHeadHybrid(nn.Module):
         self.head_return = nn.Linear(attn_input_dim, 1)
         self.head_next_close = nn.Linear(attn_input_dim, 1)
         self.head_volatility = nn.Linear(attn_input_dim, cfg.num_vol_classes)
+        self.head_max_return = nn.Linear(attn_input_dim, 1)
+        self.head_topk_returns = nn.Linear(attn_input_dim, cfg.top_k_predictions)
+        self.head_topk_prices = nn.Linear(attn_input_dim, cfg.top_k_predictions)
+        self.head_sell_now = nn.Linear(attn_input_dim, 1) if cfg.predict_sell_now else None
 
     def forward(self, x: torch.Tensor):
         # x: [B, T, F]
@@ -59,7 +63,12 @@ class MultiHeadHybrid(nn.Module):
             "return": self.head_return(context),
             "next_close": self.head_next_close(context),
             "volatility_logits": self.head_volatility(context),
+            "max_return": self.head_max_return(context),
+            "topk_returns": self.head_topk_returns(context),
+            "topk_prices": self.head_topk_prices(context),
         }
+        if self.head_sell_now is not None:
+            outputs["sell_now"] = self.head_sell_now(context)
         return outputs, attn_weights
 
 

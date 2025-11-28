@@ -55,6 +55,10 @@ class HybridCNNLSTMAttention(nn.Module):
             output_dim = cfg.output_dim
         self.dropout = nn.Dropout(cfg.dropout)
         self.fc = nn.Linear(head_input, output_dim)
+        self.head_max_return = nn.Linear(head_input, 1)
+        self.head_topk_returns = nn.Linear(head_input, cfg.top_k_predictions)
+        self.head_topk_prices = nn.Linear(head_input, cfg.top_k_predictions)
+        self.head_sell_now = nn.Linear(head_input, 1) if cfg.predict_sell_now else None
 
     def forward(self, x: torch.Tensor):
         # x: [B, T, F]
@@ -67,8 +71,15 @@ class HybridCNNLSTMAttention(nn.Module):
 
         context, attn_weights = self.attention(combined)
         context = self.dropout(context)
-        output = self.fc(context)
-        return output, attn_weights
+        outputs = {
+            "primary": self.fc(context),
+            "max_return": self.head_max_return(context),
+            "topk_returns": self.head_topk_returns(context),
+            "topk_prices": self.head_topk_prices(context),
+        }
+        if self.head_sell_now is not None:
+            outputs["sell_now"] = self.head_sell_now(context)
+        return outputs, attn_weights
 
 
 def build_model(cfg: ModelConfig, task_type: str = "classification") -> HybridCNNLSTMAttention:

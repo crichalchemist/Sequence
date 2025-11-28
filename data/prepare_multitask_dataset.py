@@ -29,6 +29,9 @@ def parse_args():
     parser.add_argument("--years", default=None, help="Comma-separated list of years to include (e.g., 2018,2019). Default: all")
     parser.add_argument("--t-in", type=int, default=120, help="Lookback window length")
     parser.add_argument("--t-out", type=int, default=10, help="Forecast horizon in minutes")
+    parser.add_argument("--lookahead-window", type=int, default=None, help="Lookahead window for auxiliary tasks")
+    parser.add_argument("--top-k", type=int, default=3, help="Top-K future returns/prices to supervise")
+    parser.add_argument("--predict-sell-now", action="store_true", help="Whether to supervise a sell-now decision")
     parser.add_argument("--flat-threshold", type=float, default=0.0001, help="Flat class threshold for log returns")
     parser.add_argument("--vol-min-change", type=float, default=0.0, help="Volatility delta threshold for vol direction label")
     parser.add_argument("--train-ratio", type=float, default=0.7, help="Train fraction (time-ordered)")
@@ -119,6 +122,9 @@ def process_pair(pair: str, args):
         feature_columns=feature_cols,
         t_in=args.t_in,
         t_out=args.t_out,
+        lookahead_window=args.lookahead_window,
+        top_k_predictions=args.top_k,
+        predict_sell_now=args.predict_sell_now,
         train_range=train_range,
         val_range=val_range,
         test_range=test_range,
