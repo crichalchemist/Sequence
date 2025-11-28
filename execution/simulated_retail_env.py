@@ -93,7 +93,15 @@ class OrderAction:
         size = max(self.size, 0.0)
         size = round(size / config.lot_size) * config.lot_size
         limit_price = self.limit_price
-        return OrderAction(self.action_type.lower(), self.side.lower(), size, limit_price)
+        action_type = self.action_type.lower()
+        side = self.side.lower()
+        if action_type not in {"market", "limit", "hold"}:
+            raise ValueError(f"Unsupported action_type '{self.action_type}'")
+        if side not in {"buy", "sell"}:
+            raise ValueError(f"Unsupported side '{self.side}'")
+        if limit_price is not None and limit_price <= 0:
+            raise ValueError("Limit price must be positive when provided")
+        return OrderAction(action_type, side, size, limit_price)
 
 
 @dataclass
@@ -252,18 +260,18 @@ class SimulatedRetailExecutionEnv:
         else:
             self.logger.warning("Unsupported action_type '%s'", action.action_type)
 
-    def _execution_price(self, side: str) -> float:
+    def _execution_price(self, side: str, size: float) -> float:
         direction = 1.0 if side == "buy" else -1.0
         half_spread = self.config.spread / 2.0
         slippage = self.config.slippage_model.sample(self.rng) * self.mid_price
         exec_price = self.mid_price + direction * (half_spread + slippage)
-        spread_cost = half_spread * 2  # distance between bid/ask around mid
+        spread_cost = half_spread * 2 * size  # distance between bid/ask around mid scaled by size
         self._spread_paid += spread_cost
-        self._slippage_paid += abs(slippage)
+        self._slippage_paid += abs(slippage) * size
         return exec_price
 
     def _execute_market(self, action: OrderAction) -> None:
-        price = self._execution_price(action.side)
+        price = self._execution_price(action.side, action.size)
         self._fill(order_type="market", side=action.side, size=action.size, price=price)
 
     def _submit_limit(self, action: OrderAction) -> None:
