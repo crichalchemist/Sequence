@@ -137,8 +137,9 @@ class A3CAgent:
         self.device = torch.device(
             a3c_cfg.device if a3c_cfg.device != "cuda" or torch.cuda.is_available() else "cpu"
         )
+        self.shared_device = torch.device("cpu")
 
-        self.global_model = ActorCriticNetwork(model_cfg, action_dim).to(self.device)
+        self.global_model = ActorCriticNetwork(model_cfg, action_dim).to(self.shared_device)
         self.global_model.share_memory()
         self.optimizer = SharedAdam(
             self.global_model.parameters(),
@@ -245,15 +246,17 @@ class A3CAgent:
                 total_loss = policy_loss + self.cfg.value_loss_coef * value_loss - self.cfg.entropy_coef * entropy_loss
 
                 self.optimizer.zero_grad()
+                local_model.zero_grad()
                 total_loss.backward()
                 if self.cfg.max_grad_norm:
                     torch.nn.utils.clip_grad_norm_(local_model.parameters(), self.cfg.max_grad_norm)
 
                 for global_param, local_param in zip(self.global_model.parameters(), local_model.parameters()):
+                    local_grad = None if local_param.grad is None else local_param.grad.detach().to(self.shared_device)
                     if global_param.grad is None:
-                        global_param.grad = local_param.grad
+                        global_param.grad = local_grad
                     else:
-                        global_param.grad.copy_(local_param.grad)
+                        global_param.grad.copy_(local_grad)
 
                 self.optimizer.step()
                 local_model.load_state_dict(self.global_model.state_dict())
