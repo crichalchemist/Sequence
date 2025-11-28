@@ -6,17 +6,19 @@ Example:
 """
 
 import argparse
+import hashlib
+import json
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Iterator
+from typing import Dict, Iterator, Optional
 
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 
-BASE_URL = "http://data.gdeltproject.org/gdeltv2"
+BASE_URL = "https://data.gdeltproject.org/gdeltv2"
 
 
 def parse_date(value: str) -> datetime:
@@ -59,6 +61,14 @@ def latest_available_end(resolution: str, step_minutes: int) -> datetime:
     return floor_to_step(latest_slot, step_minutes)
 
 
+def sha256_bytes(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def sha256_file(path: Path) -> str:
+    return sha256_bytes(path.read_bytes())
+
+
 def download_file(
     session: requests.Session,
     url: str,
@@ -67,16 +77,38 @@ def download_file(
     timeout: int,
     max_retries: int,
     backoff: float,
+    expected_checksum: Optional[str],
 ) -> None:
     if dest.exists() and not overwrite:
-        print(f"[skip] exists {dest.name}")
-        return
+        if expected_checksum:
+            local_checksum = sha256_file(dest)
+            if local_checksum == expected_checksum:
+                print(f"[skip] exists {dest.name} (checksum verified)")
+                return
+            print(
+                f"[warn] exists {dest.name} (checksum mismatch: local {local_checksum} vs expected {expected_checksum}); re-downloading"
+            )
+            dest.unlink()
+        else:
+            print(f"[skip] exists {dest.name} (no checksum provided)")
+            return
     for attempt in range(1, max_retries + 1):
         try:
             resp = session.get(url, timeout=timeout)
             if resp.status_code == 200:
-                dest.write_bytes(resp.content)
-                print(f"[ok]   {dest.name}")
+                content = resp.content
+                if expected_checksum:
+                    checksum = sha256_bytes(content)
+                    if checksum != expected_checksum:
+                        print(
+                            f"[fail] {dest.name} checksum mismatch (got {checksum}, expected {expected_checksum})"
+                        )
+                        # Treat as retryable corruption rather than accepting bad data.
+                        raise ValueError("checksum mismatch")
+                    print(f"[ok]   {dest.name} (checksum verified)")
+                else:
+                    print(f"[ok]   {dest.name} (no checksum provided)")
+                dest.write_bytes(content)
                 return
             print(f"[warn] {dest.name} -> HTTP {resp.status_code}")
         except Exception as exc:
@@ -87,6 +119,19 @@ def download_file(
             time.sleep(sleep_time)
 
     print(f"[fail] {dest.name} after {max_retries} attempts")
+
+
+def load_checksums(checksum_file: Optional[str]) -> Dict[str, str]:
+    if not checksum_file:
+        return {}
+    path = Path(checksum_file)
+    if not path.exists():
+        raise FileNotFoundError(f"Checksum file not found: {path}")
+    with path.open("r", encoding="utf-8") as handle:
+        data = json.load(handle)
+    if not isinstance(data, dict):
+        raise ValueError("Checksum file must contain a JSON object mapping filenames to SHA256 values")
+    return {str(key): str(value) for key, value in data.items()}
 
 
 def main():
@@ -105,10 +150,18 @@ def main():
     parser.add_argument("--timeout", type=int, default=10, help="HTTP timeout per request (seconds)")
     parser.add_argument("--max-retries", type=int, default=3, help="Max attempts per file before giving up")
     parser.add_argument("--retry-backoff", type=float, default=2.0, help="Seconds multiplied by attempt number between retries")
+    parser.add_argument(
+        "--checksum-file",
+        type=str,
+        default=None,
+        help="Optional JSON mapping filenames to SHA256 digests for verification",
+    )
     args = parser.parse_args()
 
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
+
+    checksum_map = load_checksums(args.checksum_file)
 
     start_dt = datetime(args.start_date.year, args.start_date.month, args.start_date.day)
     end_dt = datetime(args.end_date.year, args.end_date.month, args.end_date.day, 23, 59, 59)
@@ -134,6 +187,7 @@ def main():
         formatter = lambda dt: dt.strftime("%Y%m%d%H%M%S")
 
     session = requests.Session()
+    session.verify = True  # enforce TLS verification
     retry_cfg = Retry(total=0)
     adapter = HTTPAdapter(max_retries=retry_cfg)
     session.mount("http://", adapter)
@@ -144,6 +198,7 @@ def main():
         filename = f"{stamp}.gkg.csv.zip"
         url = f"{BASE_URL}/{filename}"
         dest = out_dir / filename
+        expected_checksum = checksum_map.get(filename)
         download_file(
             session,
             url,
@@ -152,6 +207,7 @@ def main():
             timeout=args.timeout,
             max_retries=args.max_retries,
             backoff=args.retry_backoff,
+            expected_checksum=expected_checksum,
         )
 
 
