@@ -10,3 +10,5 @@ datasets>=2.19.0
 transformers>=4.38.0
 peft>=0.13.2
 bitsandbytes>=0.43.3
+pytest>=7.4.0
+testcontainers>=4.6.0
