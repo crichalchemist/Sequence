@@ -93,9 +93,10 @@ def main():
             flat_threshold = args.flat_threshold
             train_ratio = args.train_ratio
             val_ratio = args.val_ratio
+            batch_size = args.batch_size
 
         try:
-            pair_name, loaders = process_pair(pair, PrepArgs)
+            pair_name, loaders = process_pair(pair, PrepArgs, batch_size=args.batch_size)
         except Exception as exc:
             print(f"[error] data prep failed for {pair}: {exc}")
             continue
