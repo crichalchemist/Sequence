@@ -71,6 +71,8 @@ def download_pair(
 ) -> Tuple[str, Optional[Path]]:
     ticker = pair_to_ticker(pair)
     adj_start, adj_end = _cap_intraday_range(start, end, interval)
+    out_dir = output_root / pair
+    out_dir.mkdir(parents=True, exist_ok=True)
     df = yf.download(ticker, start=adj_start, end=adj_end, interval=interval, progress=False, group_by="ticker")
     if df.empty and interval != "1d":
         # Fallback to daily if intraday not available.
@@ -84,8 +86,6 @@ def download_pair(
 
     df = df.reset_index()
     df.columns = [c[1] if isinstance(c, tuple) else c for c in df.columns]  # flatten MultiIndex if present
-    out_dir = output_root / pair
-    out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / f"{pair}_{interval_used}.csv"
     df.to_csv(out_path, index=False)
     return pair, out_path

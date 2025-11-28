@@ -207,6 +207,9 @@ def run_yfinance_download(args) -> None:
     ]
     try:
         subprocess.run(cmd, check=True, cwd=ROOT)
+        # Ensure pair folders exist even if download returned empty.
+        for pair in [p.strip().lower() for p in args.pairs.split(",") if p.strip()]:
+            (Path(output_root) / pair).mkdir(parents=True, exist_ok=True)
     except Exception as exc:  # pragma: no cover - defensive
         print(f"[warn] yfinance download failed: {exc}")
 
