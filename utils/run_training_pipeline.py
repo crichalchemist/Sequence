@@ -111,6 +111,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--gdelt-timeout", type=int, default=10, help="HTTP timeout per GDELT request (seconds).")
     parser.add_argument("--gdelt-max-retries", type=int, default=3, help="Retries per GDELT file.")
     parser.add_argument("--gdelt-retry-backoff", type=float, default=2.0, help="Backoff seconds multiplied by attempt.")
+    parser.add_argument(
+        "--delete-input-zips",
+        action="store_true",
+        help="After a pair finishes training/eval, delete its input zip files to reclaim disk.",
+    )
     return parser.parse_args()
 
 
@@ -125,6 +130,27 @@ def maybe_prompt_for_more(queue: List[str]) -> List[str]:
         if p and p not in queue:
             queue.append(p)
     return queue
+
+
+def cleanup_pair_zips(pair: str, input_root: Path, years: Optional[str]) -> None:
+    root = Path(input_root)
+    target_dir = root / pair
+    if not target_dir.exists():
+        return
+    filters = None
+    if years:
+        filters = {y.strip() for y in years.split(",") if y.strip()}
+    removed = 0
+    for zp in target_dir.glob("*.zip"):
+        if filters and not any(y in zp.name for y in filters):
+            continue
+        try:
+            zp.unlink()
+            removed += 1
+        except Exception as exc:  # pragma: no cover - defensive
+            print(f"[warn] could not delete {zp}: {exc}")
+    if removed:
+        print(f"[info] deleted {removed} zip(s) for {pair} under {target_dir}")
 
 
 def maybe_offer_game(enabled: bool) -> None:
@@ -271,6 +297,9 @@ def main() -> None:
         if not args.skip_eval:
             metrics = evaluate_model(model, test_loader, task_type=args.task_type)
             print(f"[eval] {pair_name}: {metrics}")
+
+        if args.delete_input_zips:
+            cleanup_pair_zips(pair_name, Path(args.input_root), args.years)
 
         if args.no_pause:
             continue
