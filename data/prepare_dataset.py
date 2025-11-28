@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from config.config import DataConfig
+from config.config import DataConfig, FeatureConfig
 from data.agent_data import DataAgent
 from features.agent_features import build_feature_frame
 
@@ -33,6 +33,18 @@ def parse_args():
     parser.add_argument("--flat-threshold", type=float, default=0.0001, help="Flat class threshold for log returns")
     parser.add_argument("--train-ratio", type=float, default=0.7, help="Train fraction (time-ordered)")
     parser.add_argument("--val-ratio", type=float, default=0.15, help="Validation fraction (time-ordered)")
+    parser.add_argument("--feature-groups", default="all", help="Comma-separated feature groups to include or 'all'")
+    parser.add_argument("--exclude-feature-groups", default=None, help="Comma-separated feature groups to drop")
+    parser.add_argument("--sma-windows", default="10,20,50", help="Comma-separated SMA window lengths")
+    parser.add_argument("--ema-windows", default="10,20,50", help="Comma-separated EMA spans")
+    parser.add_argument("--rsi-window", type=int, default=14, help="Window length for RSI")
+    parser.add_argument("--bollinger-window", type=int, default=20, help="Window length for Bollinger bands")
+    parser.add_argument("--bollinger-num-std", type=float, default=2.0, help="Std dev multiplier for Bollinger bands")
+    parser.add_argument("--atr-window", type=int, default=14, help="Window length for ATR")
+    parser.add_argument("--short-vol-window", type=int, default=10, help="Short window for volatility clustering")
+    parser.add_argument("--long-vol-window", type=int, default=50, help="Long window for volatility clustering")
+    parser.add_argument("--spread-windows", default="20", help="Comma-separated windows for normalized spread stats")
+    parser.add_argument("--imbalance-smoothing", type=int, default=5, help="Rolling mean window for wick/body imbalance")
     return parser.parse_args()
 
 
@@ -111,7 +123,28 @@ def process_pair(pair: str, args):
         input_root = (ROOT / input_root).resolve()
 
     raw_df = _load_pair_data(pair, input_root, years)
-    feature_df = build_feature_frame(raw_df)
+
+    include_groups = None if args.feature_groups.lower() == "all" else [g.strip() for g in args.feature_groups.split(",") if g.strip()]
+    exclude_groups = (
+        [g.strip() for g in args.exclude_feature_groups.split(",") if g.strip()]
+        if args.exclude_feature_groups
+        else None
+    )
+    feature_cfg = FeatureConfig(
+        sma_windows=[int(x) for x in args.sma_windows.split(",") if x.strip()],
+        ema_windows=[int(x) for x in args.ema_windows.split(",") if x.strip()],
+        rsi_window=args.rsi_window,
+        bollinger_window=args.bollinger_window,
+        bollinger_num_std=args.bollinger_num_std,
+        atr_window=args.atr_window,
+        short_vol_window=args.short_vol_window,
+        long_vol_window=args.long_vol_window,
+        spread_windows=[int(x) for x in args.spread_windows.split(",") if x.strip()],
+        imbalance_smoothing=args.imbalance_smoothing,
+        include_groups=include_groups,
+        exclude_groups=exclude_groups,
+    )
+    feature_df = build_feature_frame(raw_df, config=feature_cfg)
     feature_df["datetime"] = pd.to_datetime(feature_df["datetime"])
 
     train_range, val_range, test_range = _compute_time_ranges(

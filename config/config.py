@@ -3,6 +3,24 @@ from typing import List, Optional, Tuple
 
 
 @dataclass
+class FeatureConfig:
+    """Configuration for feature engineering windows and toggles."""
+
+    sma_windows: List[int] = field(default_factory=lambda: [10, 20, 50])
+    ema_windows: List[int] = field(default_factory=lambda: [10, 20, 50])
+    rsi_window: int = 14
+    bollinger_window: int = 20
+    bollinger_num_std: float = 2.0
+    atr_window: int = 14
+    short_vol_window: int = 10
+    long_vol_window: int = 50
+    spread_windows: List[int] = field(default_factory=lambda: [20])
+    imbalance_smoothing: int = 5
+    include_groups: Optional[List[str]] = None
+    exclude_groups: Optional[List[str]] = None
+
+
+@dataclass
 class DataConfig:
     csv_path: str
     datetime_column: str = "datetime"
