@@ -9,7 +9,10 @@ from models.signal_policy import SignalPolicyAgent
 
 
 def _collect_outputs(
-    model: HybridCNNLSTMAttention, loader: DataLoader, device: torch.device
+    model: HybridCNNLSTMAttention,
+    loader: DataLoader,
+    device: torch.device,
+    task_type: str,
 ) -> Tuple[np.ndarray, np.ndarray]:
     model.eval()
     preds: List[np.ndarray] = []
@@ -18,8 +21,9 @@ def _collect_outputs(
         for x, y in loader:
             x = x.to(device)
             y = y.to(device)
-            logits, _ = model(x)
-            preds.append(logits.detach().cpu().numpy())
+            outputs, _ = model(x)
+            head = outputs["direction_logits"] if task_type == "classification" else outputs["return"]
+            preds.append(head.detach().cpu().numpy())
             targets.append(y.detach().cpu().numpy())
     return np.concatenate(preds), np.concatenate(targets)
 
@@ -73,7 +77,7 @@ def evaluate_model(
     model: HybridCNNLSTMAttention, loader: DataLoader, task_type: str = "classification"
 ) -> Dict[str, float]:
     device = next(model.parameters()).device
-    logits_or_preds, targets = _collect_outputs(model, loader, device)
+    logits_or_preds, targets = _collect_outputs(model, loader, device, task_type)
     if task_type == "classification":
         return classification_metrics(logits_or_preds, targets)
     return regression_metrics(logits_or_preds, targets)

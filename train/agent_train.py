@@ -31,6 +31,12 @@ def _regression_rmse(preds: torch.Tensor, targets: torch.Tensor) -> float:
     return torch.sqrt(mse).item()
 
 
+def _select_outputs(outputs: Dict[str, torch.Tensor], task_type: str) -> torch.Tensor:
+    if task_type == "classification":
+        return outputs["direction_logits"]
+    return outputs["return"]
+
+
 def _align_regression(preds: torch.Tensor, targets: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
     preds = preds.squeeze(-1)
     targets = targets.squeeze(-1)
@@ -51,7 +57,8 @@ def _evaluate(
     with torch.no_grad():
         for batch in loader:
             x, y = _to_device(batch, device)
-            logits, _ = model(x)
+            outputs, _ = model(x)
+            logits = _select_outputs(outputs, task_type)
             if task_type == "regression":
                 logits, y = _align_regression(logits, y)
             loss = loss_fn(logits, y)
@@ -95,7 +102,8 @@ def train_model(
         running_loss = 0.0
         for step, batch in enumerate(train_loader, start=1):
             x, y = _to_device(batch, device)
-            logits, _ = model(x)
+            outputs, _ = model(x)
+            logits = _select_outputs(outputs, task_type)
             if task_type == "regression":
                 logits, y = _align_regression(logits, y)
             loss = loss_fn(logits, y)

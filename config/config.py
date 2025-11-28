@@ -27,6 +27,18 @@ class ModelConfig:
     dropout: float = 0.1
     num_classes: Optional[int] = 3  # set to None for regression
     output_dim: int = 1  # used for regression
+    bidirectional: bool = True
+    num_dir_classes: Optional[int] = None
+    return_dim: Optional[int] = None
+    num_volatility_classes: int = 2
+
+    def __post_init__(self) -> None:
+        # Preserve backward compatibility with older configs that only specify
+        # num_classes/output_dim while allowing explicit head dimensions.
+        if self.num_dir_classes is None:
+            self.num_dir_classes = self.num_classes or 3
+        if self.return_dim is None:
+            self.return_dim = self.output_dim
 
 
 @dataclass
