@@ -10,6 +10,11 @@ This repository trains and evaluates a foreign-exchange forecasting model on min
 4) Optional sentiment: add `--run-gdelt-download` to pull GDELT GKG files before training. [Leetaru & Schrodt 2013]
 5) Optional mini-game: when prompted during training, press `y` to launch; quit with `Q` (may slow training).
 
+### Intrinsic-time bars (directional-change)
+- Swap minute bars for intrinsic-time bars based on directional-change thresholds using `--intrinsic-time` and configure the move sizes with `--dc-threshold-up` / `--dc-threshold-down`.
+- Example: `python data/prepare_dataset.py --pairs gbpusd --intrinsic-time --dc-threshold-up 0.0005`
+- The same flags are available in `utils/run_training_pipeline.py` to keep training/eval consistent.
+
 ## Finetuning NovaSky models (LLMs)
 - Resource-friendly (recommended on limited VRAM): `python train/run_finetune_novasky_lora.py --model-name-or-path /path/to/NovaSky-AI/Sky-T1-32B-Flash --output-dir models/novasky-lora --use-4bit --bf16 --per-device-train-batch-size 1 --gradient-accumulation-steps 32 --max-length 1024`
 - Full finetune (heavier): `python train/run_finetune_novasky.py --model-name-or-path /path/to/NovaSky-AI/Sky-T1-32B-Flash --output-dir models/novasky-full --per-device-train-batch-size 1 --gradient-accumulation-steps 32 --max-length 1024`
