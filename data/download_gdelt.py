@@ -12,7 +12,7 @@ import importlib
 import importlib.util
 import json
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional, Tuple
 
@@ -59,7 +59,9 @@ def floor_to_step(dt: datetime, step_minutes: int) -> datetime:
 def _utcnow_naive() -> datetime:
     """Return the current UTC time as a naive datetime without deprecation warnings."""
 
-    return datetime.now(datetime.UTC).replace(tzinfo=None)
+    # datetime.UTC is only available in Python 3.11+; timezone.utc keeps compatibility
+    # while ensuring we generate a naive UTC timestamp for downstream formatting.
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 def latest_available_end(resolution: str, step_minutes: int) -> datetime:
@@ -238,6 +240,19 @@ def main():
     parser.add_argument("--max-retries", type=int, default=3, help="Max attempts per file before giving up")
     parser.add_argument("--retry-backoff", type=float, default=2.0, help="Seconds multiplied by attempt number between retries")
     parser.add_argument(
+        "--ca-bundle",
+        default=None,
+        help="Optional CA bundle path for TLS verification when using private roots",
+    )
+    parser.add_argument(
+        "--insecure",
+        action="store_true",
+        help=(
+            "Disable TLS certificate verification. Only use when mirrors have hostname mismatches "
+            "and you accept the risk."
+        ),
+    )
+    parser.add_argument(
         "--checksum-file",
         type=str,
         default=None,
@@ -299,7 +314,13 @@ def main():
         formatter = lambda dt: dt.strftime("%Y%m%d%H%M%S")
 
     session = requests.Session()
-    session.verify = True  # enforce TLS verification
+    if args.insecure:
+        print("[warn] TLS verification disabled; downloads are susceptible to MITM attacks.")
+        session.verify = False
+    elif args.ca_bundle:
+        session.verify = args.ca_bundle
+    else:
+        session.verify = True  # enforce TLS verification
     retry_cfg = Retry(total=0)
     adapter = HTTPAdapter(max_retries=retry_cfg)
     session.mount("http://", adapter)
