@@ -1,12 +1,10 @@
-"""Stream parser for GDELT GKG CSV files."""
-from __future__ import annotations
-
-import csv
 """Stream parser for GDELT GKG files."""
 from __future__ import annotations
 
 import csv
 import gzip
+import io
+import zipfile
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -63,30 +61,59 @@ class GDELTParser:
     IDX_GCAM = 15
 
     def parse_file(self, path: Path) -> Iterator[GDELTRecord]:
+        if path.suffix == ".zip":
+            yield from self._parse_zip(path)
+            return
+
         opener = gzip.open if path.suffix == ".gz" else open
         with opener(path, "rt", encoding="utf-8", errors="ignore") as f:
-            reader = csv.reader(f, delimiter="\t")
-            for row in reader:
-                if len(row) <= self.IDX_TONE:
-                    continue
-                dt = self._parse_datetime(row[self.IDX_DATE])
-                themes = self._parse_themes(row[self.IDX_THEMES], row[self.IDX_ENHANCED_THEMES])
-                counts = self._parse_counts(row[self.IDX_COUNTS])
-                tone = self._parse_tone(row[self.IDX_TONE])
-                persons = self._parse_list(row[self.IDX_PERSONS])
-                orgs = self._parse_list(row[self.IDX_ORGS])
-                locations = self._parse_locations(row[self.IDX_LOCATIONS])
-                gcam = self._parse_gcam(row[self.IDX_GCAM]) if len(row) > self.IDX_GCAM else {}
-                yield GDELTRecord(
-                    datetime=dt,
-                    themes=themes,
-                    counts=counts,
-                    tone=tone,
-                    persons=persons,
-                    orgs=orgs,
-                    locations=locations,
-                    gcam=gcam,
-                )
+            yield from self._parse_rows(f)
+
+    def _parse_zip(self, path: Path) -> Iterator[GDELTRecord]:
+        with zipfile.ZipFile(path) as zip_file:
+            member = self._select_zip_member(zip_file)
+            if member is None:
+                return
+            with zip_file.open(member, "r") as raw_member:
+                with io.TextIOWrapper(raw_member, encoding="utf-8", errors="ignore") as text_member:
+                    yield from self._parse_rows(text_member)
+
+    def _select_zip_member(self, zip_file: zipfile.ZipFile) -> Optional[zipfile.ZipInfo]:
+        for member in zip_file.infolist():
+            if member.is_dir():
+                continue
+            if member.filename.lower().endswith(".gkgv2.csv"):
+                return member
+        for member in zip_file.infolist():
+            if member.is_dir():
+                continue
+            if member.filename.lower().endswith(".csv"):
+                return member
+        return None
+
+    def _parse_rows(self, file_obj: Iterable[str]) -> Iterator[GDELTRecord]:
+        reader = csv.reader(file_obj, delimiter="\t")
+        for row in reader:
+            if len(row) <= self.IDX_TONE:
+                continue
+            dt = self._parse_datetime(row[self.IDX_DATE])
+            themes = self._parse_themes(row[self.IDX_THEMES], row[self.IDX_ENHANCED_THEMES])
+            counts = self._parse_counts(row[self.IDX_COUNTS])
+            tone = self._parse_tone(row[self.IDX_TONE])
+            persons = self._parse_list(row[self.IDX_PERSONS])
+            orgs = self._parse_list(row[self.IDX_ORGS])
+            locations = self._parse_locations(row[self.IDX_LOCATIONS])
+            gcam = self._parse_gcam(row[self.IDX_GCAM]) if len(row) > self.IDX_GCAM else {}
+            yield GDELTRecord(
+                datetime=dt,
+                themes=themes,
+                counts=counts,
+                tone=tone,
+                persons=persons,
+                orgs=orgs,
+                locations=locations,
+                gcam=gcam,
+            )
 
     @staticmethod
     def _parse_datetime(value: str) -> datetime:
