@@ -165,7 +165,6 @@ def process_pair(pair: str, args, batch_size: Optional[int] = None):
         include_groups=include_groups,
         exclude_groups=exclude_groups,
     )
-    feature_df = build_feature_frame(raw_df, config=feature_cfg)
     df_for_features = raw_df
     if args.intrinsic_time:
         df_for_features = build_intrinsic_time_bars(
@@ -178,7 +177,7 @@ def process_pair(pair: str, args, batch_size: Optional[int] = None):
             f"DC thresholds up={args.dc_threshold_up}, down={args.dc_threshold_down or args.dc_threshold_up}"
         )
 
-    feature_df = build_feature_frame(df_for_features)
+    feature_df = build_feature_frame(df_for_features, config=feature_cfg)
     feature_df["datetime"] = pd.to_datetime(feature_df["datetime"])
 
     train_range, val_range, test_range = _compute_time_ranges(

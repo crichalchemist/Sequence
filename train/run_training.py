@@ -54,6 +54,11 @@ def parse_args():
     parser.add_argument("--weight-decay", type=float, default=0.0)
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--checkpoint-path", default="models/best_model.pt")
+    parser.add_argument(
+        "--disable-risk",
+        action="store_true",
+        help="Disable risk manager gating during signal pretraining.",
+    )
     parser.add_argument("--max-return-weight", type=float, default=1.0)
     parser.add_argument("--topk-return-weight", type=float, default=1.0)
     parser.add_argument("--topk-price-weight", type=float, default=1.0)
@@ -124,14 +129,13 @@ def main():
             learning_rate=args.learning_rate,
             weight_decay=args.weight_decay,
             device=device,
-            checkpoint_path=str(ckpt_path),
             max_return_weight=args.max_return_weight,
             topk_return_weight=args.topk_return_weight,
             topk_price_weight=args.topk_price_weight,
             sell_now_weight=args.sell_now_weight,
             checkpoint_path=str(signal_ckpt),
         )
-        train_cfg.risk.enabled = not args.disable_risk
+        pretrain_cfg.risk.enabled = not args.disable_risk
 
         signal_model = SignalModel(signal_cfg)
         signal_history = pretrain_signal_model(
