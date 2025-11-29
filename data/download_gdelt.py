@@ -11,7 +11,7 @@ import importlib
 import importlib.util
 import json
 import time
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, Iterator, Optional, Tuple
 
@@ -20,7 +20,7 @@ BASE_URL = "https://data.gdeltproject.org/gdeltv2"
 
 
 def parse_date(value: str) -> datetime:
-    return datetime.strptime(value, "%Y-%m-%d")
+    return datetime.strptime(value, "%Y-%m-%d").replace(tzinfo=UTC)
 
 
 def iter_timestamps(start: datetime, end: datetime, step_minutes: int = 15) -> Iterator[datetime]:
@@ -52,9 +52,9 @@ def latest_available_end(resolution: str, step_minutes: int) -> datetime:
     GDELT only publishes 15-minute batches a few minutes after the window ends
     and daily files the following day. Cap requests to avoid 404s on future windows.
     """
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
     if resolution == "daily":
-        return datetime(now.year, now.month, now.day) - timedelta(seconds=1)
+        return datetime(now.year, now.month, now.day, tzinfo=UTC) - timedelta(seconds=1)
     latest_slot = now - timedelta(minutes=step_minutes)
     return floor_to_step(latest_slot, step_minutes)
 
@@ -168,7 +168,7 @@ def main():
 
     parser = argparse.ArgumentParser(description="Download GDELT 2.1 GKG zip files.")
     parser.add_argument("--start-date", default="2016-01-01", type=parse_date, help="YYYY-MM-DD (UTC) inclusive")
-    parser.add_argument("--end-date", default=datetime.utcnow().strftime("%Y-%m-%d"), type=parse_date, help="YYYY-MM-DD (UTC) inclusive")
+    parser.add_argument("--end-date", default=datetime.now(UTC).strftime("%Y-%m-%d"), type=parse_date, help="YYYY-MM-DD (UTC) inclusive")
     parser.add_argument(
         "--resolution",
         choices=["daily", "15min"],
@@ -194,8 +194,8 @@ def main():
 
     checksum_map = load_checksums(args.checksum_file)
 
-    start_dt = datetime(args.start_date.year, args.start_date.month, args.start_date.day)
-    end_dt = datetime(args.end_date.year, args.end_date.month, args.end_date.day, 23, 59, 59)
+    start_dt = args.start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+    end_dt = args.end_date.replace(hour=23, minute=59, second=59, microsecond=0)
     max_end_dt = latest_available_end(args.resolution, args.step_minutes)
 
     if args.resolution == "15min":
