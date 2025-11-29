@@ -1,6 +1,6 @@
 """
-Tiny terminal game to pass the time while training runs.
-Move with arrow keys or WASD; press SPACE to shoot falling blocks.
+Tiny terminal endless runner to pass the time while training runs.
+Tap SPACE to jump over incoming obstacles; stay on the ground otherwise.
 Quit with Q.
 """
 
@@ -8,25 +8,25 @@ import curses
 import random
 import time
 
-
 PLAYER = "@"
-BLOCK = "#"
-BULLET = "|"
+OBSTACLE = "#"
 EMPTY = " "
 
 TICK = 0.08
-SPAWN_CHANCE = 0.15
+SPAWN_CHANCE = 0.12
+JUMP_STRENGTH = -3
+GRAVITY = 1
 
 
 def clamp(val: int, lo: int, hi: int) -> int:
     return max(lo, min(hi, val))
 
 
-def draw(stdscr, grid, score, lives) -> None:
+def draw(stdscr, grid, score, jump_prompt: str) -> None:
     stdscr.erase()
     for y, row in enumerate(grid):
         stdscr.addstr(y, 0, "".join(row))
-    stdscr.addstr(len(grid), 0, f"Score: {score}  Lives: {lives}  (Q quits)")
+    stdscr.addstr(len(grid), 0, f"Score: {score}  {jump_prompt}  (Q quits)")
     stdscr.refresh()
 
 
@@ -39,79 +39,49 @@ def run_game(stdscr) -> None:
     height = max(10, height - 2)
     width = max(20, width - 2)
 
-    player_x = width // 2
-    player_y = height - 1
-    blocks = []
-    bullets = []
+    ground_y = height - 2
+    player_x = width // 6
+    player_y = ground_y
+    velocity_y = 0
+    obstacles: list[tuple[int, int]] = []  # (y, x)
     score = 0
-    lives = 3
+    jump_prompt = "Press SPACE to jump"
+    game_over = False
 
-    def spawn_block():
-        x = random.randint(0, width - 1)
-        blocks.append([0, x])
-
-    while lives > 0:
+    while not game_over:
         key = stdscr.getch()
         if key != -1:
             if key in (ord("q"), ord("Q")):
                 break
-            if key in (curses.KEY_LEFT, ord("a")):
-                player_x = clamp(player_x - 1, 0, width - 1)
-            if key in (curses.KEY_RIGHT, ord("d")):
-                player_x = clamp(player_x + 1, 0, width - 1)
-            if key in (curses.KEY_UP, ord("w")):
-                player_y = clamp(player_y - 1, 0, height - 1)
-            if key in (curses.KEY_DOWN, ord("s")):
-                player_y = clamp(player_y + 1, 0, height - 1)
-            if key == ord(" "):
-                bullets.append([player_y - 1, player_x])
+            if key == ord(" ") and player_y >= ground_y:
+                velocity_y = JUMP_STRENGTH
 
         if random.random() < SPAWN_CHANCE:
-            spawn_block()
+            obstacles.append((ground_y, width - 1))
 
-        # Move bullets up.
-        new_bullets = []
-        for y, x in bullets:
-            ny = y - 1
-            if ny >= 0:
-                new_bullets.append([ny, x])
-        bullets = new_bullets
+        # Apply gravity and update position.
+        velocity_y = clamp(velocity_y + GRAVITY, JUMP_STRENGTH, 4)
+        player_y = clamp(player_y + velocity_y, 0, ground_y)
 
-        # Move blocks down.
-        new_blocks = []
-        for y, x in blocks:
-            ny = y + 1
-            if ny >= height:
-                lives -= 1
-                continue
-            new_blocks.append([ny, x])
-        blocks = new_blocks
-
-        # Handle collisions (bullets vs blocks).
-        hit = set()
-        blocks_after = []
-        for idx, (by, bx) in enumerate(blocks):
-            if any(b for b in bullets if b[0] == by and b[1] == bx):
-                hit.add(idx)
-                score += 5
-        blocks = [b for i, b in enumerate(blocks) if i not in hit]
-        bullets = [b for b in bullets if (b[0], b[1]) not in {(blocks[i][0], blocks[i][1]) for i in range(len(blocks))}]
-
-        # Player collision.
-        for by, bx in blocks:
-            if by == player_y and bx == player_x:
-                lives -= 1
-                blocks = [b for b in blocks if not (b[0] == by and b[1] == bx)]
+        # Move obstacles left; earn points when safely passed.
+        new_obstacles = []
+        for oy, ox in obstacles:
+            nx = ox - 1
+            if nx == player_x and oy == player_y:
+                game_over = True
+            if nx >= 0:
+                new_obstacles.append((oy, nx))
+            else:
+                score += 1
+        obstacles = new_obstacles
 
         grid = [[EMPTY for _ in range(width)] for _ in range(height)]
-        for y, x in blocks:
-            grid[y][x] = BLOCK
-        for y, x in bullets:
-            if 0 <= y < height:
-                grid[y][x] = BULLET
+        for oy, ox in obstacles:
+            grid[oy][ox] = OBSTACLE
+        grid[ground_y] = ["_" for _ in range(width)]
         grid[player_y][player_x] = PLAYER
 
-        draw(stdscr, grid, score, lives)
+        draw(stdscr, grid, score, jump_prompt)
         time.sleep(TICK)
 
     stdscr.nodelay(False)
