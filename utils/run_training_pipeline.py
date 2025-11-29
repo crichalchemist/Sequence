@@ -130,6 +130,26 @@ def parse_args() -> argparse.Namespace:
         default="daily",
         help="GDELT download cadence.",
     )
+    parser.add_argument(
+        "--gdelt-mirror",
+        default="gdelt",
+        help=(
+            "Mirror to use for GDELT downloads (gdelt, hf-maxlong-2022, hf-olm, hf-andreas-helgesson). "
+            "Use a Hugging Face mirror if the primary endpoint returns errors."
+        ),
+    )
+    parser.add_argument(
+        "--gdelt-mirror-fallbacks",
+        default="",
+        help=(
+            "Comma-separated list of GDELT mirrors to try if the primary source fails."
+        ),
+    )
+    parser.add_argument(
+        "--gdelt-base-url",
+        default=None,
+        help="Override the GDELT download base URL (https:// only). Takes precedence over --gdelt-mirror.",
+    )
     parser.add_argument("--gdelt-step-minutes", type=int, default=15, help="Cadence for 15min resolution.")
     parser.add_argument("--gdelt-out-dir", default="data/gdelt", help="Destination folder for GDELT zips.")
     parser.add_argument("--gdelt-overwrite", action="store_true", help="Re-download even if files exist.")
@@ -350,7 +370,7 @@ def maybe_offer_game(enabled: bool) -> None:
 
 
 def run_gdelt_download(args) -> None:
-    end_date = args.gdelt_end_date or datetime.utcnow().strftime("%Y-%m-%d")
+    end_date = args.gdelt_end_date or datetime.now(datetime.UTC).strftime("%Y-%m-%d")
     cmd = [
         sys.executable,
         str(ROOT / "data" / "download_gdelt.py"),
@@ -360,6 +380,10 @@ def run_gdelt_download(args) -> None:
         end_date,
         "--resolution",
         args.gdelt_resolution,
+        "--mirror",
+        args.gdelt_mirror,
+        "--mirror-fallbacks",
+        args.gdelt_mirror_fallbacks,
         "--step-minutes",
         str(args.gdelt_step_minutes),
         "--out-dir",
@@ -373,6 +397,8 @@ def run_gdelt_download(args) -> None:
     ]
     if args.gdelt_overwrite:
         cmd.append("--overwrite")
+    if args.gdelt_base_url:
+        cmd.extend(["--base-url", args.gdelt_base_url])
     print(
         f"[info] Downloading GDELT to {args.gdelt_out_dir} "
         f"({args.gdelt_resolution}, {args.gdelt_start_date} -> {end_date})"
