@@ -48,12 +48,46 @@ def parse_args():
     parser.add_argument("--flat-threshold", type=float, default=0.0001)
     parser.add_argument("--train-ratio", type=float, default=0.7)
     parser.add_argument("--val-ratio", type=float, default=0.15)
+    parser.add_argument("--feature-groups", default="all", help="Comma-separated feature groups to include or 'all'")
+    parser.add_argument("--exclude-feature-groups", default=None, help="Comma-separated feature groups to drop")
+    parser.add_argument("--sma-windows", default="10,20,50", help="Comma-separated SMA window lengths")
+    parser.add_argument("--ema-windows", default="10,20,50", help="Comma-separated EMA spans")
+    parser.add_argument("--rsi-window", type=int, default=14, help="Window length for RSI")
+    parser.add_argument("--bollinger-window", type=int, default=20, help="Window length for Bollinger bands")
+    parser.add_argument("--bollinger-num-std", type=float, default=2.0, help="Std dev multiplier for Bollinger bands")
+    parser.add_argument("--atr-window", type=int, default=14, help="Window length for ATR")
+    parser.add_argument("--short-vol-window", type=int, default=10, help="Short window for volatility clustering")
+    parser.add_argument("--long-vol-window", type=int, default=50, help="Long window for volatility clustering")
+    parser.add_argument("--spread-windows", default="20", help="Comma-separated windows for normalized spread stats")
+    parser.add_argument("--imbalance-smoothing", type=int, default=5, help="Rolling mean window for wick/body imbalance")
+    parser.add_argument(
+        "--intrinsic-time",
+        action="store_true",
+        help="Convert minute bars to intrinsic-time bars via directional-change events.",
+    )
+    parser.add_argument(
+        "--dc-threshold-up",
+        type=float,
+        default=0.001,
+        help="Fractional increase needed to flag an upward directional change (e.g., 0.001=0.1%).",
+    )
+    parser.add_argument(
+        "--dc-threshold-down",
+        type=float,
+        default=None,
+        help="Fractional decrease needed to flag a downward directional change. Defaults to dc-threshold-up.",
+    )
     parser.add_argument("--batch-size", type=int, default=64)
     parser.add_argument("--epochs", type=int, default=10)
     parser.add_argument("--learning-rate", type=float, default=1e-3)
     parser.add_argument("--weight-decay", type=float, default=0.0)
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--checkpoint-path", default="models/best_model.pt")
+    parser.add_argument(
+        "--disable-risk",
+        action="store_true",
+        help="Disable risk manager gating during signal pretraining.",
+    )
     parser.add_argument("--max-return-weight", type=float, default=1.0)
     parser.add_argument("--topk-return-weight", type=float, default=1.0)
     parser.add_argument("--topk-price-weight", type=float, default=1.0)
@@ -94,6 +128,21 @@ def main():
             train_ratio = args.train_ratio
             val_ratio = args.val_ratio
             batch_size = args.batch_size
+            feature_groups = args.feature_groups
+            exclude_feature_groups = args.exclude_feature_groups
+            sma_windows = args.sma_windows
+            ema_windows = args.ema_windows
+            rsi_window = args.rsi_window
+            bollinger_window = args.bollinger_window
+            bollinger_num_std = args.bollinger_num_std
+            atr_window = args.atr_window
+            short_vol_window = args.short_vol_window
+            long_vol_window = args.long_vol_window
+            spread_windows = args.spread_windows
+            imbalance_smoothing = args.imbalance_smoothing
+            intrinsic_time = args.intrinsic_time
+            dc_threshold_up = args.dc_threshold_up
+            dc_threshold_down = args.dc_threshold_down
 
         try:
             pair_name, loaders = process_pair(pair, PrepArgs, batch_size=args.batch_size)
@@ -124,14 +173,13 @@ def main():
             learning_rate=args.learning_rate,
             weight_decay=args.weight_decay,
             device=device,
-            checkpoint_path=str(ckpt_path),
             max_return_weight=args.max_return_weight,
             topk_return_weight=args.topk_return_weight,
             topk_price_weight=args.topk_price_weight,
             sell_now_weight=args.sell_now_weight,
             checkpoint_path=str(signal_ckpt),
         )
-        train_cfg.risk.enabled = not args.disable_risk
+        pretrain_cfg.risk.enabled = not args.disable_risk
 
         signal_model = SignalModel(signal_cfg)
         signal_history = pretrain_signal_model(

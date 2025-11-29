@@ -64,6 +64,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--flat-threshold", type=float, default=0.0001)
     parser.add_argument("--train-ratio", type=float, default=0.7)
     parser.add_argument("--val-ratio", type=float, default=0.15)
+    parser.add_argument("--feature-groups", default="all", help="Comma-separated feature groups to include or 'all'")
+    parser.add_argument("--exclude-feature-groups", default=None, help="Comma-separated feature groups to drop")
+    parser.add_argument("--sma-windows", default="10,20,50", help="Comma-separated SMA window lengths")
+    parser.add_argument("--ema-windows", default="10,20,50", help="Comma-separated EMA spans")
+    parser.add_argument("--rsi-window", type=int, default=14, help="Window length for RSI")
+    parser.add_argument("--bollinger-window", type=int, default=20, help="Window length for Bollinger bands")
+    parser.add_argument("--bollinger-num-std", type=float, default=2.0, help="Std dev multiplier for Bollinger bands")
+    parser.add_argument("--atr-window", type=int, default=14, help="Window length for ATR")
+    parser.add_argument("--short-vol-window", type=int, default=10, help="Short window for volatility clustering")
+    parser.add_argument("--long-vol-window", type=int, default=50, help="Long window for volatility clustering")
+    parser.add_argument("--spread-windows", default="20", help="Comma-separated windows for normalized spread stats")
+    parser.add_argument("--imbalance-smoothing", type=int, default=5, help="Rolling mean window for wick/body imbalance")
     parser.add_argument(
         "--intrinsic-time",
         action="store_true",
@@ -452,6 +464,21 @@ def main() -> None:
             flat_threshold = args.flat_threshold
             train_ratio = args.train_ratio
             val_ratio = args.val_ratio
+            feature_groups = args.feature_groups
+            exclude_feature_groups = args.exclude_feature_groups
+            sma_windows = args.sma_windows
+            ema_windows = args.ema_windows
+            rsi_window = args.rsi_window
+            bollinger_window = args.bollinger_window
+            bollinger_num_std = args.bollinger_num_std
+            atr_window = args.atr_window
+            short_vol_window = args.short_vol_window
+            long_vol_window = args.long_vol_window
+            spread_windows = args.spread_windows
+            imbalance_smoothing = args.imbalance_smoothing
+            intrinsic_time = args.intrinsic_time
+            dc_threshold_up = args.dc_threshold_up
+            dc_threshold_down = args.dc_threshold_down
 
         try:
             pair_name, loaders = process_pair(pair, PrepArgs)
