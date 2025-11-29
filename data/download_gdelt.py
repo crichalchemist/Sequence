@@ -240,6 +240,19 @@ def main():
     parser.add_argument("--max-retries", type=int, default=3, help="Max attempts per file before giving up")
     parser.add_argument("--retry-backoff", type=float, default=2.0, help="Seconds multiplied by attempt number between retries")
     parser.add_argument(
+        "--ca-bundle",
+        default=None,
+        help="Optional CA bundle path for TLS verification when using private roots",
+    )
+    parser.add_argument(
+        "--insecure",
+        action="store_true",
+        help=(
+            "Disable TLS certificate verification. Only use when mirrors have hostname mismatches "
+            "and you accept the risk."
+        ),
+    )
+    parser.add_argument(
         "--checksum-file",
         type=str,
         default=None,
@@ -301,7 +314,13 @@ def main():
         formatter = lambda dt: dt.strftime("%Y%m%d%H%M%S")
 
     session = requests.Session()
-    session.verify = True  # enforce TLS verification
+    if args.insecure:
+        print("[warn] TLS verification disabled; downloads are susceptible to MITM attacks.")
+        session.verify = False
+    elif args.ca_bundle:
+        session.verify = args.ca_bundle
+    else:
+        session.verify = True  # enforce TLS verification
     retry_cfg = Retry(total=0)
     adapter = HTTPAdapter(max_retries=retry_cfg)
     session.mount("http://", adapter)
