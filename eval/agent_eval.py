@@ -6,6 +6,7 @@ from torch.utils.data import DataLoader
 
 from models.agent_hybrid import HybridCNNLSTMAttention
 from models.signal_policy import SignalPolicyAgent
+from risk.risk_manager import RiskManager
 
 
 def _collect_outputs(
@@ -21,28 +22,18 @@ def _collect_outputs(
     with torch.no_grad():
         for x, y in loader:
             x = x.to(device)
-            y = y.to(device)
-            logits, _ = model(x)
+            outputs, _ = model(x)
+            primary = outputs["primary"]
             if risk_manager:
                 context = risk_manager.build_context(x=x)
                 if task_type == "classification":
-                    logits, reasons = risk_manager.apply_classification_logits(logits, context)
+                    primary, reasons = risk_manager.apply_classification_logits(primary, context)
                 else:
-                    logits, reasons = risk_manager.apply_regression_output(logits, context)
+                    primary, reasons = risk_manager.apply_regression_output(primary, context)
                 risk_manager.log_events(reasons, prefix="eval")
-            if isinstance(y, dict):
-                y_primary = y["primary"].to(device)
-            else:
-                y_primary = y.to(device)
-            outputs, _ = model(x)
-            logits = outputs["primary"]
-            preds.append(logits.detach().cpu().numpy())
+            y_primary = y["primary"].to(device) if isinstance(y, dict) else y.to(device)
+            preds.append(primary.detach().cpu().numpy())
             targets.append(y_primary.detach().cpu().numpy())
-            y = y.to(device)
-            outputs, _ = model(x)
-            head = outputs["direction_logits"] if task_type == "classification" else outputs["return"]
-            preds.append(head.detach().cpu().numpy())
-            targets.append(y.detach().cpu().numpy())
     return np.concatenate(preds), np.concatenate(targets)
 
 
@@ -101,7 +92,6 @@ def evaluate_model(
     logits_or_preds, targets = _collect_outputs(
         model, loader, device, risk_manager=risk_manager, task_type=task_type
     )
-    logits_or_preds, targets = _collect_outputs(model, loader, device, task_type)
     if task_type == "classification":
         return classification_metrics(logits_or_preds, targets)
     return regression_metrics(logits_or_preds, targets)
