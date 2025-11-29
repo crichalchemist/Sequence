@@ -1,5 +1,6 @@
 """
 Downloader for GDELT 2.1 GKG files into a local folder.
+Supports Hugging Face mirrors when gdeltproject.org is unavailable.
 
 Example:
   python data/download_gdelt.py --start-date 2016-01-01 --end-date 2016-01-03 --resolution daily --out-dir data/gdelt
@@ -17,6 +18,14 @@ from typing import Any, Dict, Iterator, Optional, Tuple
 
 
 BASE_URL = "https://data.gdeltproject.org/gdeltv2"
+
+HUGGINGFACE_MIRRORS = {
+    # News headline mirrors for when the primary GDELT endpoint is unavailable.
+    "gdelt": BASE_URL,
+    "hf-maxlong-2022": "https://huggingface.co/datasets/MaxLong/gdelt-news-headlines-2022/resolve/main",
+    "hf-olm": "https://huggingface.co/datasets/olm/gdelt-news-headlines/resolve/main",
+    "hf-andreas-helgesson": "https://huggingface.co/datasets/andreas-helgesson/gdelt-big/resolve/main",
+}
 
 
 def parse_date(value: str) -> datetime:
@@ -163,6 +172,20 @@ def load_checksums(checksum_file: Optional[str]) -> Dict[str, str]:
     return {str(key): str(value) for key, value in data.items()}
 
 
+def resolve_base_url(mirror: str, base_override: Optional[str]) -> str:
+    if base_override:
+        if not base_override.startswith("https://"):
+            raise ValueError("--base-url must start with https:// to enforce TLS verification")
+        return base_override.rstrip("/")
+
+    if mirror not in HUGGINGFACE_MIRRORS:
+        raise ValueError(
+            f"Unknown mirror '{mirror}'. Choose from: {', '.join(sorted(HUGGINGFACE_MIRRORS))}"
+        )
+
+    return HUGGINGFACE_MIRRORS[mirror].rstrip("/")
+
+
 def main():
     requests, HTTPAdapter, Retry = _load_http_dependencies()
 
@@ -174,6 +197,20 @@ def main():
         choices=["daily", "15min"],
         default="daily",
         help="daily = one file per day; 15min = full 15-minute stream",
+    )
+    parser.add_argument(
+        "--mirror",
+        choices=sorted(HUGGINGFACE_MIRRORS.keys()),
+        default="gdelt",
+        help=(
+            "Data source for downloads. Use a Hugging Face mirror when gdeltproject.org is unreliable: "
+            "hf-maxlong-2022, hf-olm, hf-andreas-helgesson"
+        ),
+    )
+    parser.add_argument(
+        "--base-url",
+        default=None,
+        help="Override the download base URL (https:// only). Takes precedence over --mirror.",
     )
     parser.add_argument("--step-minutes", type=int, default=15, help="Cadence between files when --resolution=15min")
     parser.add_argument("--out-dir", default="data/gdelt", help="Destination directory for zip files")
@@ -193,6 +230,8 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
 
     checksum_map = load_checksums(args.checksum_file)
+
+    base_url = resolve_base_url(args.mirror, args.base_url)
 
     start_dt = datetime(args.start_date.year, args.start_date.month, args.start_date.day)
     end_dt = datetime(args.end_date.year, args.end_date.month, args.end_date.day, 23, 59, 59)
@@ -227,7 +266,7 @@ def main():
     for ts in generator:
         stamp = formatter(ts)
         filename = f"{stamp}.gkg.csv.zip"
-        url = f"{BASE_URL}/{filename}"
+        url = f"{base_url}/{filename}"
         dest = out_dir / filename
         expected_checksum = checksum_map.get(filename)
         download_file(
