@@ -170,7 +170,7 @@ def process_pair(pair: str, args, batch_size: Optional[int] = None):
         df_for_features = build_intrinsic_time_bars(
             raw_df,
             up_threshold=args.dc_threshold_up,
-            down_threshold=args.dc_threshold_down,
+            down_threshold=args.dc_threshold_down or args.dc_threshold_up,
         )
         print(
             f"[intrinsic] reduced {len(raw_df):,} -> {len(df_for_features):,} bars using "
