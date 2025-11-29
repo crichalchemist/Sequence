@@ -20,15 +20,12 @@ class TemporalAttention(nn.Module):
         return context, weights
 
 
-class HybridCNNLSTMAttention(nn.Module):
-    """
-    CNN + BiLSTM + temporal attention hybrid model with multi-head outputs.
-    """
+class PriceSequenceEncoder(nn.Module):
+    """CNN + (bi)LSTM + temporal attention encoder returning a single embedding."""
 
-    def __init__(self, cfg: ModelConfig, task_type: str = "classification"):
+    def __init__(self, cfg: ModelConfig):
         super().__init__()
         self.cfg = cfg
-        self.task_type = task_type
 
         padding = cfg.cnn_kernel_size // 2
         self.cnn = nn.Conv1d(
@@ -47,19 +44,11 @@ class HybridCNNLSTMAttention(nn.Module):
         )
 
         lstm_factor = 2 if cfg.bidirectional else 1
-        attn_input_dim = lstm_factor * cfg.hidden_size_lstm + cfg.cnn_num_filters
-        self.attention = TemporalAttention(attn_input_dim, cfg.attention_dim)
-
+        self.output_dim = lstm_factor * cfg.hidden_size_lstm + cfg.cnn_num_filters
+        self.attention = TemporalAttention(self.output_dim, cfg.attention_dim)
         self.dropout = nn.Dropout(cfg.dropout)
-        self.head_direction = nn.Linear(attn_input_dim, cfg.num_dir_classes)
-        self.head_return = nn.Linear(attn_input_dim, cfg.return_dim)
-        self.head_volatility = nn.Linear(attn_input_dim, cfg.num_volatility_classes)
-        self.head_max_return = nn.Linear(attn_input_dim, 1)
-        self.head_topk_returns = nn.Linear(attn_input_dim, cfg.top_k_predictions)
-        self.head_topk_prices = nn.Linear(attn_input_dim, cfg.top_k_predictions)
-        self.head_sell_now = nn.Linear(attn_input_dim, 1) if cfg.predict_sell_now else None
 
-    def forward(self, x: torch.Tensor):
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         # x: [B, T, F]
         lstm_out, _ = self.lstm(x)  # [B, T, H_lstm * (1 or 2)]
 
@@ -70,6 +59,32 @@ class HybridCNNLSTMAttention(nn.Module):
 
         context, attn_weights = self.attention(combined)
         context = self.dropout(context)
+        return context, attn_weights
+
+
+class HybridCNNLSTMAttention(nn.Module):
+    """
+    CNN + BiLSTM + temporal attention hybrid model with multi-head outputs.
+    """
+
+    def __init__(self, cfg: ModelConfig, task_type: str = "classification"):
+        super().__init__()
+        self.cfg = cfg
+        self.task_type = task_type
+
+        self.price_encoder = PriceSequenceEncoder(cfg)
+
+        attn_input_dim = self.price_encoder.output_dim
+        self.head_direction = nn.Linear(attn_input_dim, cfg.num_dir_classes)
+        self.head_return = nn.Linear(attn_input_dim, cfg.return_dim)
+        self.head_volatility = nn.Linear(attn_input_dim, cfg.num_volatility_classes)
+        self.head_max_return = nn.Linear(attn_input_dim, 1)
+        self.head_topk_returns = nn.Linear(attn_input_dim, cfg.top_k_predictions)
+        self.head_topk_prices = nn.Linear(attn_input_dim, cfg.top_k_predictions)
+        self.head_sell_now = nn.Linear(attn_input_dim, 1) if cfg.predict_sell_now else None
+
+    def forward(self, x: torch.Tensor):
+        context, attn_weights = self.price_encoder(x)
 
         direction_logits = self.head_direction(context)
         return_pred = self.head_return(context)
