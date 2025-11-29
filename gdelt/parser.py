@@ -2,10 +2,6 @@
 from __future__ import annotations
 
 import csv
-"""Stream parser for GDELT GKG files."""
-from __future__ import annotations
-
-import csv
 import gzip
 from dataclasses import dataclass
 from datetime import datetime, timezone
