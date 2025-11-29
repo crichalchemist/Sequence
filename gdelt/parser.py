@@ -1,7 +1,3 @@
-"""Stream parser for GDELT GKG CSV files."""
-from __future__ import annotations
-
-import csv
 """Stream parser for GDELT GKG files."""
 from __future__ import annotations
 
