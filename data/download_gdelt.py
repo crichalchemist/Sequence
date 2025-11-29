@@ -14,7 +14,7 @@ import json
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, Iterator, Optional, Tuple
+from typing import Any, Dict, Iterator, List, Optional, Tuple
 
 
 BASE_URL = "https://data.gdeltproject.org/gdeltv2"
@@ -56,12 +56,18 @@ def floor_to_step(dt: datetime, step_minutes: int) -> datetime:
     )
 
 
+def _utcnow_naive() -> datetime:
+    """Return the current UTC time as a naive datetime without deprecation warnings."""
+
+    return datetime.now(datetime.UTC).replace(tzinfo=None)
+
+
 def latest_available_end(resolution: str, step_minutes: int) -> datetime:
     """
     GDELT only publishes 15-minute batches a few minutes after the window ends
     and daily files the following day. Cap requests to avoid 404s on future windows.
     """
-    now = datetime.utcnow()
+    now = _utcnow_naive()
     if resolution == "daily":
         return datetime(now.year, now.month, now.day) - timedelta(seconds=1)
     latest_slot = now - timedelta(minutes=step_minutes)
@@ -116,20 +122,20 @@ def download_file(
     max_retries: int,
     backoff: float,
     expected_checksum: Optional[str],
-) -> None:
+) -> bool:
     if dest.exists() and not overwrite:
         if expected_checksum:
             local_checksum = sha256_file(dest)
             if local_checksum == expected_checksum:
                 print(f"[skip] exists {dest.name} (checksum verified)")
-                return
+                return True
             print(
                 f"[warn] exists {dest.name} (checksum mismatch: local {local_checksum} vs expected {expected_checksum}); re-downloading"
             )
             dest.unlink()
         else:
             print(f"[skip] exists {dest.name} (no checksum provided)")
-            return
+            return True
     for attempt in range(1, max_retries + 1):
         try:
             resp = session.get(url, timeout=timeout)
@@ -147,7 +153,7 @@ def download_file(
                 else:
                     print(f"[ok]   {dest.name} (no checksum provided)")
                 dest.write_bytes(content)
-                return
+                return True
             print(f"[warn] {dest.name} -> HTTP {resp.status_code}")
         except Exception as exc:
             print(f"[err]  {dest.name} attempt {attempt}/{max_retries} -> {exc}")
@@ -157,6 +163,7 @@ def download_file(
             time.sleep(sleep_time)
 
     print(f"[fail] {dest.name} after {max_retries} attempts")
+    return False
 
 
 def load_checksums(checksum_file: Optional[str]) -> Dict[str, str]:
@@ -191,7 +198,12 @@ def main():
 
     parser = argparse.ArgumentParser(description="Download GDELT 2.1 GKG zip files.")
     parser.add_argument("--start-date", default="2016-01-01", type=parse_date, help="YYYY-MM-DD (UTC) inclusive")
-    parser.add_argument("--end-date", default=datetime.utcnow().strftime("%Y-%m-%d"), type=parse_date, help="YYYY-MM-DD (UTC) inclusive")
+    parser.add_argument(
+        "--end-date",
+        default=_utcnow_naive().strftime("%Y-%m-%d"),
+        type=parse_date,
+        help="YYYY-MM-DD (UTC) inclusive",
+    )
     parser.add_argument(
         "--resolution",
         choices=["daily", "15min"],
@@ -205,6 +217,13 @@ def main():
         help=(
             "Data source for downloads. Use a Hugging Face mirror when gdeltproject.org is unreliable: "
             "hf-maxlong-2022, hf-olm, hf-andreas-helgesson"
+        ),
+    )
+    parser.add_argument(
+        "--mirror-fallbacks",
+        default="",
+        help=(
+            "Comma-separated list of mirrors to try if the primary source fails (ignored when --base-url is set)."
         ),
     )
     parser.add_argument(
@@ -231,6 +250,29 @@ def main():
 
     checksum_map = load_checksums(args.checksum_file)
 
+    base_urls: List[Tuple[str, str]] = []
+    if args.base_url and args.mirror_fallbacks:
+        print("[warn] Ignoring --mirror-fallbacks because --base-url is set.")
+
+    if args.base_url:
+        base_urls.append(("custom", resolve_base_url(args.mirror, args.base_url)))
+    else:
+        base_urls.append((args.mirror, resolve_base_url(args.mirror, args.base_url)))
+        fallback_mirrors = [m.strip() for m in args.mirror_fallbacks.split(",") if m.strip()]
+        for mirror in fallback_mirrors:
+            if mirror == args.mirror:
+                continue
+            base_urls.append((mirror, resolve_base_url(mirror, None)))
+
+    # Deduplicate any repeated base URLs while preserving order.
+    seen_urls = set()
+    unique_base_urls: List[Tuple[str, str]] = []
+    for mirror_name, base_url in base_urls:
+        if base_url in seen_urls:
+            continue
+        seen_urls.add(base_url)
+        unique_base_urls.append((mirror_name, base_url))
+    base_urls = unique_base_urls
     base_url = resolve_base_url(args.mirror, args.base_url)
 
     start_dt = datetime(args.start_date.year, args.start_date.month, args.start_date.day)
@@ -269,16 +311,27 @@ def main():
         url = f"{base_url}/{filename}"
         dest = out_dir / filename
         expected_checksum = checksum_map.get(filename)
-        download_file(
-            session,
-            url,
-            dest,
-            overwrite=args.overwrite,
-            timeout=args.timeout,
-            max_retries=args.max_retries,
-            backoff=args.retry_backoff,
-            expected_checksum=expected_checksum,
-        )
+
+        success = False
+        for idx, (mirror_name, base_url) in enumerate(base_urls):
+            if idx > 0:
+                print(f"[info] switching to mirror '{mirror_name}' for {filename}")
+            url = f"{base_url}/{filename}"
+            success = download_file(
+                session,
+                url,
+                dest,
+                overwrite=args.overwrite,
+                timeout=args.timeout,
+                max_retries=args.max_retries,
+                backoff=args.retry_backoff,
+                expected_checksum=expected_checksum,
+            )
+            if success:
+                break
+
+        if not success:
+            print(f"[fail] {filename} could not be downloaded from any configured source")
 
 
 if __name__ == "__main__":

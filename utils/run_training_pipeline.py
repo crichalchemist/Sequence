@@ -139,6 +139,13 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--gdelt-mirror-fallbacks",
+        default="",
+        help=(
+            "Comma-separated list of GDELT mirrors to try if the primary source fails."
+        ),
+    )
+    parser.add_argument(
         "--gdelt-base-url",
         default=None,
         help="Override the GDELT download base URL (https:// only). Takes precedence over --gdelt-mirror.",
@@ -363,7 +370,7 @@ def maybe_offer_game(enabled: bool) -> None:
 
 
 def run_gdelt_download(args) -> None:
-    end_date = args.gdelt_end_date or datetime.utcnow().strftime("%Y-%m-%d")
+    end_date = args.gdelt_end_date or datetime.now(datetime.UTC).strftime("%Y-%m-%d")
     cmd = [
         sys.executable,
         str(ROOT / "data" / "download_gdelt.py"),
@@ -375,6 +382,8 @@ def run_gdelt_download(args) -> None:
         args.gdelt_resolution,
         "--mirror",
         args.gdelt_mirror,
+        "--mirror-fallbacks",
+        args.gdelt_mirror_fallbacks,
         "--step-minutes",
         str(args.gdelt_step_minutes),
         "--out-dir",
