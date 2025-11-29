@@ -3,17 +3,34 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from gdelt.config import GDELT_TIME_DELTA_MINUTES
+from gdelt.config import GDELT_TIME_DELTA_MINUTES, get_gdelt_bucket_minutes
 
 
 def align_candle_to_regime(
-    candle_time: datetime, bucket_minutes: int = GDELT_TIME_DELTA_MINUTES
+    candle_time: datetime, bucket_minutes: int | None = None
 ) -> datetime:
-    """Floor candle_time to the previous full regime bucket using the configured default interval.
+    """Floor candle_time to the previous full regime bucket.
 
-    The default bucket size is defined by :data:`GDELT_TIME_DELTA_MINUTES` to keep
-    regime alignment consistent across ingestion utilities.
+    By default, the bucket size is derived from :data:`gdelt.config.GDELT_TIME_DELTA_MINUTES`
+    so callers stay aligned with the ingestion cadence.
     """
+    bucket_minutes = bucket_minutes or get_gdelt_bucket_minutes()
+def get_gdelt_bucket_minutes() -> int:
+    """Return the default GDELT bucket size in minutes from configuration."""
+    return GDELT_TIME_DELTA_MINUTES
+
+
+def align_candle_to_regime(
+    candle_time: datetime, bucket_minutes: int | None = None
+) -> datetime:
+    """Floor candle_time to the previous full regime bucket using the configured default.
+
+    When ``bucket_minutes`` is not provided, the interval from ``config.py``
+    (``GDELT_TIME_DELTA_MINUTES``, currently 15 minutes) is used so aligners
+    and iterators remain consistent.
+    """
+    if bucket_minutes is None:
+        bucket_minutes = get_gdelt_bucket_minutes()
     candle_time = candle_time.astimezone(timezone.utc)
     minutes = (candle_time.minute // bucket_minutes) * bucket_minutes
     aligned = candle_time.replace(minute=0, second=0, microsecond=0) + timedelta(minutes=minutes)
@@ -22,18 +39,28 @@ def align_candle_to_regime(
     return aligned
 
 
-def iter_gdelt_buckets(start: datetime, end: datetime) -> list[datetime]:
+def iter_gdelt_buckets(
+    start: datetime, end: datetime, bucket_minutes: int | None = None
+) -> list[datetime]:
     """Generate regime bucket start times between start and end inclusive.
 
-    Uses the configured bucket size to keep iteration and alignment in sync.
+    The bucket size defaults to :func:`get_gdelt_bucket_minutes` to match the configured
+    ingestion cadence.
     """
+    bucket_minutes = bucket_minutes or get_gdelt_bucket_minutes()
+def iter_gdelt_buckets(start: datetime, end: datetime) -> list[datetime]:
+    """Generate regime bucket start times between start and end inclusive using the configured bucket size."""
     start = start.astimezone(timezone.utc)
     end = end.astimezone(timezone.utc)
     if end < start:
         raise ValueError("end must be after start")
     buckets = []
-    current = align_candle_to_regime(start, bucket_minutes=GDELT_TIME_DELTA_MINUTES)
+    current = align_candle_to_regime(start, bucket_minutes=bucket_minutes)
     while current <= end:
         buckets.append(current)
-        current += timedelta(minutes=GDELT_TIME_DELTA_MINUTES)
+        current += timedelta(minutes=bucket_minutes)
+    current = align_candle_to_regime(start, bucket_minutes=get_gdelt_bucket_minutes())
+    while current <= end:
+        buckets.append(current)
+        current += timedelta(minutes=get_gdelt_bucket_minutes())
     return buckets
