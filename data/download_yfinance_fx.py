@@ -10,6 +10,7 @@ Options:
   --pairs: comma list to override pairs file (e.g., eurusd,usdjpy)
   --start/--end: date range (YYYY-MM-DD)
   --interval: Yahoo interval (1d,1h,30m,15m,5m where allowed)
+  --skip-existing: skip download when the target CSV already exists
 """
 
 import argparse
@@ -66,13 +67,28 @@ def _cap_intraday_range(start: Optional[str], end: Optional[str], interval: str)
     return start_dt.strftime("%Y-%m-%d"), end_dt.strftime("%Y-%m-%d")
 
 
+def _atomic_write_csv(df: pd.DataFrame, out_path: Path) -> None:
+    temp_path = out_path.with_suffix(out_path.suffix + ".tmp")
+    df.to_csv(temp_path, index=False)
+    temp_path.replace(out_path)
+
+
 def download_pair(
-    pair: str, start: Optional[str], end: Optional[str], interval: str, output_root: Path
-) -> Tuple[str, Optional[Path]]:
+    pair: str, start: Optional[str], end: Optional[str], interval: str, output_root: Path, skip_existing: bool
+) -> Tuple[str, Optional[Path], bool]:
     ticker = pair_to_ticker(pair)
     adj_start, adj_end = _cap_intraday_range(start, end, interval)
     out_dir = output_root / pair
     out_dir.mkdir(parents=True, exist_ok=True)
+
+    primary_path = out_dir / f"{pair}_{interval}.csv"
+    fallback_path = out_dir / f"{pair}_1d.csv" if interval != "1d" else primary_path
+
+    if skip_existing and primary_path.exists():
+        return pair, primary_path, True
+    if skip_existing and interval != "1d" and fallback_path.exists():
+        return pair, fallback_path, True
+
     df = yf.download(ticker, start=adj_start, end=adj_end, interval=interval, progress=False, group_by="ticker")
     if df.empty and interval != "1d":
         # Fallback to daily if intraday not available.
@@ -86,9 +102,10 @@ def download_pair(
 
     df = df.reset_index()
     df.columns = [c[1] if isinstance(c, tuple) else c for c in df.columns]  # flatten MultiIndex if present
+    # Write atomically to avoid corrupted partial files if interrupted.
     out_path = out_dir / f"{pair}_{interval_used}.csv"
-    df.to_csv(out_path, index=False)
-    return pair, out_path
+    _atomic_write_csv(df, out_path)
+    return pair, out_path, False
 
 
 def main():
@@ -99,6 +116,11 @@ def main():
     parser.add_argument("--start", default="2015-01-01", help="Start date YYYY-MM-DD")
     parser.add_argument("--end", default=None, help="End date YYYY-MM-DD (default: today)")
     parser.add_argument("--interval", default="1h", help="Interval (e.g., 1d,1h,30m,15m,5m)")
+    parser.add_argument(
+        "--skip-existing",
+        action="store_true",
+        help="Skip downloads when output CSV already exists",
+    )
     args = parser.parse_args()
 
     output_root = Path(args.output_root).resolve()
@@ -112,12 +134,15 @@ def main():
 
     missing = []
     for pair in pairs:
-        pair, path = download_pair(pair, args.start, args.end, args.interval, output_root)
+        pair, path, skipped = download_pair(
+            pair, args.start, args.end, args.interval, output_root, args.skip_existing
+        )
         if path is None:
             missing.append(pair)
             print(f"[warn] {pair} returned no data")
         else:
-            print(f"[ok] {pair} -> {path}")
+            status = "[skip]" if skipped else "[ok]"
+            print(f"{status} {pair} -> {path}")
 
     if missing:
         print(f"No data for pairs: {', '.join(missing)}")
