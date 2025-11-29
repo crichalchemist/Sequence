@@ -51,14 +51,13 @@ class HybridCNNLSTMAttention(nn.Module):
         self.attention = TemporalAttention(attn_input_dim, cfg.attention_dim)
 
         self.dropout = nn.Dropout(cfg.dropout)
-        self.fc = nn.Linear(head_input, output_dim)
-        self.head_max_return = nn.Linear(head_input, 1)
-        self.head_topk_returns = nn.Linear(head_input, cfg.top_k_predictions)
-        self.head_topk_prices = nn.Linear(head_input, cfg.top_k_predictions)
-        self.head_sell_now = nn.Linear(head_input, 1) if cfg.predict_sell_now else None
         self.head_direction = nn.Linear(attn_input_dim, cfg.num_dir_classes)
         self.head_return = nn.Linear(attn_input_dim, cfg.return_dim)
         self.head_volatility = nn.Linear(attn_input_dim, cfg.num_volatility_classes)
+        self.head_max_return = nn.Linear(attn_input_dim, 1)
+        self.head_topk_returns = nn.Linear(attn_input_dim, cfg.top_k_predictions)
+        self.head_topk_prices = nn.Linear(attn_input_dim, cfg.top_k_predictions)
+        self.head_sell_now = nn.Linear(attn_input_dim, 1) if cfg.predict_sell_now else None
 
     def forward(self, x: torch.Tensor):
         # x: [B, T, F]
@@ -71,22 +70,21 @@ class HybridCNNLSTMAttention(nn.Module):
 
         context, attn_weights = self.attention(combined)
         context = self.dropout(context)
+
+        direction_logits = self.head_direction(context)
+        return_pred = self.head_return(context)
+        primary_output = direction_logits if self.task_type == "classification" else return_pred
         outputs = {
-            "primary": self.fc(context),
+            "primary": primary_output,
+            "direction_logits": direction_logits,
+            "return": return_pred,
+            "volatility_logits": self.head_volatility(context),
             "max_return": self.head_max_return(context),
             "topk_returns": self.head_topk_returns(context),
             "topk_prices": self.head_topk_prices(context),
         }
         if self.head_sell_now is not None:
             outputs["sell_now"] = self.head_sell_now(context)
-        return outputs, attn_weights
-
-
-def build_model(cfg: ModelConfig, task_type: str = "classification") -> HybridCNNLSTMAttention:
-            "direction_logits": self.head_direction(context),
-            "return": self.head_return(context),
-            "volatility_logits": self.head_volatility(context),
-        }
         return outputs, attn_weights
 
 
