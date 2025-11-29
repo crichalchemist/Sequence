@@ -12,7 +12,7 @@ import importlib
 import importlib.util
 import json
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional, Tuple
 
@@ -59,7 +59,9 @@ def floor_to_step(dt: datetime, step_minutes: int) -> datetime:
 def _utcnow_naive() -> datetime:
     """Return the current UTC time as a naive datetime without deprecation warnings."""
 
-    return datetime.now(datetime.UTC).replace(tzinfo=None)
+    # datetime.UTC is only available in Python 3.11+; timezone.utc keeps compatibility
+    # while ensuring we generate a naive UTC timestamp for downstream formatting.
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 def latest_available_end(resolution: str, step_minutes: int) -> datetime:
