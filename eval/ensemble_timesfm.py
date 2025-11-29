@@ -1,11 +1,11 @@
 """
-Ensemble our hybrid model with TimesFM (torch) for regression forecasting.
+Ensemble the Dignity model with TimesFM (torch) for regression forecasting.
 
 Steps:
   1. Build regression datasets for each pair (uses Central-time HistData zips).
-  2. Load hybrid checkpoint.
+  2. Load Dignity checkpoint.
   3. Run TimesFM forecast_naive on denormalized close windows.
-  4. Ensemble hybrid + TimesFM (mean) and report RMSE/MAE.
+  4. Ensemble Dignity + TimesFM (mean) and report RMSE/MAE.
 
 Usage example:
   python eval/ensemble_timesfm.py \
@@ -38,7 +38,7 @@ from timesfm.timesfm_2p5 import timesfm_2p5_torch
 
 
 def parse_args():
-    p = argparse.ArgumentParser(description="Ensemble hybrid model with TimesFM for regression.")
+    p = argparse.ArgumentParser(description="Ensemble Dignity model with TimesFM for regression.")
     p.add_argument("--pairs", default="gbpusd", help="Comma-separated pair codes")
     p.add_argument("--years", default=None, help="Comma-separated years to include (default: all)")
     p.add_argument("--input-root", default="output_central", help="Root with Central-time HistData zips")
@@ -179,27 +179,27 @@ def main():
             test_df = splits["test"]
             sequences, targets, close_windows = build_test_windows(test_df, agent, feature_cols)
 
-            # Hybrid model
+            # Dignity model
             num_features = sequences.shape[-1]
             model_cfg = ModelConfig(num_features=num_features, num_classes=None, output_dim=1)
-            hybrid = build_model(model_cfg, task_type="regression").to(device)
+            dignity = build_model(model_cfg, task_type="regression").to(device)
             ckpt_path = Path(args.checkpoint_root) / f"{pair}_best_model.pt"
             if not ckpt_path.exists():
                 print(f"[warn] checkpoint not found for {pair}: {ckpt_path}, skipping")
                 continue
             state = torch.load(ckpt_path, map_location=device)
-            hybrid.load_state_dict(state)
-            hybrid.eval()
+            dignity.load_state_dict(state)
+            dignity.eval()
 
-            preds_hybrid = []
+            preds_dignity = []
             preds_tfm = []
             preds_ensemble = []
 
             for seq, close_seq in zip(sequences, close_windows):
                 x = torch.tensor(seq, dtype=torch.float32, device=device).unsqueeze(0)
                 with torch.no_grad():
-                    outputs, _ = hybrid(x)
-                hybrid_ret = outputs["return"].squeeze().item()
+                    outputs, _ = dignity(x)
+                dignity_ret = outputs["return"].squeeze().item()
 
                 tfm_forecast = tfm_model.forecast_naive(horizon=args.t_out, inputs=[close_seq])[0]
                 if tfm_forecast is None or len(tfm_forecast) == 0:
@@ -208,14 +208,14 @@ def main():
                 last_forecast = float(tfm_forecast[-1])
                 tfm_ret = float(np.log(max(last_forecast, 1e-8) / max(last_input, 1e-8)))
 
-                ensemble_ret = 0.5 * (hybrid_ret + tfm_ret)
-                preds_hybrid.append(hybrid_ret)
+                ensemble_ret = 0.5 * (dignity_ret + tfm_ret)
+                preds_dignity.append(dignity_ret)
                 preds_tfm.append(tfm_ret)
                 preds_ensemble.append(ensemble_ret)
 
             targets_arr = targets[: len(preds_ensemble)]
             metrics = {
-                "hybrid": regression_metrics(np.array(preds_hybrid), targets_arr),
+                "dignity": regression_metrics(np.array(preds_dignity), targets_arr),
                 "timesfm": regression_metrics(np.array(preds_tfm), targets_arr),
                 "ensemble": regression_metrics(np.array(preds_ensemble), targets_arr),
             }

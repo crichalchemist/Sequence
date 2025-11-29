@@ -62,9 +62,9 @@ class PriceSequenceEncoder(nn.Module):
         return context, attn_weights
 
 
-class HybridCNNLSTMAttention(nn.Module):
+class DignityModel(nn.Module):
     """
-    CNN + BiLSTM + temporal attention hybrid model with multi-head outputs.
+    CNN + BiLSTM + temporal attention Dignity model with multi-head outputs.
     """
 
     def __init__(self, cfg: ModelConfig, task_type: str = "classification"):
@@ -109,11 +109,15 @@ def build_model(
     num_dir_classes: int | None = None,
     num_volatility_classes: int | None = None,
     return_dim: int | None = None,
-) -> HybridCNNLSTMAttention:
+) -> DignityModel:
     if num_dir_classes is not None:
         cfg.num_dir_classes = num_dir_classes
     if num_volatility_classes is not None:
         cfg.num_volatility_classes = num_volatility_classes
     if return_dim is not None:
         cfg.return_dim = return_dim
-    return HybridCNNLSTMAttention(cfg, task_type=task_type)
+    return DignityModel(cfg, task_type=task_type)
+
+
+# Backward compatibility for existing checkpoints/imports.
+HybridCNNLSTMAttention = DignityModel

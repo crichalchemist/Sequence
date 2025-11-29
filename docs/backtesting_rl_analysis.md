@@ -1,8 +1,8 @@
 # Backtesting.py fit vs existing RL and execution stack
 
 ## Current RL and execution capabilities
-- **A3C harness:** Multi-worker actor-critic training already wraps the hybrid CNN–LSTM–attention encoder. It handles asynchronous rollouts, shared Adam optimizer state, and gradient synchronization with value/policy losses plus entropy regularization. The harness expects a gym-like environment factory, so any backtesting-driven env would plug in via the existing factory hook.
-- **Hybrid feature encoder inside RL:** The RL stack reuses the ModelConfig-driven hybrid encoder (LSTM + Conv1d + attention) as a shared feature extractor before policy/value heads. This keeps RL aligned with the forecasting backbone but currently assumes fixed feature counts and time-major tensors from the data agent.
+- **A3C harness:** Multi-worker actor-critic training already wraps the Dignity CNN–LSTM–attention encoder. It handles asynchronous rollouts, shared Adam optimizer state, and gradient synchronization with value/policy losses plus entropy regularization. The harness expects a gym-like environment factory, so any backtesting-driven env would plug in via the existing factory hook.
+- **Dignity feature encoder inside RL:** The RL stack reuses the ModelConfig-driven Dignity encoder (LSTM + Conv1d + attention) as a shared feature extractor before policy/value heads. This keeps RL aligned with the forecasting backbone but currently assumes fixed feature counts and time-major tensors from the data agent.
 - **Retail execution simulator:** A gym-like execution environment exists with spread, slippage, limit-fill probability, decision lag, FIFO PnL, and logging. Rewards are portfolio value deltas, making it suitable for policy evaluation without exchange dependencies.
 - **Risk gating:** A risk manager throttles logits or regression outputs when drawdown, volatility, spread, or no-trade windows are hit. This can be used during backtests to mimic live guardrails by clamping actions to flat/low exposure.
 

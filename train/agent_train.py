@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
 from config.config import RLTrainingConfig, TrainingConfig
-from models.agent_hybrid import HybridCNNLSTMAttention
+from models.agent_hybrid import DignityModel
 from models.signal_policy import ExecutionPolicy, SignalModel
 from risk.risk_manager import RiskManager
 
@@ -85,7 +85,7 @@ def _compute_losses(
 
 
 def _evaluate(
-    model: HybridCNNLSTMAttention,
+    model: DignityModel,
     loader: DataLoader,
     cfg: TrainingConfig,
     device,
@@ -126,7 +126,7 @@ def _evaluate(
 
 
 def train_model(
-    model: HybridCNNLSTMAttention,
+    model: DignityModel,
     train_loader: DataLoader,
     val_loader: DataLoader,
     cfg: TrainingConfig,
