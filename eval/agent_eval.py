@@ -4,13 +4,13 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-from models.agent_hybrid import HybridCNNLSTMAttention
+from models.agent_hybrid import DignityModel
 from models.signal_policy import SignalPolicyAgent
 from risk.risk_manager import RiskManager
 
 
 def _collect_outputs(
-    model: HybridCNNLSTMAttention,
+    model: DignityModel,
     loader: DataLoader,
     device: torch.device,
     risk_manager: RiskManager | None = None,
@@ -83,7 +83,7 @@ def regression_metrics(preds: np.ndarray, targets: np.ndarray) -> Dict[str, floa
 
 
 def evaluate_model(
-    model: HybridCNNLSTMAttention,
+    model: DignityModel,
     loader: DataLoader,
     task_type: str = "classification",
     risk_manager: RiskManager | None = None,

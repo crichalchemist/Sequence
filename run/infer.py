@@ -1,7 +1,7 @@
-"""Run hybrid encoder + policy inference against a simulator or MetaApi.
+"""Run Dignity encoder + policy inference against a simulator or MetaApi.
 
 This runner builds features from candle data (plus optional intrinsic bars),
-loads the hybrid CNN-LSTM-attention encoder, and routes actions through an
+loads the Dignity CNN-LSTM-attention encoder, and routes actions through an
 execution backend selected at runtime. The same inference path is shared across
 simulation and live modes through dependency injection.
 """
@@ -25,7 +25,7 @@ if str(ROOT) not in sys.path:
 
 from config.config import ModelConfig  # noqa: E402
 from features.agent_features import build_feature_frame  # noqa: E402
-from models.agent_hybrid import HybridCNNLSTMAttention, build_model  # noqa: E402
+from models.agent_hybrid import DignityModel, build_model  # noqa: E402
 
 
 ACTION_NAMES = ["sell", "hold", "buy"]
@@ -148,7 +148,7 @@ def build_state(cfg: InferenceConfig) -> tuple[torch.Tensor, float, List[str]]:
     return state_tensor, latest_price, feature_cols
 
 
-def load_policy(cfg: InferenceConfig, num_features: int) -> HybridCNNLSTMAttention:
+def load_policy(cfg: InferenceConfig, num_features: int) -> DignityModel:
     model_cfg = ModelConfig(num_features=num_features)
     model = build_model(model_cfg, task_type=cfg.task_type)
     checkpoint = torch.load(cfg.checkpoint_path, map_location=cfg.device)
@@ -165,7 +165,7 @@ def telemetry_log(logger: logging.Logger, message: str, payload: Dict[str, objec
 
 
 class InferenceRunner:
-    def __init__(self, model: HybridCNNLSTMAttention, backend: ExecutionBackend, device: str):
+    def __init__(self, model: DignityModel, backend: ExecutionBackend, device: str):
         self.model = model
         self.backend = backend
         self.device = device
@@ -190,7 +190,7 @@ class InferenceRunner:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Hybrid encoder + policy inference runner")
+    parser = argparse.ArgumentParser(description="Dignity encoder + policy inference runner")
     parser.add_argument("--candles", required=True, type=Path, help="CSV with OHLC candles including datetime")
     parser.add_argument("--intrinsic-bars", type=Path, help="Optional CSV of intrinsic features to append")
     parser.add_argument("--checkpoint", required=True, type=Path, help="Path to model checkpoint")

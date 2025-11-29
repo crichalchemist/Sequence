@@ -1,12 +1,12 @@
 import torch
 
 from config.config import ExportConfig
-from models.agent_hybrid import HybridCNNLSTMAttention
+from models.agent_hybrid import DignityModel
 from models.signal_policy import SignalPolicyAgent
 
 
 def export_to_onnx(
-    model: HybridCNNLSTMAttention,
+    model: DignityModel,
     export_cfg: ExportConfig,
     example_input: torch.Tensor,
     task_type: str = "classification",
