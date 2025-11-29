@@ -25,6 +25,7 @@ from data.prepare_dataset import process_pair
 from eval.agent_eval import evaluate_model, evaluate_policy_agent
 from models.agent_hybrid import build_model
 from models.signal_policy import SignalModel, SignalPolicyAgent
+from risk.risk_manager import RiskManager
 
 
 def parse_args():
