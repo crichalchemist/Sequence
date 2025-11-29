@@ -56,8 +56,23 @@ def test_parse_zip_file(tmp_path: Path):
     assert len(records) == 1
     record = records[0]
     assert record.datetime.year == 2024
-    assert record.themes == ["ENHTHEME", "THEME1", "THEME2"]
-    assert record.counts[0].type == "CountType"
+    assert record.themes == ["ENHANCED1", "ENHANCED2", "THEME1", "THEME2"]
+    assert {count.type for count in record.counts} == {"STATENAME", "NUMARTS"}
+    assert record.tone.polarity == 4.0
     assert record.counts[0].value == 1.0
     assert record.locations[0].country_code == "USA"
-    assert record.gcam == {"c1": 1.5, "c2": 2.5}
+    assert record.locations[0].name == "New York"
+    assert record.persons == ["Person1", "Person2"]
+    assert record.orgs == ["Org1", "Org2"]
+    assert record.gcam == {"c1": 0.5, "c2": 1.5}
+
+
+def _load_parser_module():
+    module_path = Path(__file__).resolve().parents[1] / "gdelt" / "parser.py"
+    spec = importlib.util.spec_from_file_location("gdelt_parser", module_path)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+    
