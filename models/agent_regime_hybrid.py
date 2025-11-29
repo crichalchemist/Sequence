@@ -1,5 +1,4 @@
 """Regime-aware hybrid model combining price and GDELT encoders."""
-"""Regime-aware hybrid encoder/decoder stack for price + GDELT fusion."""
 from __future__ import annotations
 
 import torch
