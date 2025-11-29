@@ -6,8 +6,14 @@ from datetime import datetime, timedelta, timezone
 from gdelt.config import GDELT_TIME_DELTA_MINUTES
 
 
-def align_candle_to_regime(candle_time: datetime, bucket_minutes: int = 60) -> datetime:
-    """Floor candle_time to the previous full regime bucket (default: hourly)."""
+def align_candle_to_regime(
+    candle_time: datetime, bucket_minutes: int = GDELT_TIME_DELTA_MINUTES
+) -> datetime:
+    """Floor candle_time to the previous full regime bucket using the configured default interval.
+
+    The default bucket size is defined by :data:`GDELT_TIME_DELTA_MINUTES` to keep
+    regime alignment consistent across ingestion utilities.
+    """
     candle_time = candle_time.astimezone(timezone.utc)
     minutes = (candle_time.minute // bucket_minutes) * bucket_minutes
     aligned = candle_time.replace(minute=0, second=0, microsecond=0) + timedelta(minutes=minutes)
@@ -17,7 +23,10 @@ def align_candle_to_regime(candle_time: datetime, bucket_minutes: int = 60) -> d
 
 
 def iter_gdelt_buckets(start: datetime, end: datetime) -> list[datetime]:
-    """Generate regime bucket start times between start and end inclusive."""
+    """Generate regime bucket start times between start and end inclusive.
+
+    Uses the configured bucket size to keep iteration and alignment in sync.
+    """
     start = start.astimezone(timezone.utc)
     end = end.astimezone(timezone.utc)
     if end < start:
