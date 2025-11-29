@@ -65,6 +65,11 @@ def parse_args():
     parser.add_argument("--entropy-coef", type=float, default=0.01)
     parser.add_argument("--value-coef", type=float, default=0.5)
     parser.add_argument("--detach-signal", action="store_true", help="freeze signal encoder during policy training")
+    parser.add_argument(
+        "--disable-risk",
+        action="store_true",
+        help="Disable risk manager gating during signal pretraining.",
+    )
     return parser.parse_args()
 
 
@@ -124,14 +129,13 @@ def main():
             learning_rate=args.learning_rate,
             weight_decay=args.weight_decay,
             device=device,
-            checkpoint_path=str(ckpt_path),
             max_return_weight=args.max_return_weight,
             topk_return_weight=args.topk_return_weight,
             topk_price_weight=args.topk_price_weight,
             sell_now_weight=args.sell_now_weight,
             checkpoint_path=str(signal_ckpt),
         )
-        train_cfg.risk.enabled = not args.disable_risk
+        pretrain_cfg.risk.enabled = not args.disable_risk
 
         signal_model = SignalModel(signal_cfg)
         signal_history = pretrain_signal_model(
