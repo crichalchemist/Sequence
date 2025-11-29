@@ -273,6 +273,7 @@ def main():
         seen_urls.add(base_url)
         unique_base_urls.append((mirror_name, base_url))
     base_urls = unique_base_urls
+    base_url = resolve_base_url(args.mirror, args.base_url)
 
     start_dt = datetime(args.start_date.year, args.start_date.month, args.start_date.day)
     end_dt = datetime(args.end_date.year, args.end_date.month, args.end_date.day, 23, 59, 59)
@@ -307,6 +308,7 @@ def main():
     for ts in generator:
         stamp = formatter(ts)
         filename = f"{stamp}.gkg.csv.zip"
+        url = f"{base_url}/{filename}"
         dest = out_dir / filename
         expected_checksum = checksum_map.get(filename)
 
