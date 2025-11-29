@@ -8,9 +8,8 @@ This repository trains and evaluates a foreign-exchange forecasting model on min
    - Train: `python utils/run_training_pipeline.py --pairs gbpusd --t-in 120 --t-out 10 --epochs 3`
    - Test: `python eval/run_evaluation.py --pairs gbpusd --checkpoint-path models/gbpusd_best_model.pt`
 4) Optional sentiment: add `--run-gdelt-download` to pull GDELT GKG files before training. If the primary endpoint is flaky,
-   pass a Hugging Face mirror (e.g., `--gdelt-mirror hf-maxlong-2022`, `hf-olm`, or `hf-andreas-helgesson`), list fallbacks via
-   `--gdelt-mirror-fallbacks hf-maxlong-2022,hf-olm,hf-andreas-helgesson`, or supply a custom HTTPS URL with `--gdelt-base-url`.
-   [Leetaru & Schrodt 2013]
+   pass a Hugging Face mirror (e.g., `--gdelt-mirror hf-maxlong-2022`, `hf-olm`, or `hf-andreas-helgesson`) or a custom
+   HTTPS URL via `--gdelt-base-url`. [Leetaru & Schrodt 2013]
 5) Optional mini-game: when prompted during training, press `y` to launch; quit with `Q` (may slow training).
 
 ### Intrinsic-time bars (directional-change)
