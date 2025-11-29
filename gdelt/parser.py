@@ -1,4 +1,4 @@
-"""Stream parser for GDELT GKG files."""
+"""Stream parser for GDELT GKG CSV files."""
 from __future__ import annotations
 
 import csv
@@ -8,7 +8,7 @@ import zipfile
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, Iterable, Iterator, List, Optional
+from typing import Dict, Iterable, Iterator, List, Optional, TextIO
 
 
 @dataclass
@@ -61,37 +61,37 @@ class GDELTParser:
     IDX_GCAM = 15
 
     def parse_file(self, path: Path) -> Iterator[GDELTRecord]:
-        if path.suffix == ".zip":
+        suffix = path.suffix.lower()
+
+        if suffix == ".zip":
             yield from self._parse_zip(path)
             return
 
-        opener = gzip.open if path.suffix == ".gz" else open
+        opener = gzip.open if suffix == ".gz" else open
         with opener(path, "rt", encoding="utf-8", errors="ignore") as f:
-            yield from self._parse_rows(f)
+            yield from self._parse_reader(f)
 
     def _parse_zip(self, path: Path) -> Iterator[GDELTRecord]:
-        with zipfile.ZipFile(path) as zip_file:
-            member = self._select_zip_member(zip_file)
+        with zipfile.ZipFile(path) as archive:
+            member = self._select_zip_member(archive)
             if member is None:
-                return
-            with zip_file.open(member, "r") as raw_member:
-                with io.TextIOWrapper(raw_member, encoding="utf-8", errors="ignore") as text_member:
-                    yield from self._parse_rows(text_member)
+                raise ValueError(f"No CSV files found inside {path}")
 
-    def _select_zip_member(self, zip_file: zipfile.ZipFile) -> Optional[zipfile.ZipInfo]:
-        for member in zip_file.infolist():
-            if member.is_dir():
-                continue
-            if member.filename.lower().endswith(".gkgv2.csv"):
-                return member
-        for member in zip_file.infolist():
-            if member.is_dir():
-                continue
-            if member.filename.lower().endswith(".csv"):
-                return member
+            with archive.open(member) as raw_file:
+                with io.TextIOWrapper(raw_file, encoding="utf-8", errors="ignore") as text_file:
+                    yield from self._parse_reader(text_file)
+
+    def _select_zip_member(self, archive: zipfile.ZipFile) -> Optional[str]:
+        names = archive.namelist()
+        for name in names:
+            if name.lower().endswith(".gkgv2.csv"):
+                return name
+        for name in names:
+            if name.lower().endswith(".csv"):
+                return name
         return None
 
-    def _parse_rows(self, file_obj: Iterable[str]) -> Iterator[GDELTRecord]:
+    def _parse_reader(self, file_obj: TextIO) -> Iterator[GDELTRecord]:
         reader = csv.reader(file_obj, delimiter="\t")
         for row in reader:
             if len(row) <= self.IDX_TONE:

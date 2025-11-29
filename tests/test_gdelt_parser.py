@@ -1,37 +1,55 @@
+import csv
 import importlib.util
 import sys
-from pathlib import Path
 import zipfile
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PARSER_PATH = PROJECT_ROOT / "gdelt" / "parser.py"
+
+spec = importlib.util.spec_from_file_location("gdelt_parser", PARSER_PATH)
+assert spec and spec.loader
+gdelt_parser = importlib.util.module_from_spec(spec)
+sys.modules[spec.name] = gdelt_parser
+spec.loader.exec_module(gdelt_parser)
+GDELTParser = gdelt_parser.GDELTParser
 
 
-def test_parse_zip_fixture(tmp_path: Path):
-    parser_module = _load_parser_module()
-    parser = parser_module.GDELTParser()
-    sample_row = "\t".join(
-        [
-            "0",
-            "20240101000000",
-            "",
-            "",
-            "",
-            "STATENAME#1;NUMARTS#2",
-            "THEME1;THEME2;",
-            "ENHANCED1#1;ENHANCED2#2;",
-            "1#New York#NY#US#40.71#-74.0",
-            "Person1;Person2;",
-            "Org1;Org2;",
-            "1,2,3,4,5",
-            "",
-            "",
-            "",
-            "c1:0.5,c2:1.5",
-        ]
-    )
-    sample_row += "\n"
+def _build_sample_zip(tmp_path: Path) -> Path:
+    data_row = [
+        "0",
+        "20240101000000",
+        "",
+        "",
+        "",
+        "CountType#1.0",
+        "THEME1;THEME2",
+        "ENHTHEME#detail",
+        "LOC#Name#0#USA#10#20",
+        "Person1;Person2",
+        "Org1;Org2",
+        "0.1,0.2,0.3,0.4,0.5",
+        "",
+        "",
+        "",
+        "c1:1.5,c2:2.5",
+    ]
 
-    zip_path = tmp_path / "gdelt_sample.zip"
-    with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        zf.writestr("sample.gkgv2.csv", sample_row)
+    csv_path = tmp_path / "sample.gkgv2.csv"
+    with csv_path.open("w", encoding="utf-8", newline="") as f:
+        writer = csv.writer(f, delimiter="\t")
+        writer.writerow(data_row)
+
+    zip_path = tmp_path / "sample.zip"
+    with zipfile.ZipFile(zip_path, "w") as archive:
+        archive.write(csv_path, arcname=csv_path.name)
+
+    return zip_path
+
+
+def test_parse_zip_file(tmp_path: Path):
+    zip_path = _build_sample_zip(tmp_path)
+    parser = GDELTParser()
 
     records = list(parser.parse_file(zip_path))
 
@@ -41,6 +59,8 @@ def test_parse_zip_fixture(tmp_path: Path):
     assert record.themes == ["ENHANCED1", "ENHANCED2", "THEME1", "THEME2"]
     assert {count.type for count in record.counts} == {"STATENAME", "NUMARTS"}
     assert record.tone.polarity == 4.0
+    assert record.counts[0].value == 1.0
+    assert record.locations[0].country_code == "USA"
     assert record.locations[0].name == "New York"
     assert record.persons == ["Person1", "Person2"]
     assert record.orgs == ["Org1", "Org2"]
@@ -55,3 +75,4 @@ def _load_parser_module():
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     return module
+    

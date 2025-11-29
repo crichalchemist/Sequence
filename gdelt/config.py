@@ -6,6 +6,12 @@ GDELT_GKG_BASE_URL = "https://data.gdeltproject.org/gdeltv2"
 GDELT_GKG_EXTENSION = ".gkg.csv.zip"
 GDELT_TIME_DELTA_MINUTES = 15
 
+
+def get_gdelt_bucket_minutes() -> int:
+    """Return the default bucket width used for aligning GDELT regimes."""
+
+    return GDELT_TIME_DELTA_MINUTES
+
 # Theme groupings for regime feature construction.
 @dataclass(frozen=True)
 class GDELTThemeConfig:
