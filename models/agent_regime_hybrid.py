@@ -4,50 +4,10 @@ from __future__ import annotations
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 from config.config import ModelConfig
-from models.agent_hybrid import TemporalAttention
+from models.agent_hybrid import PriceSequenceEncoder
 from models.regime_encoder import RegimeEncoder
-
-
-class PriceSequenceEncoder(nn.Module):
-    """CNN + (bi)LSTM + temporal attention encoder returning a single embedding."""
-
-    def __init__(self, cfg: ModelConfig):
-        super().__init__()
-        self.cfg = cfg
-
-        padding = cfg.cnn_kernel_size // 2
-        self.cnn = nn.Conv1d(
-            in_channels=cfg.num_features,
-            out_channels=cfg.cnn_num_filters,
-            kernel_size=cfg.cnn_kernel_size,
-            padding=padding,
-        )
-
-        self.lstm = nn.LSTM(
-            input_size=cfg.num_features,
-            hidden_size=cfg.hidden_size_lstm,
-            num_layers=cfg.num_layers_lstm,
-            batch_first=True,
-            bidirectional=cfg.bidirectional,
-        )
-
-        lstm_factor = 2 if cfg.bidirectional else 1
-        self.output_dim = lstm_factor * cfg.hidden_size_lstm + cfg.cnn_num_filters
-        self.attention = TemporalAttention(self.output_dim, cfg.attention_dim)
-        self.dropout = nn.Dropout(cfg.dropout)
-
-    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        # x: [B, T, F]
-        lstm_out, _ = self.lstm(x)
-        cnn_in = x.permute(0, 2, 1)
-        cnn_features = F.relu(self.cnn(cnn_in)).permute(0, 2, 1)
-        combined = torch.cat([lstm_out, cnn_features], dim=-1)
-        context, attn_weights = self.attention(combined)
-        context = self.dropout(context)
-        return context, attn_weights
 
 
 class RegimeAwareHybrid(nn.Module):
