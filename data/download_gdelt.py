@@ -7,15 +7,13 @@ Example:
 
 import argparse
 import hashlib
+import importlib
+import importlib.util
 import json
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, Iterator, Optional
-
-import requests
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
+from typing import Any, Dict, Iterator, Optional, Tuple
 
 
 BASE_URL = "https://data.gdeltproject.org/gdeltv2"
@@ -69,8 +67,39 @@ def sha256_file(path: Path) -> str:
     return sha256_bytes(path.read_bytes())
 
 
+def _load_http_dependencies() -> Tuple[Any, Any, Any]:
+    """
+    Import requests and its retry helpers only when available, with an explicit
+    error guiding users to install the project's dependencies.
+    """
+
+    if importlib.util.find_spec("requests") is None:
+        raise ModuleNotFoundError(
+            "Missing dependency: requests. Install it with `pip install -r requirements.txt` "
+            "before running GDELT downloads."
+        )
+
+    requests = importlib.import_module("requests")
+    adapters_spec = importlib.util.find_spec("requests.adapters")
+    urllib3_retry_spec = importlib.util.find_spec("urllib3.util.retry")
+    if adapters_spec is None or urllib3_retry_spec is None:
+        missing = []
+        if adapters_spec is None:
+            missing.append("requests.adapters")
+        if urllib3_retry_spec is None:
+            missing.append("urllib3.util.retry")
+        missing_list = ", ".join(missing)
+        raise ModuleNotFoundError(
+            f"Missing dependencies: {missing_list}. Install via `pip install -r requirements.txt`."
+        )
+
+    adapters = importlib.import_module("requests.adapters")
+    urllib3_retry = importlib.import_module("urllib3.util.retry")
+    return requests, adapters.HTTPAdapter, urllib3_retry.Retry
+
+
 def download_file(
-    session: requests.Session,
+    session: Any,
     url: str,
     dest: Path,
     overwrite: bool,
@@ -135,6 +164,8 @@ def load_checksums(checksum_file: Optional[str]) -> Dict[str, str]:
 
 
 def main():
+    requests, HTTPAdapter, Retry = _load_http_dependencies()
+
     parser = argparse.ArgumentParser(description="Download GDELT 2.1 GKG zip files.")
     parser.add_argument("--start-date", default="2016-01-01", type=parse_date, help="YYYY-MM-DD (UTC) inclusive")
     parser.add_argument("--end-date", default=datetime.utcnow().strftime("%Y-%m-%d"), type=parse_date, help="YYYY-MM-DD (UTC) inclusive")
