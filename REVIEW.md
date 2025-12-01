@@ -11,6 +11,10 @@ This review highlights opportunities to harden data ingestion, improve reliabili
 ## Data Quality and Training Determinism
 - **Validate and sanitize raw price files before feature building.** `data/prepare_dataset.py` currently trusts CSV/zip contents and only warns on load failures. Introduce schema checks (column presence/dtypes), NaN/outlier filtering, and duplicate-timestamp detection prior to feature engineering to prevent silent training drift. Recording basic summary stats per split would also help detect data leakage or misaligned windows. 【F:data/prepare_dataset.py†L1-L78】
 
+## Latest changes reviewed
+- **UTC conversion + dedup is now mandatory in data prep.** `process_pair` now routes every dataset through `convert_to_utc_and_dedup`, which reduces timezone drift and overlapping rows risk. Consider extending this to enforce strictly monotonic timestamps and capture duplicate counts in logs/metrics for observability. 【F:data/prepare_dataset.py†L146-L181】
+- **Configurable multi-head attention path.** `ModelConfig` exposes `use_multihead_attention`, and `PriceSequenceEncoder` switches to `MultiHeadTemporalAttention` when enabled. The encoder asserts divisibility of `input_dim` by the head count at runtime; surface this as an argparse/config validation earlier to fail fast before launching a long training job. Also guard against pathological head counts (e.g., zero or extremely large) that could be supplied via user config. 【F:config/config.py†L39-L65】【F:models/agent_hybrid.py†L28-L165】
+
 ## Observability and Testing
 - **Add fast smoke tests for the pipeline.** Consider a minimal test that builds a tiny synthetic dataset, runs `features.build_feature_frame`, `DataAgent.window_data`, and a single training/eval step to detect regressions in data formats and model wiring. This can live under `tests/` and run in CI with CPU-only settings.
 
