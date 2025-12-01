@@ -1,54 +1,47 @@
-# Plain-English Guide (with citations)
-This repository trains and evaluates a foreign-exchange forecasting model on minute-level price data, with optional news sentiment. It also provides finetuning utilities for larger language models (NovaSky family) on finance-specific corpora.
+# Sequence – FX Forecasting Toolkit
 
-## What you do (step by step)
-1) Install dependencies: `python3 -m pip install -r requirements.txt`
-2) Stage price data: place HistData zips under `output_central/PAIR/*.zip` (e.g., `output_central/gbpusd/2023.zip`). [HistData]
-3) Train and test:
-   - Train: `python utils/run_training_pipeline.py --pairs gbpusd --t-in 120 --t-out 10 --epochs 3`
-   - Test: `python eval/run_evaluation.py --pairs gbpusd --checkpoint-path models/gbpusd_best_model.pt`
-4) Optional sentiment: add `--run-gdelt-download` to pull GDELT GKG files before training. If the primary endpoint is flaky,
-   pass a Hugging Face mirror (e.g., `--gdelt-mirror hf-maxlong-2022`, `hf-olm`, or `hf-andreas-helgesson`) or a custom
-   HTTPS URL via `--gdelt-base-url`. [Leetaru & Schrodt 2013]
-5) Optional mini-game: when prompted during training, press `y` to launch; quit with `Q` (may slow training).
+A concise guide to get the repository up and running, covering data preparation, model training, evaluation, and
+optional LLM finetuning.
 
-### Intrinsic-time bars (directional-change)
-- Swap minute bars for intrinsic-time bars based on directional-change thresholds using `--intrinsic-time` and configure the move sizes with `--dc-threshold-up` / `--dc-threshold-down`.
-- Example: `python data/prepare_dataset.py --pairs gbpusd --intrinsic-time --dc-threshold-up 0.0005`
-- The same flags are available in `utils/run_training_pipeline.py` to keep training/eval consistent.
+## Quick‑start
 
-## Finetuning NovaSky models (LLMs)
-- Resource-friendly (recommended on limited VRAM): `python train/run_finetune_novasky_lora.py --model-name-or-path /path/to/NovaSky-AI/Sky-T1-32B-Flash --output-dir models/novasky-lora --use-4bit --bf16 --per-device-train-batch-size 1 --gradient-accumulation-steps 32 --max-length 1024`
-- Full finetune (heavier): `python train/run_finetune_novasky.py --model-name-or-path /path/to/NovaSky-AI/Sky-T1-32B-Flash --output-dir models/novasky-full --per-device-train-batch-size 1 --gradient-accumulation-steps 32 --max-length 1024`
-- Finetune datasets (Hugging Face): FinanceInc/auditor_sentiment; yale-nlp/FinanceMath; PatronusAI/financebench; Josephgflowers/Finance-Instruct-500k.
-- Base model: NovaSky-AI/Sky-T1-32B-Flash (local). [NovaSky 2025]
+1. **Install** – `python -m pip install -r requirements.txt` (Python 3.10+).
+2. **Place data** – unzip HistData files under `output_central/<pair>/` (e.g. `output_central/gbpusd/2023.zip`).
+3. **Prepare** – `python data/prepare_dataset.py --pairs gbpusd --t‑in 120 --t‑out 10 --task-type classification`.
+4. **Train** – `python train/run_training.py --pairs gbpusd --epochs 3 --learning-rate 1e-3`.
+5. **Evaluate** – `python eval/run_evaluation.py --pairs gbpusd --checkpoint-path models/gbpusd_best_model.pt`.
 
-## Fault tolerance
-- Frequent checkpoints; resume with `--resume-from-checkpoint <folder>`.
-- Training pipeline skips pairs with existing checkpoints; override with `--force-train` to retrain.
+## Optional features
 
-## Components
-- `data/`: price loaders and the GDELT downloader.
-- `features/`: indicator/feature construction.
-- `train/`: training loops and finetune runners.
-- `eval/`: evaluation utilities.
-- `utils/`: pipeline runner, mini-game, helpers.
-- `models/agent_hybrid.py`: LSTM + CNN + Attention hybrid used for price forecasting (our LST/ATTN baseline).
+* **Intrinsic‑time bars** – directional‑change conversion: add `--intrinsic-time --dc-threshold-up 0.0005` to the
+  prepare command.
+* **Sentiment enrichment** – download GDELT GKG files with `--run-gdelt-download`; override the endpoint via
+  `--gdelt-mirror` or `--gdelt-base-url`.
+* **LLM finetuning** – resources for NovaSky models are in `train/`; see the script docstrings for 4‑bit LoRA vs.
+  full‑precision options.
 
-## Research context (PDFs consulted)
-- Applying news to FX: *Applying News-Based Trading to the FX Market* (applyingnews_forex.pdf).
-- Modern algorithmic trading: *Modern Algorithmic Trading* (modernalgotrading.pdf).
-- Liquidity and liquidation: *Liquidating FX Positions* (liquidatingforex.pdf).
-- Execution: *Optimal Execution for Day Trading* (optimal execution day trading.pdf).
-- Deep learning for FX: *Deep Learning for Forex* (forexdeeplearning.pdf); *Asynchronous Multi-Asset Learning* (deeplearning_asyncmulti.pdf); *Reinforcement Learning Agent for FX* (reinforcementlearning_agent.pdf).
+## Robustness & fault tolerance
 
-These inform potential future work:
-- Enrich sentiment: combine GDELT with economic calendars or headline embeddings.
-- Multi-asset/async learning: explore asynchronous or multi-asset training for allocation and hedging.
-- Execution-aware objectives: add slippage/impact-aware losses and evaluate under liquidity constraints.
+* **Check‑pointing** – training writes checkpoints to `models/`; resume with `--resume-from-checkpoint <folder>`.
+* **Idempotent pipelines** – existing checkpoints skip retraining; use `--force-train` to force a fresh run.
+
+## Repository layout
+
+* `data/` – raw loaders, intrinsic‑time conversion, and dataset builder.
+* `features/` – pure technical‑indicator functions.
+* `models/` – hybrid CNN + LSTM + Attention (`agent_hybrid.py`) and multi‑task variant.
+* `train/` – training loops for signal and policy agents.
+* `eval/` – evaluation utilities.
+* `export/` – ONNX export helper.
+* `utils/` – CLI wrappers and auxiliary helpers.
+
+## Research context
+
+We draw on a variety of finance‑focused studies (FX news impact, modern algorithmic trading, liquidity‑aware execution,
+deep learning for FX, and reinforcement‑learning agents). See the original PDFs in the repository for details.
 
 ## References
-- [HistData] HistData minute bars (user-provided zips per pair).
-- [Leetaru & Schrodt 2013] Leetaru, K., & Schrodt, P. A. (2013). GDELT: Global Database of Events, Language, and Tone, 1979–present. (GDELT 2.1 GKG endpoint: http://data.gdeltproject.org/gdeltv2/)
-- [NovaSky 2025] NovaSky Team. (2025). Sky-T1-32B-Flash (local checkpoint) and SkyThought models.
-- Hugging Face datasets: FinanceInc/auditor_sentiment; yale-nlp/FinanceMath; PatronusAI/financebench; Josephgflowers/Finance-Instruct-500k.
+
+* HistData – minute‑bar zip archives.
+* GDELT – `http://data.gdeltproject.org/gdeltv2/`.
+* NovaSky – local `Sky‑T1‑32B‑Flash` checkpoint.

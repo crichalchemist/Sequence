@@ -29,3 +29,25 @@
 ## Commit & Pull Request Guidelines
 - Use concise, imperative commit messages (e.g., "Add attention dropout", "Fix dataset windowing"); keep related changes grouped per commit.
 - PRs should describe the task, affected agents/files, configs used, and sample commands run (train/eval/export). Include any new arguments or defaults and note checkpoint/output paths touched.
+
+## Future Plan (Roadmap)
+
+- **Timezone normalisation** – Enforce UTC for all timestamps in the data agents and store the zone explicitly when
+  loading raw HistData.
+- **Duplicate‑row guard** – De‑duplicate on the `datetime` column after merging zip and CSV sources.
+- **Feature cache** – Cache the intermediate `feature_df` (e.g., Feather format) keyed by a hash of the *content* of raw
+  data and `FeatureConfig` to speed repeated experiments.
+- **Dynamic loss weighting** – Replace static `*_weight` fields with learnable uncertainty parameters (Kendall et al.,
+  2018).
+- **Multi‑head temporal attention** – Optional switch in `ModelConfig` to use a multi‑head attention encoder for longer
+  look‑backs.
+- **Early‑stopping & checkpoint retention** – Patience‑based stop and keep top‑N checkpoints for robustness.
+- **Logging framework** – Migrate `print` statements to a unified `logging` module with configurable verbosity (
+  environment variable `SEQ_LOG_LEVEL`).
+- **Unit tests for data splits** – Add tests ensuring non‑overlapping, time‑ordered train/val/test ranges.
+- **Incremental DataLoader** – Implement an `IterableDataset` fallback for very long histories to reduce memory
+  pressure.
+- **Deterministic runs** – Introduce a global seed setter for `random`, `numpy`, and `torch` to guarantee
+  reproducibility across runs.
+- **Unified data‑agent implementation** – Consolidate `data/agent_data.py` and `data/agents/base_agent.py` into a
+  single, well‑documented hierarchy (`BaseDataAgent`) to avoid duplicated logic.

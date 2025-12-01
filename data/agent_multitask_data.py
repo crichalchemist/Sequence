@@ -7,7 +7,7 @@ import torch
 from torch.utils.data import Dataset
 
 from config.config import MultiTaskDataConfig
-from data.agent_data import _label_from_return, _select_range
+from data.agents.base_agent import _label_from_return, _select_range
 
 
 @dataclass

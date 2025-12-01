@@ -134,6 +134,13 @@ def train_model(
     task_type: str = "classification",
     risk_manager: RiskManager | None = None,
 ) -> Dict[str, List[float]]:
+    # ------------------------------------------------------------------
+    # Logging configuration and device handling
+    # ------------------------------------------------------------------
+    import logging
+    logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
+    logger = logging.getLogger(__name__)
+
     device_str = cfg.device
     if device_str.startswith("cuda") and not torch.cuda.is_available():
         device_str = "cpu"
@@ -150,6 +157,7 @@ def train_model(
     history = {"train_loss": [], "val_loss": [], "val_metric": []}
     best_metric = -float("inf") if task_type == "classification" else float("inf")
     best_state = None
+    epochs_without_improve = 0
 
     for epoch in range(1, cfg.epochs + 1):
         model.train()
@@ -198,11 +206,22 @@ def train_model(
             best_state = {k: v.cpu() for k, v in model.state_dict().items()}
             if cfg.checkpoint_path:
                 torch.save(best_state, cfg.checkpoint_path)
+                logger.info(f"Saved new best checkpoint to {cfg.checkpoint_path}")
+            epochs_without_improve = 0
+        else:
+            epochs_without_improve += 1
 
-        print(
+        logger.info(
             f"epoch {epoch}/{cfg.epochs} train_loss {train_epoch_loss:.4f} "
             f"val_loss {val_loss:.4f} val_metric {val_metric:.4f}"
         )
+
+        # Early‑stopping based on patience configured in TrainingConfig.
+        if getattr(cfg, "early_stop_patience", None) is not None and epochs_without_improve >= cfg.early_stop_patience:
+            logger.info(
+                f"Early stopping triggered at epoch {epoch} (no improvement for {cfg.early_stop_patience} epochs)."
+            )
+            break
 
     if best_state is not None:
         model.load_state_dict(best_state)

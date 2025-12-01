@@ -17,8 +17,14 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+# Local utilities – imported after ensuring the repository root is on ``sys.path``.
+from utils.logger import get_logger
+from utils.datetime import convert_to_utc_and_dedup
+from utils.seed import set_seed
+
+logger = get_logger(__name__)
+
 from config.config import DataConfig, FeatureConfig
-from data.agent_data import DataAgent
 from features.agent_features import build_feature_frame
 from features.intrinsic_time import build_intrinsic_time_bars
 
@@ -112,7 +118,7 @@ def _load_pair_data(pair: str, input_root: Path, years: Optional[List[str]]) -> 
             df["source_file"] = cpath.name
             frames.append(df)
         except Exception as exc:
-            print(f"[warn] failed to load CSV {cpath}: {exc}")
+            logger.warning("[warn] failed to load CSV %s: %s", cpath, exc)
     if not frames:
         raise RuntimeError("No CSV data loaded; check zip contents.")
 
@@ -144,6 +150,15 @@ def process_pair(pair: str, args, batch_size: Optional[int] = None):
         input_root = (ROOT / input_root).resolve()
 
     raw_df = _load_pair_data(pair, input_root, years)
+    # ---------------------------------------------------------------------
+    # 1️⃣  Ensure timestamps are UTC and deduplicate any overlapping rows.
+    # ---------------------------------------------------------------------
+    # HistData timestamps are in Central Time (America/Chicago). Converting
+    # them to UTC provides a single source of truth across the pipeline.
+    # ---------------------------------------------------------------------
+    # 1️⃣  Ensure timestamps are UTC and deduplicate any overlapping rows.
+    # ---------------------------------------------------------------------
+    raw_df = convert_to_utc_and_dedup(raw_df, datetime_col="datetime")
 
     include_groups = None if args.feature_groups.lower() == "all" else [g.strip() for g in args.feature_groups.split(",") if g.strip()]
     exclude_groups = (
@@ -172,12 +187,46 @@ def process_pair(pair: str, args, batch_size: Optional[int] = None):
             up_threshold=args.dc_threshold_up,
             down_threshold=args.dc_threshold_down or args.dc_threshold_up,
         )
-        print(
-            f"[intrinsic] reduced {len(raw_df):,} -> {len(df_for_features):,} bars using "
-            f"DC thresholds up={args.dc_threshold_up}, down={args.dc_threshold_down or args.dc_threshold_up}"
-        )
+    logger = get_logger(__name__)
+    logger.info(
+        "[intrinsic] reduced %d -> %d bars using DC thresholds up=%s, down=%s",
+        len(raw_df),
+        len(df_for_features),
+        args.dc_threshold_up,
+        args.dc_threshold_down or args.dc_threshold_up,
+    )
 
-    feature_df = build_feature_frame(df_for_features, config=feature_cfg)
+    # ---------------------------------------------------------------------
+    # 2️⃣  Cache heavy feature computation to avoid re‑running on every call.
+    # ---------------------------------------------------------------------
+    cache_dir = ROOT / "output_central" / "cache"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    # Simple hash based on raw data shape and feature config parameters.
+
+    # ---------------------------------------------------------------------
+    # 3️⃣  Compute a robust cache key that includes the *content* of the raw
+    #      dataframe.  This avoids stale caches when the underlying price data
+    #      changes but the shape stays identical.
+    # ---------------------------------------------------------------------
+    import hashlib
+
+    # Hash the raw data values (including index) – ``hash_pandas_object`` returns a
+    # Series of uint64 hashes; converting to bytes yields a deterministic digest.
+    raw_hash_bytes = pd.util.hash_pandas_object(raw_df, index=True).values.tobytes()
+    hash_input = (
+            raw_hash_bytes
+            + str(feature_cfg).encode()
+            + (b"intrinsic" if args.intrinsic_time else b"regular")
+    )
+    cache_hash = hashlib.sha256(hash_input).hexdigest()[:12]
+    cache_path = cache_dir / f"{pair}_features_{cache_hash}.feather"
+    if cache_path.exists():
+        feature_df = pd.read_feather(cache_path)
+        logger.info("[cache] loaded pre‑computed features from %s", cache_path)
+    else:
+        feature_df = build_feature_frame(df_for_features, config=feature_cfg)
+        feature_df.to_feather(cache_path)
+        logger.info("[cache] saved computed features to %s", cache_path)
     feature_df["datetime"] = pd.to_datetime(feature_df["datetime"])
 
     train_range, val_range, test_range = _compute_time_ranges(
@@ -202,22 +251,30 @@ def process_pair(pair: str, args, batch_size: Optional[int] = None):
         flat_threshold=args.flat_threshold,
     )
 
-    agent = DataAgent(data_cfg)
+    # ---------------------------------------------------------------------
+    # 5️⃣  Create datasets and dataloaders using the unified BaseDataAgent.
+    # ---------------------------------------------------------------------
+    from data.agents.single_task_agent import SingleTaskDataAgent
+    from data.agents.base_agent import BaseDataAgent as DataAgent
+
+    agent = SingleTaskDataAgent(data_cfg)
     datasets = agent.build_datasets(feature_df)
     effective_batch_size = batch_size if batch_size is not None else getattr(args, "batch_size", 64)
     loaders = DataAgent.build_dataloaders(datasets, batch_size=effective_batch_size)
 
-    print(f"Pair: {pair}")
-    print(f"Rows after features: {len(feature_df):,}")
-    print(f"Features: {len(feature_cols)} -> {feature_cols}")
+    logger.info("Pair: %s", pair)
+    logger.info("Rows after features: %s", f"{len(feature_df):,}")
+    logger.info("Features: %s -> %s", len(feature_cols), feature_cols)
     for split, ds in datasets.items():
         loader = loaders[split]
-        print(f"{split}: {len(ds):,} windows (batch_size={loader.batch_size})")
-    print("Dataloaders ready (train/val/test).")
+        logger.info("%s: %s windows (batch_size=%s)", split, f"{len(ds):,}", loader.batch_size)
+    logger.info("Dataloaders ready (train/val/test).")
     return pair, loaders
 
 
 def main():
+    # Ensure reproducibility across runs.
+    set_seed()
     args = parse_args()
     pairs = [p.strip().lower() for p in args.pairs.split(",") if p.strip()]
     results = {}
@@ -226,7 +283,7 @@ def main():
             _, loaders = process_pair(pair, args)
             results[pair] = loaders
         except Exception as e:
-            print(f"[error] Failed to process {pair}: {e}")
+            logger.error("[error] Failed to process %s: %s", pair, e)
     return results
 
 

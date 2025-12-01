@@ -1,3 +1,15 @@
+"""DEPRECATED: This module is being phased out in favor of data/agents/base_agent.py.
+
+Please use:
+- data.agents.base_agent.BaseDataAgent instead of DataAgent
+- data.agents.single_task_agent.SingleTaskDataAgent for single-task workflows
+- data.agents.base_agent.NormalizationStats instead of local NormalizationStats
+- data.agents.base_agent.SequenceDataset instead of local SequenceDataset
+
+This file will be removed in a future release.
+"""
+
+import warnings
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
@@ -7,6 +19,14 @@ import torch
 from torch.utils.data import Dataset
 
 from config.config import DataConfig
+
+# Issue deprecation warning when this module is imported
+warnings.warn(
+    "data.agent_data is deprecated and will be removed in a future release. "
+    "Use data.agents.base_agent.BaseDataAgent or data.agents.single_task_agent.SingleTaskDataAgent instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 
 def _select_range(df: pd.DataFrame, time_col: str, date_range: Optional[Tuple[str, str]]) -> pd.DataFrame:

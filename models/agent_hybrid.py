@@ -6,18 +6,59 @@ from config.config import ModelConfig
 
 
 class TemporalAttention(nn.Module):
+    """Single‑head additive attention.
+
+    Used when ``ModelConfig.use_multihead_attention`` is ``False`` (default).
+    """
+
     def __init__(self, input_dim: int, attention_dim: int):
         super().__init__()
         self.proj = nn.Linear(input_dim, attention_dim)
         self.score = nn.Linear(attention_dim, 1)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         # x: [B, T, D]
         h = torch.tanh(self.proj(x))
         scores = self.score(h).squeeze(-1)  # [B, T]
         weights = F.softmax(scores, dim=1)
         context = torch.bmm(weights.unsqueeze(1), x).squeeze(1)
         return context, weights
+
+
+class MultiHeadTemporalAttention(nn.Module):
+    """Multi‑head additive attention (optional).
+
+    Mirrors the API of ``TemporalAttention`` but splits the representation
+    into ``n_heads`` sub‑spaces and concatenates the resulting contexts.
+    """
+
+    def __init__(self, input_dim: int, attention_dim: int, n_heads: int = 4):
+        super().__init__()
+        assert input_dim % n_heads == 0, "input_dim must be divisible by n_heads"
+        self.n_heads = n_heads
+        head_dim = input_dim // n_heads
+        self.head_dim = head_dim
+        self.proj = nn.Linear(input_dim, attention_dim)
+        self.score = nn.Linear(attention_dim, n_heads)
+
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        # x: [B, T, D]
+        B, T, D = x.shape
+        h = torch.tanh(self.proj(x))  # [B, T, attention_dim]
+        # Produce a score per head.
+        scores = self.score(h)  # [B, T, n_heads]
+        scores = scores.permute(0, 2, 1)  # [B, n_heads, T]
+        weights = F.softmax(scores, dim=2)  # per‑head softmax over time
+        # Split x into heads.
+        x_heads = x.view(B, T, self.n_heads, self.head_dim).permute(0, 2, 1, 3)  # [B, n_heads, T, head_dim]
+        # Weighted sum per head.
+        context = torch.einsum("bnht,bnhtd->bnhd", weights, x_heads)  # [B, n_heads, 1, head_dim]
+        context = context.squeeze(2)  # [B, n_heads, head_dim]
+        # Concatenate heads back to [B, D]
+        context = context.reshape(B, D)
+        # Return combined weights (average across heads for logging)
+        avg_weights = weights.mean(dim=1)  # [B, T]
+        return context, avg_weights
 
 
 class PriceSequenceEncoder(nn.Module):
@@ -45,7 +86,11 @@ class PriceSequenceEncoder(nn.Module):
 
         lstm_factor = 2 if cfg.bidirectional else 1
         self.output_dim = lstm_factor * cfg.hidden_size_lstm + cfg.cnn_num_filters
-        self.attention = TemporalAttention(self.output_dim, cfg.attention_dim)
+        # Choose attention variant based on config.
+        if cfg.use_multihead_attention:
+            self.attention = MultiHeadTemporalAttention(self.output_dim, cfg.attention_dim)
+        else:
+            self.attention = TemporalAttention(self.output_dim, cfg.attention_dim)
         self.dropout = nn.Dropout(cfg.dropout)
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:

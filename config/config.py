@@ -58,6 +58,9 @@ class ModelConfig:
     return_dim: Optional[int] = None
     num_volatility_classes: int = 2
 
+    # New optional flag to enable multi‑head attention in the encoder.
+    use_multihead_attention: bool = False
+
     def __post_init__(self) -> None:
         # Preserve backward compatibility with older configs that only specify
         # num_classes/output_dim while allowing explicit head dimensions.
@@ -94,6 +97,9 @@ class TrainingConfig:
     topk_return_weight: float = 1.0
     topk_price_weight: float = 1.0
     sell_now_weight: float = 1.0
+    # Early‑stopping patience (epochs without improvement) and checkpoint retention.
+    early_stop_patience: int = 3
+    top_n_checkpoints: int = 3
 
 
 @dataclass

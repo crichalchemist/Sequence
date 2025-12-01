@@ -11,12 +11,19 @@ from zipfile import ZipFile
 
 import pandas as pd
 
+from utils.datetime import convert_to_utc_and_dedup
+# Local utilities
+from utils.logger import get_logger
+from utils.seed import set_seed
+
+logger = get_logger(__name__)
+
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from config.config import FeatureConfig, MultiTaskDataConfig
-from data.agent_multitask_data import MultiTaskDataAgent
+from data.agents.multitask_agent import MultiTaskDataAgent
 from features.agent_features import build_feature_frame
 from features.agent_sentiment import aggregate_sentiment, attach_sentiment_features
 from data.gdelt_ingest import load_gdelt_gkg
@@ -110,6 +117,8 @@ def process_pair(pair: str, args):
         input_root = (ROOT / input_root).resolve()
 
     raw_df = _load_pair_data(pair, input_root, years)
+    # Ensure UTC timestamps and remove duplicates.
+    raw_df = convert_to_utc_and_dedup(raw_df, datetime_col="datetime")
     include_groups = None if args.feature_groups.lower() == "all" else [g.strip() for g in args.feature_groups.split(",") if g.strip()]
     exclude_groups = (
         [g.strip() for g in args.exclude_feature_groups.split(",") if g.strip()]
@@ -138,9 +147,9 @@ def process_pair(pair: str, args):
             gdelt_df = load_gdelt_gkg(Path(args.gdelt_path), target_tz=args.gdelt_tz)
             sent_feats = aggregate_sentiment(gdelt_df, feature_df, time_col="datetime", score_col="sentiment_score")
             feature_df = attach_sentiment_features(feature_df, sent_feats)
-            print(f"GDELT sentiment merged: {len(sent_feats.columns)} sentiment features")
+            logger.info("GDELT sentiment merged: %d sentiment features", len(sent_feats.columns))
         except Exception as exc:
-            print(f"[warn] Failed to ingest GDELT sentiment: {exc}")
+            logger.warning("[warn] Failed to ingest GDELT sentiment: %s", exc)
 
     train_range, val_range, test_range = _compute_time_ranges(
         feature_df, args.train_ratio, args.val_ratio
@@ -168,16 +177,18 @@ def process_pair(pair: str, args):
     datasets = agent.build_datasets(feature_df)
     loaders = MultiTaskDataAgent.build_dataloaders(datasets, batch_size=64)
 
-    print(f"Pair: {pair}")
-    print(f"Rows after features: {len(feature_df):,}")
-    print(f"Features: {len(feature_cols)} -> {feature_cols}")
+    logger.info("Pair: %s", pair)
+    logger.info("Rows after features: %s", f"{len(feature_df):,}")
+    logger.info("Features: %s -> %s", len(feature_cols), feature_cols)
     for split, ds in datasets.items():
-        print(f"{split}: {len(ds):,} windows")
-    print("Dataloaders ready (train/val/test).")
+        logger.info("%s: %s windows", split, f"{len(ds):,}")
+    logger.info("Dataloaders ready (train/val/test).")
     return pair, loaders
 
 
 def main():
+    # Ensure reproducibility.
+    set_seed()
     args = parse_args()
     pairs = [p.strip().lower() for p in args.pairs.split(",") if p.strip()]
     results = {}
@@ -186,7 +197,7 @@ def main():
             _, loaders = process_pair(pair, args)
             results[pair] = loaders
         except Exception as e:
-            print(f"[error] Failed to process {pair}: {e}")
+            logger.error("[error] Failed to process %s: %s", pair, e)
     return results
 
 
