@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SEQUENCE FRAMEWORK :: MATRIX TERMINAL</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000000;
+            color: #00ff00;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        #matrix-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.15;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            padding: 30px 0;
+            border-bottom: 2px solid #00ff00;
+            margin-bottom: 30px;
+            text-shadow: 0 0 10px #00ff00;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            letter-spacing: 8px;
+            margin-bottom: 10px;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        .header .subtitle {
+            font-size: 1.2em;
+            letter-spacing: 4px;
+            color: #00cc00;
+        }
+
+        @keyframes glow {
+            from {
+                text-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00;
+            }
+            to {
+                text-shadow: 0 0 20px #00ff00, 0 0 30px #00ff00, 0 0 40px #00ff00;
+            }
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .panel {
+            background: rgba(0, 20, 0, 0.85);
+            border: 2px solid #00ff00;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .panel:hover {
+            box-shadow: 0 0 30px rgba(0, 255, 0, 0.6);
+            transform: translateY(-5px);
+        }
+
+        .panel h2 {
+            font-size: 1.5em;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #00ff00;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .panel h2::before {
+            content: '▶';
+            color: #00ff00;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px dashed #004400;
+        }
+
+        .status-item:last-child {
+            border-bottom: none;
+        }
+
+        .status-label {
+            color: #00cc00;
+        }
+
+        .status-value {
+            color: #00ff00;
+            font-weight: bold;
+        }
+
+        .status-value.active {
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 25px;
+            background: #001100;
+            border: 1px solid #00ff00;
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 10px 0;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #003300, #00ff00);
+            transition: width 0.5s ease;
+            box-shadow: 0 0 10px #00ff00;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        .progress-text {
+            text-align: center;
+            margin-top: 5px;
+            font-size: 0.9em;
+            color: #00cc00;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .metric-card {
+            background: rgba(0, 50, 0, 0.5);
+            padding: 15px;
+            border: 1px solid #00ff00;
+            border-radius: 3px;
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 2em;
+            color: #00ff00;
+            font-weight: bold;
+            text-shadow: 0 0 10px #00ff00;
+        }
+
+        .metric-label {
+            font-size: 0.9em;
+            color: #00cc00;
+            margin-top: 5px;
+        }
+
+        .log-terminal {
+            background: rgba(0, 10, 0, 0.9);
+            border: 2px solid #00ff00;
+            padding: 15px;
+            height: 300px;
+            overflow-y: auto;
+            font-size: 0.9em;
+            border-radius: 5px;
+            box-shadow: inset 0 0 20px rgba(0, 255, 0, 0.2);
+        }
+
+        .log-entry {
+            padding: 3px 0;
+            opacity: 0;
+            animation: fadeIn 0.5s forwards;
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+
+        .log-timestamp {
+            color: #00aa00;
+        }
+
+        .log-success {
+            color: #00ff00;
+        }
+
+        .log-warning {
+            color: #ffff00;
+        }
+
+        .log-info {
+            color: #00cccc;
+        }
+
+        .system-status {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        .status-badge {
+            padding: 8px 15px;
+            border: 1px solid #00ff00;
+            border-radius: 3px;
+            background: rgba(0, 50, 0, 0.5);
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-badge::before {
+            content: '●';
+            font-size: 1.2em;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        .status-badge.online::before {
+            color: #00ff00;
+        }
+
+        .status-badge.warning::before {
+            color: #ffff00;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 30px 0;
+            border-top: 2px solid #00ff00;
+            margin-top: 30px;
+            color: #00cc00;
+            font-size: 0.9em;
+        }
+
+        .scan-line {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #00ff00, transparent);
+            z-index: 999;
+            animation: scan 4s linear infinite;
+            opacity: 0.3;
+        }
+
+        @keyframes scan {
+            0% { top: 0; }
+            100% { top: 100%; }
+        }
+
+        .checklist {
+            list-style: none;
+            margin-top: 15px;
+        }
+
+        .checklist li {
+            padding: 8px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .checklist li::before {
+            content: '✓';
+            color: #00ff00;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        .checklist li.pending::before {
+            content: '○';
+            color: #00aa00;
+        }
+
+        .timestamp {
+            color: #00aa00;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="matrix-canvas"></canvas>
+    <div class="scan-line"></div>
+    
+    <div class="container">
+        <div class="header">
+            <h1>SEQUENCE FRAMEWORK</h1>
+            <div class="subtitle">MATRIX NEURAL NETWORK TERMINAL</div>
+            <div class="timestamp" id="system-time"></div>
+        </div>
+
+        <div class="grid">
+            <div class="panel">
+                <h2>SYSTEM STATUS</h2>
+                <div class="system-status">
+                    <div class="status-badge online">NEURAL NET ONLINE</div>
+                    <div class="status-badge online">CUDA ENABLED</div>
+                    <div class="status-badge online">A3C ACTIVE</div>
+                    <div class="status-badge warning">GDELT SYNC</div>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Framework Version:</span>
+                    <span class="status-value">v2024.12.06</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Python Runtime:</span>
+                    <span class="status-value">3.10+</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">PyTorch Backend:</span>
+                    <span class="status-value active">2.0+ ONLINE</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Repository:</span>
+                    <span class="status-value">crichalchemist/Sequence</span>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>TRAINING PROGRESS</h2>
+                <div class="status-item">
+                    <span class="status-label">Current Epoch:</span>
+                    <span class="status-value active">37 / 50</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="epoch-progress" style="width: 74%;"></div>
+                </div>
+                <div class="progress-text">CNN-LSTM-ATTENTION :: 74% COMPLETE</div>
+                
+                <div class="status-item">
+                    <span class="status-label">Batch Processing:</span>
+                    <span class="status-value active">512 / 1024</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="batch-progress" style="width: 50%;"></div>
+                </div>
+                <div class="progress-text">MINI-BATCH :: 50% COMPLETE</div>
+            </div>
+
+            <div class="panel">
+                <h2>MODEL PERFORMANCE</h2>
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-value" id="accuracy">94.7%</div>
+                        <div class="metric-label">ACCURACY</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="loss">0.0342</div>
+                        <div class="metric-label">LOSS</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="precision">92.3%</div>
+                        <div class="metric-label">PRECISION</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="recall">95.8%</div>
+                        <div class="metric-label">RECALL</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>ACTIVE COMPONENTS</h2>
+                <ul class="checklist">
+                    <li>CNN Feature Extraction</li>
+                    <li>LSTM Temporal Modeling</li>
+                    <li>Multi-Head Attention</li>
+                    <li>Intrinsic Time Transform</li>
+                    <li>FinBERT Sentiment Analysis</li>
+                    <li>A3C Execution Policy</li>
+                    <li class="pending">TimesFM Ensemble</li>
+                    <li>Backtesting Integration</li>
+                </ul>
+            </div>
+
+            <div class="panel">
+                <h2>DATA PIPELINE</h2>
+                <div class="status-item">
+                    <span class="status-label">Currency Pairs:</span>
+                    <span class="status-value">GBPUSD, EURUSD</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Data Points Processed:</span>
+                    <span class="status-value active">2,847,392</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">GDELT Events:</span>
+                    <span class="status-value">156,428</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Sentiment Features:</span>
+                    <span class="status-value">INTEGRATED</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Intrinsic Time Bars:</span>
+                    <span class="status-value active">ACTIVE</span>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>REINFORCEMENT LEARNING</h2>
+                <div class="status-item">
+                    <span class="status-label">Algorithm:</span>
+                    <span class="status-value">A3C (Asynchronous)</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Total Steps:</span>
+                    <span class="status-value active">742,891 / 1,000,000</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="rl-progress" style="width: 74%;"></div>
+                </div>
+                <div class="progress-text">A3C TRAINING :: 74% COMPLETE</div>
+                <div class="status-item">
+                    <span class="status-label">Workers Active:</span>
+                    <span class="status-value active">8 / 8</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Avg Reward:</span>
+                    <span class="status-value">+0.0428</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>SYSTEM LOG TERMINAL</h2>
+            <div class="log-terminal" id="log-terminal">
+                <div class="log-entry log-success"><span class="log-timestamp">[21:07:14]</span> [SUCCESS] Neural network initialization complete</div>
+                <div class="log-entry log-info"><span class="log-timestamp">[21:07:15]</span> [INFO] Loading checkpoint: models/gbpusd_best_model.pt</div>
+                <div class="log-entry log-success"><span class="log-timestamp">[21:07:16]</span> [SUCCESS] CUDA device detected: Tesla V100</div>
+                <div class="log-entry log-info"><span class="log-timestamp">[21:07:17]</span> [INFO] Batch size: 64 | Learning rate: 1e-3</div>
+                <div class="log-entry log-success"><span class="log-timestamp">[21:07:18]</span> [SUCCESS] Intrinsic time transform applied (DC threshold: 0.0005)</div>
+                <div class="log-entry log-info"><span class="log-timestamp">[21:07:19]</span> [INFO] Training epoch 37/50 started</div>
+                <div class="log-entry log-success"><span class="log-timestamp">[21:07:22]</span> [SUCCESS] Forward pass complete - Loss: 0.0342</div>
+                <div class="log-entry log-info"><span class="log-timestamp">[21:07:23]</span> [INFO] Backward pass and optimizer step complete</div>
+                <div class="log-entry log-warning"><span class="log-timestamp">[21:07:25]</span> [WARNING] GDELT sync pending - using cached sentiment data</div>
+                <div class="log-entry log-info"><span class="log-timestamp">[21:07:26]</span> [INFO] A3C worker 3 completed episode - Reward: +0.0451</div>
+                <div class="log-entry log-success"><span class="log-timestamp">[21:07:28]</span> [SUCCESS] Attention weights computed - 8 heads active</div>
+                <div class="log-entry log-info"><span class="log-timestamp">[21:07:30]</span> [INFO] Processing batch 512/1024</div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>SEQUENCE FRAMEWORK :: DEEP LEARNING FOR FX MARKET PREDICTION</p>
+            <p>MIT LICENSE :: 2024 :: crichalchemist</p>
+            <p class="timestamp">MATRIX TERMINAL v1.0</p>
+        </div>
+    </div>
+
+    <script>
+        // Matrix rain effect
+        const canvas = document.getElementById('matrix-canvas');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const matrixChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*()_+-=[]{}|;:,.<>?/~`';
+        const fontSize = 14;
+        const columns = canvas.width / fontSize;
+
+        const drops = [];
+        for (let i = 0; i < columns; i++) {
+            drops[i] = Math.random() * -100;
+        }
+
+        function drawMatrix() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = '#00ff00';
+            ctx.font = fontSize + 'px monospace';
+
+            for (let i = 0; i < drops.length; i++) {
+                const text = matrixChars[Math.floor(Math.random() * matrixChars.length)];
+                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+                if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+                drops[i]++;
+            }
+        }
+
+        setInterval(drawMatrix, 35);
+
+        // Update system time
+        function updateTime() {
+            const now = new Date();
+            const timeString = now.toISOString().replace('T', ' ').substring(0, 19);
+            document.getElementById('system-time').textContent = `SYSTEM TIME: ${timeString} UTC`;
+        }
+        updateTime();
+        setInterval(updateTime, 1000);
+
+        // Simulate log updates
+        const logTerminal = document.getElementById('log-terminal');
+        const logMessages = [
+            { type: 'info', msg: 'Updating gradient accumulation' },
+            { type: 'success', msg: 'Checkpoint saved: models/checkpoint_epoch_37' },
+            { type: 'info', msg: 'Memory usage: 7.2GB / 16GB' },
+            { type: 'success', msg: 'Validation accuracy: 94.7%' },
+            { type: 'info', msg: 'A3C worker 5 exploring new policy' },
+            { type: 'success', msg: 'Feature normalization complete' },
+            { type: 'info', msg: 'LSTM hidden states updated' },
+            { type: 'success', msg: 'Multi-head attention computation complete' },
+            { type: 'info', msg: 'Backtesting environment initialized' },
+            { type: 'success', msg: 'FinBERT sentiment scores integrated' }
+        ];
+
+        function addLogEntry() {
+            const now = new Date();
+            const timestamp = now.toTimeString().substring(0, 8);
+            const randomLog = logMessages[Math.floor(Math.random() * logMessages.length)];
+            
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry log-${randomLog.type}`;
+            logEntry.innerHTML = `<span class="log-timestamp">[${timestamp}]</span> [${randomLog.type.toUpperCase()}] ${randomLog.msg}`;
+            
+            logTerminal.appendChild(logEntry);
+            logTerminal.scrollTop = logTerminal.scrollHeight;
+
+            // Keep only last 20 entries
+            while (logTerminal.children.length > 20) {
+                logTerminal.removeChild(logTerminal.firstChild);
+            }
+        }
+
+        setInterval(addLogEntry, 3000);
+
+        // Animate metrics
+        function animateMetrics() {
+            const accuracy = document.getElementById('accuracy');
+            const loss = document.getElementById('loss');
+            const precision = document.getElementById('precision');
+            const recall = document.getElementById('recall');
+
+            // Slight random variations
+            const accVal = 94.5 + Math.random() * 0.5;
+            const lossVal = 0.032 + Math.random() * 0.005;
+            const precVal = 91.8 + Math.random() * 1.0;
+            const recVal = 95.3 + Math.random() * 1.0;
+
+            accuracy.textContent = accVal.toFixed(1) + '%';
+            loss.textContent = lossVal.toFixed(4);
+            precision.textContent = precVal.toFixed(1) + '%';
+            recall.textContent = recVal.toFixed(1) + '%';
+        }
+
+        setInterval(animateMetrics, 2000);
+
+        // Animate progress bars
+        function animateProgress() {
+            const epochProgress = document.getElementById('epoch-progress');
+            const batchProgress = document.getElementById('batch-progress');
+            const rlProgress = document.getElementById('rl-progress');
+
+            // Simulate progress
+            let epochWidth = parseFloat(epochProgress.style.width);
+            let batchWidth = parseFloat(batchProgress.style.width);
+            
+            epochWidth = Math.min(100, epochWidth + 0.01);
+            batchWidth = (batchWidth + 0.5) % 100;
+            
+            epochProgress.style.width = epochWidth + '%';
+            batchProgress.style.width = batchWidth + '%';
+        }
+
+        setInterval(animateProgress, 100);
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        console.log('%c SEQUENCE FRAMEWORK INITIALIZED ', 'background: #000; color: #0f0; font-size: 20px; font-family: monospace;');
+        console.log('%c Matrix Terminal Active ', 'background: #000; color: #0f0; font-size: 14px; font-family: monospace;');
+    </script>
+</body>
+</html>
