@@ -48,8 +48,6 @@ def iter_gdelt_buckets(
     ingestion cadence.
     """
     bucket_minutes = bucket_minutes or get_gdelt_bucket_minutes()
-def iter_gdelt_buckets(start: datetime, end: datetime) -> list[datetime]:
-    """Generate regime bucket start times between start and end inclusive using the configured bucket size."""
     start = start.astimezone(timezone.utc)
     end = end.astimezone(timezone.utc)
     if end < start:
@@ -59,8 +57,4 @@ def iter_gdelt_buckets(start: datetime, end: datetime) -> list[datetime]:
     while current <= end:
         buckets.append(current)
         current += timedelta(minutes=bucket_minutes)
-    current = align_candle_to_regime(start, bucket_minutes=get_gdelt_bucket_minutes())
-    while current <= end:
-        buckets.append(current)
-        current += timedelta(minutes=get_gdelt_bucket_minutes())
     return buckets
