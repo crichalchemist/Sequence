@@ -1,12 +1,12 @@
-"""Aggregate GDELT records into fixed-length regime feature vectors."""
+"""Enhanced GDELT feature builder for time series analysis and ML training."""
 from __future__ import annotations
 
 import math
-from collections import Counter, defaultdict
-from datetime import datetime
-from typing import Iterable, List
-
+import pandas as pd
 import numpy as np
+from collections import Counter, defaultdict
+from datetime import datetime, timedelta
+from typing import Iterable, List, Dict, Optional, Union
 
 from gdelt.config import (
     COUNTS_OF_INTEREST,
@@ -18,6 +18,83 @@ from gdelt.config import (
     REGIME_FEATURE_DIM,
 )
 from gdelt.parser import GDELTRecord
+
+
+class GDELTTimeSeriesBuilder:
+    """Enhanced GDELT feature builder for time series analysis and ML training."""
+
+    def __init__(self):
+        self.numeric_cols = [
+            'NumMentions', 'NumSources', 'NumArticles',
+            'AvgTone', 'GoldsteinScale', 'Actor1Geo_Lat',
+            'Actor1Geo_Long', 'Actor2Geo_Lat', 'Actor2Geo_Long'
+        ]
+
+    def build_timeseries_features(self, raw_data: pd.DataFrame) -> pd.DataFrame:
+        """Convert GDELT events to ML-ready time-series format"""
+        df = raw_data.copy()
+
+        # Ensure datetime index
+        if 'SQLDATE' in df.columns:
+            df['SQLDATE'] = pd.to_datetime(df['SQLDATE'], format='%Y%m%d')
+            df = df.set_index('SQLDATE')
+        elif 'DATE' in df.columns:
+            df['DATE'] = pd.to_datetime(df['DATE'])
+            df = df.set_index('DATE')
+
+        # Daily aggregation with statistical measures
+        features = df.groupby(df.index.date).agg({
+            'AvgTone': ['mean', 'std', 'count', 'min', 'max'] if 'AvgTone' in df.columns else ['count'],
+            'GoldsteinScale': ['mean', 'std', 'min', 'max'] if 'GoldsteinScale' in df.columns else ['count'],
+            'NumMentions': ['sum', 'mean'] if 'NumMentions' in df.columns else ['count'],
+            'NumArticles': ['sum', 'count'] if 'NumArticles' in df.columns else ['count'],
+            'EventCode': 'nunique' if 'EventCode' in df.columns else 'count',
+            'Actor1CountryCode': 'nunique' if 'Actor1CountryCode' in df.columns else 'count',
+        }).fillna(0)
+
+        # Flatten columns
+        features.columns = ['_'.join(str(col).strip()) for col in features.columns]
+
+        # Add derived mathematical features
+        features = self._add_derived_features(features)
+
+        return features
+
+    def _add_derived_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Add mathematically derived features"""
+        # Safely handle tone normalization
+        if 'AvgTone_mean' in df.columns:
+            tone_mean = df['AvgTone_mean']
+            tone_std = tone_mean.std()
+            if tone_std > 0:
+                df['tone_zscore'] = (tone_mean - tone_mean.mean()) / tone_std
+            else:
+                df['tone_zscore'] = 0.0
+
+        # Safely handle conflict normalization
+        if 'GoldsteinScale_mean' in df.columns:
+            conflict_mean = df['GoldsteinScale_mean']
+            conflict_std = conflict_mean.std()
+            if conflict_std > 0:
+                df['conflict_zscore'] = (conflict_mean - conflict_mean.mean()) / conflict_std
+            else:
+                df['conflict_zscore'] = 0.0
+
+        # Log transforms for count data
+        if 'NumMentions_sum' in df.columns:
+            df['mentions_log'] = np.log1p(df['NumMentions_sum'])
+        if 'NumArticles_sum' in df.columns:
+            df['articles_log'] = np.log1p(df['NumArticles_sum'])
+
+        # Volatility measures
+        if 'AvgTone_std' in df.columns and 'AvgTone_mean' in df.columns:
+            df['tone_volatility'] = df['AvgTone_std'] / (df['AvgTone_mean'].abs() + 1e-8)
+
+        # Coverage intensity
+        if 'NumArticles_sum' in df.columns and 'NumMentions_sum' in df.columns:
+            df['coverage_intensity'] = df['NumArticles_sum'] / (df['NumMentions_sum'] + 1)
+
+        return df
 
 
 class RegimeFeatureBuilder:

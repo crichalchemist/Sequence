@@ -9,8 +9,8 @@ from gdelt.config import (
     REGIME_FEATURE_DIM,
     REGIME_FEATURE_NAMES,
 )
-from gdelt.downloader import GDELTDownloader
-from gdelt.feature_builder import RegimeFeatureBuilder
+from gdelt.consolidated_downloader import GDELTDownloader
+from gdelt.feature_builder import RegimeFeatureBuilder, GDELTTimeSeriesBuilder
 from gdelt.parser import GDELTRecord
 
 __all__ = [
@@ -23,5 +23,6 @@ __all__ = [
     "REGIME_FEATURE_NAMES",
     "GDELTDownloader",
     "RegimeFeatureBuilder",
+    "GDELTTimeSeriesBuilder",
     "GDELTRecord",
 ]
