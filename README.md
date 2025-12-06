@@ -4,7 +4,7 @@
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c.svg)](https://pytorch.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-**Sequence** is a comprehensive deep learning toolkit for foreign exchange (FX) market forecasting and algorithmic trading. The framework combines state-of-the-art neural architectures (CNN-LSTM-Attention hybrids), intrinsic time representations, sentiment analysis, and reinforcement learning for end-to-end trading strategy development.
+**Sequence** is a comprehensive deep learning toolkit for foreign exchange (FX) market forecasting and algorithmic trading. The framework combines state-of-the-art neural architecture (Dignity), intrinsic time representations, sentiment analysis, and reinforcement learning for end-to-end trading strategy development.
 
 ## Overview
 
