@@ -225,7 +225,7 @@ class BacktestManager:
             logger.error(f"Comparison failed: {e}")
             return None
 
-    def get_results_dataframe(self, symbol: str = None, limit: 20) -> pd.DataFrame:
+    def get_results_dataframe(self, symbol: str = None, limit: int = 20) -> pd.DataFrame:
         """Get results as DataFrame for analysis."""
         try:
             conn = sqlite3.connect(DB_PATH)

@@ -305,7 +305,7 @@ class MQL5Bridge:
             logger.error(f"Failed to mark signal sent: {e}")
             return False
 
-    def get_backtest_comparison(self, symbol: str = None, limit: 10) -> pd.DataFrame:
+    def get_backtest_comparison(self, symbol: str = None, limit: int = 10) -> pd.DataFrame:
         """Get comparison of backtest results."""
         try:
             conn = sqlite3.connect(DB_PATH)
