@@ -511,9 +511,13 @@
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
 
-        const matrixChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*()_+-=[]{}|;:,.<>?/~`';
+        const matrixChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
         const fontSize = 14;
         const columns = canvas.width / fontSize;
+        const MATRIX_ANIMATION_INTERVAL = 35; // milliseconds between frames
+        const MAX_LOG_ENTRIES = 20; // maximum log entries to keep
+        const EPOCH_PROGRESS_RATE = 0.01; // simulated epoch progress increment
+        const BATCH_PROGRESS_RATE = 0.5; // simulated batch progress increment
 
         const drops = [];
         for (let i = 0; i < columns; i++) {
@@ -538,7 +542,7 @@
             }
         }
 
-        setInterval(drawMatrix, 35);
+        setInterval(drawMatrix, MATRIX_ANIMATION_INTERVAL);
 
         // Update system time
         function updateTime() {
@@ -576,8 +580,8 @@
             logTerminal.appendChild(logEntry);
             logTerminal.scrollTop = logTerminal.scrollHeight;
 
-            // Keep only last 20 entries
-            while (logTerminal.children.length > 20) {
+            // Keep only last MAX_LOG_ENTRIES entries
+            while (logTerminal.children.length > MAX_LOG_ENTRIES) {
                 logTerminal.removeChild(logTerminal.firstChild);
             }
         }
@@ -615,8 +619,8 @@
             let epochWidth = parseFloat(epochProgress.style.width);
             let batchWidth = parseFloat(batchProgress.style.width);
             
-            epochWidth = Math.min(100, epochWidth + 0.01);
-            batchWidth = (batchWidth + 0.5) % 100;
+            epochWidth = Math.min(100, epochWidth + EPOCH_PROGRESS_RATE);
+            batchWidth = (batchWidth + BATCH_PROGRESS_RATE) % 100;
             
             epochProgress.style.width = epochWidth + '%';
             batchProgress.style.width = batchWidth + '%';
@@ -624,10 +628,14 @@
 
         setInterval(animateProgress, 100);
 
-        // Handle window resize
+        // Handle window resize with debounce
+        let resizeTimeout;
         window.addEventListener('resize', () => {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }, 250);
         });
 
         console.log('%c SEQUENCE FRAMEWORK INITIALIZED ', 'background: #000; color: #0f0; font-size: 20px; font-family: monospace;');
