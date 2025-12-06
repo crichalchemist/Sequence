@@ -23,7 +23,7 @@ if str(ROOT) not in sys.path:
 from config.config import MultiTaskModelConfig, MultiTaskLossWeights, TrainingConfig
 from data.prepare_multitask_dataset import process_pair
 from models.agent_multitask import build_multitask_model
-from train.agent_train_multitask import train_multitask
+from train.core.agent_train_multitask import train_multitask
 
 
 def parse_args():
@@ -84,6 +84,19 @@ def parse_args():
 
 
 def main():
+    # Initialize tracing for observability
+    try:
+        from utils.tracing import setup_tracing
+        setup_tracing(
+            service_name="sequence-multitask-training",
+            otlp_endpoint="http://localhost:4318",
+            environment="development"
+        )
+    except ImportError:
+        print("[warn] OpenTelemetry not available; running without tracing")
+    except Exception as e:
+        print(f"[warn] Failed to initialize tracing: {e}; continuing without tracing")
+    
     args = parse_args()
     pairs = [p.strip().lower() for p in args.pairs.split(",") if p.strip()]
 

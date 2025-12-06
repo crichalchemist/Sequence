@@ -3,38 +3,29 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from config.config import PolicyConfig, SignalModelConfig
-from models.agent_hybrid import TemporalAttention
+from models.agent_hybrid import SharedEncoder, TemporalAttention
 
 
-class SignalBackbone(nn.Module):
-    """CNN + LSTM + attention encoder reused by both signal heads and the policy."""
+class SignalBackbone(SharedEncoder):
+    """CNN + LSTM + attention encoder reused by both signal heads and the policy.
+    
+    Inherits from SharedEncoder for consistency with price sequence encoding.
+    Signal backbones typically use unidirectional LSTM for causal processing.
+    """
 
     def __init__(self, cfg: SignalModelConfig):
-        super().__init__()
-        padding = cfg.cnn_kernel_size // 2
-        self.cnn = nn.Conv1d(
-            in_channels=cfg.num_features,
-            out_channels=cfg.cnn_num_filters,
-            kernel_size=cfg.cnn_kernel_size,
-            padding=padding,
+        super().__init__(
+            num_features=cfg.num_features,
+            hidden_size_lstm=cfg.hidden_size_lstm,
+            num_layers_lstm=cfg.num_layers_lstm,
+            cnn_num_filters=cfg.cnn_num_filters,
+            cnn_kernel_size=cfg.cnn_kernel_size,
+            attention_dim=cfg.attention_dim,
+            dropout=cfg.signal_dropout,
+            bidirectional=False,  # Signal models use unidirectional LSTM
+            use_optimized_attention=False,
+            use_multihead_attention=False,
         )
-        self.lstm = nn.LSTM(
-            input_size=cfg.num_features,
-            hidden_size=cfg.hidden_size_lstm,
-            num_layers=cfg.num_layers_lstm,
-            batch_first=True,
-        )
-        attn_input_dim = cfg.hidden_size_lstm + cfg.cnn_num_filters
-        self.attention = TemporalAttention(attn_input_dim, cfg.attention_dim)
-        self.output_dim = attn_input_dim
-
-    def forward(self, x: torch.Tensor):
-        lstm_out, _ = self.lstm(x)  # [B, T, H_lstm]
-        cnn_in = x.permute(0, 2, 1)
-        cnn_features = F.relu(self.cnn(cnn_in)).permute(0, 2, 1)
-        combined = torch.cat([lstm_out, cnn_features], dim=-1)
-        context, attn_weights = self.attention(combined)
-        return context, attn_weights
 
 
 class SignalModel(nn.Module):

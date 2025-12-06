@@ -28,7 +28,7 @@ from config.config import (  # noqa: E402
 )
 from data.prepare_dataset import process_pair  # noqa: E402
 from models.signal_policy import ExecutionPolicy, SignalModel  # noqa: E402
-from train.agent_train import (  # noqa: E402
+from train.core.agent_train import (  # noqa: E402
     pretrain_signal_model,
     train_execution_policy,
 )
@@ -78,9 +78,13 @@ def parse_args():
         help="Fractional decrease needed to flag a downward directional change. Defaults to dc-threshold-up.",
     )
     parser.add_argument("--batch-size", type=int, default=64)
+    parser.add_argument("--num-workers", type=int, default=4, help="DataLoader workers for parallel loading")
+    parser.add_argument("--pin-memory", action="store_true", default=True, help="Pin DataLoader memory for GPU")
+    parser.add_argument("--prefetch-factor", type=int, default=4, help="DataLoader prefetch factor")
     parser.add_argument("--epochs", type=int, default=10)
     parser.add_argument("--learning-rate", type=float, default=1e-3)
     parser.add_argument("--weight-decay", type=float, default=0.0)
+    parser.add_argument("--use-amp", action="store_true", help="Enable mixed precision (AMP) training for GPU")
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--checkpoint-path", default="models/best_model.pt")
     parser.add_argument(
@@ -108,6 +112,19 @@ def parse_args():
 
 
 def main():
+    # Initialize tracing for observability
+    try:
+        from utils.tracing import setup_tracing
+        setup_tracing(
+            service_name="sequence-training",
+            otlp_endpoint="http://localhost:4318",
+            environment="development"
+        )
+    except ImportError:
+        print("[warn] OpenTelemetry not available; running without tracing")
+    except Exception as e:
+        print(f"[warn] Failed to initialize tracing: {e}; continuing without tracing")
+    
     args = parse_args()
     pairs = [p.strip().lower() for p in args.pairs.split(",") if p.strip()]
 

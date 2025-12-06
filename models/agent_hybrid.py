@@ -3,113 +3,174 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from config.config import ModelConfig
+from utils.attention_optimization import (
+    OptimizedMultiHeadAttention,
+    SlidingWindowAttention,
+    AdaptiveAttention,
+    TemporalAttention,
+    create_optimized_attention,
+    MultiHeadTemporalAttention
+)
 
 
-class TemporalAttention(nn.Module):
-    """Single‑head additive attention.
-
-    Used when ``ModelConfig.use_multihead_attention`` is ``False`` (default).
+class SharedEncoder(nn.Module):
+    """Unified CNN + LSTM + Attention encoder base class for all model variants.
+    
+    Encapsulates the core pattern: temporal local features (CNN) + sequential
+    dependencies (LSTM) + context aggregation (attention) → single embedding.
+    
+    All model encoders (price sequences, signals, regimes) inherit this base,
+    ensuring consistent architecture and reducing code duplication.
+    
+    Parameters
+    ----------
+    num_features : int
+        Number of input features (sequence width).
+    hidden_size_lstm : int
+        LSTM hidden dimension.
+    num_layers_lstm : int
+        Number of LSTM layers. Default: 1.
+    cnn_num_filters : int
+        Number of CNN output filters. Default: 32.
+    cnn_kernel_size : int
+        CNN kernel size. Default: 3.
+    attention_dim : int
+        Attention mechanism hidden dimension. Default: 64.
+    dropout : float
+        Dropout rate. Default: 0.1.
+    bidirectional : bool
+        Whether LSTM is bidirectional. Default: True.
+    use_optimized_attention : bool
+        Whether to use optimized attention for long sequences. Default: False.
+    use_multihead_attention : bool
+        Whether to use multi-head attention. Default: False.
+    n_attention_heads : int
+        Number of attention heads (if multihead). Default: 4.
+    max_seq_length : int
+        Max sequence length for optimized attention. Default: 1024.
+    use_adaptive_attention : bool
+        Whether attention is adaptive. Default: False.
     """
-
-    def __init__(self, input_dim: int, attention_dim: int):
+    
+    def __init__(
+        self,
+        num_features: int,
+        hidden_size_lstm: int = 64,
+        num_layers_lstm: int = 1,
+        cnn_num_filters: int = 32,
+        cnn_kernel_size: int = 3,
+        attention_dim: int = 64,
+        dropout: float = 0.1,
+        bidirectional: bool = True,
+        use_optimized_attention: bool = False,
+        use_multihead_attention: bool = False,
+        n_attention_heads: int = 4,
+        max_seq_length: int = 1024,
+        use_adaptive_attention: bool = False,
+    ):
         super().__init__()
-        self.proj = nn.Linear(input_dim, attention_dim)
-        self.score = nn.Linear(attention_dim, 1)
-
-    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        # x: [B, T, D]
-        h = torch.tanh(self.proj(x))
-        scores = self.score(h).squeeze(-1)  # [B, T]
-        weights = F.softmax(scores, dim=1)
-        context = torch.bmm(weights.unsqueeze(1), x).squeeze(1)
-        return context, weights
-
-
-class MultiHeadTemporalAttention(nn.Module):
-    """Multi‑head additive attention (optional).
-
-    Mirrors the API of ``TemporalAttention`` but splits the representation
-    into ``n_heads`` sub‑spaces and concatenates the resulting contexts.
-    """
-
-    def __init__(self, input_dim: int, attention_dim: int, n_heads: int = 4):
-        super().__init__()
-        assert input_dim % n_heads == 0, "input_dim must be divisible by n_heads"
-        self.n_heads = n_heads
-        head_dim = input_dim // n_heads
-        self.head_dim = head_dim
-        self.proj = nn.Linear(input_dim, attention_dim)
-        self.score = nn.Linear(attention_dim, n_heads)
-
-    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        # x: [B, T, D]
-        B, T, D = x.shape
-        h = torch.tanh(self.proj(x))  # [B, T, attention_dim]
-        # Produce a score per head.
-        scores = self.score(h)  # [B, T, n_heads]
-        scores = scores.permute(0, 2, 1)  # [B, n_heads, T]
-        weights = F.softmax(scores, dim=2)  # per‑head softmax over time
-        # Split x into heads.
-        x_heads = x.view(B, T, self.n_heads, self.head_dim).permute(0, 2, 1, 3)  # [B, n_heads, T, head_dim]
-        # Weighted sum per head.
-        context = torch.einsum("bnht,bnhtd->bnhd", weights, x_heads)  # [B, n_heads, 1, head_dim]
-        context = context.squeeze(2)  # [B, n_heads, head_dim]
-        # Concatenate heads back to [B, D]
-        context = context.reshape(B, D)
-        # Return combined weights (average across heads for logging)
-        avg_weights = weights.mean(dim=1)  # [B, T]
-        return context, avg_weights
-
-
-class PriceSequenceEncoder(nn.Module):
-    """CNN + (bi)LSTM + temporal attention encoder returning a single embedding."""
-
-    def __init__(self, cfg: ModelConfig):
-        super().__init__()
-        self.cfg = cfg
-
-        padding = cfg.cnn_kernel_size // 2
+        
+        # CNN for local temporal patterns
+        padding = cnn_kernel_size // 2
         self.cnn = nn.Conv1d(
-            in_channels=cfg.num_features,
-            out_channels=cfg.cnn_num_filters,
-            kernel_size=cfg.cnn_kernel_size,
+            in_channels=num_features,
+            out_channels=cnn_num_filters,
+            kernel_size=cnn_kernel_size,
             padding=padding,
         )
-
+        
+        # LSTM for sequential dependencies
         self.lstm = nn.LSTM(
-            input_size=cfg.num_features,
-            hidden_size=cfg.hidden_size_lstm,
-            num_layers=cfg.num_layers_lstm,
+            input_size=num_features,
+            hidden_size=hidden_size_lstm,
+            num_layers=num_layers_lstm,
             batch_first=True,
-            bidirectional=cfg.bidirectional,
+            bidirectional=bidirectional,
         )
-
-        lstm_factor = 2 if cfg.bidirectional else 1
-        self.output_dim = lstm_factor * cfg.hidden_size_lstm + cfg.cnn_num_filters
-        # Choose attention variant based on config.
-        if cfg.use_multihead_attention:
-            self.attention = MultiHeadTemporalAttention(self.output_dim, cfg.attention_dim)
+        
+        # Compute combined dimension
+        lstm_factor = 2 if bidirectional else 1
+        lstm_out_dim = lstm_factor * hidden_size_lstm
+        self.output_dim = lstm_out_dim + cnn_num_filters
+        
+        # Attention for context aggregation
+        if use_optimized_attention:
+            self.attention = create_optimized_attention(
+                input_dim=self.output_dim,
+                attention_dim=attention_dim,
+                n_heads=n_attention_heads,
+                max_seq_length=max_seq_length,
+                use_adaptive=use_adaptive_attention,
+            )
+        elif use_multihead_attention:
+            self.attention = MultiHeadTemporalAttention(
+                input_dim=self.output_dim,
+                attention_dim=attention_dim,
+                n_heads=n_attention_heads,
+            )
         else:
-            self.attention = TemporalAttention(self.output_dim, cfg.attention_dim)
-        self.dropout = nn.Dropout(cfg.dropout)
-
+            self.attention = TemporalAttention(self.output_dim, attention_dim)
+        
+        self.dropout = nn.Dropout(dropout)
+    
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        # x: [B, T, F]
-        lstm_out, _ = self.lstm(x)  # [B, T, H_lstm * (1 or 2)]
-
-        cnn_in = x.permute(0, 2, 1)  # [B, F, T]
-        cnn_features = F.relu(self.cnn(cnn_in)).permute(0, 2, 1)  # [B, T, H_cnn]
-
-        combined = torch.cat([lstm_out, cnn_features], dim=-1)  # [B, T, H_lstm + H_cnn]
-
+        """Forward pass: CNN + LSTM fusion → Attention → Embedding.
+        
+        Parameters
+        ----------
+        x : torch.Tensor
+            Input sequences [B, T, num_features].
+            
+        Returns
+        -------
+        tuple[torch.Tensor, torch.Tensor]
+            - context: Aggregated embedding [B, output_dim]
+            - attn_weights: Attention weights [B, T] or [B, n_heads, T]
+        """
+        # LSTM forward
+        lstm_out, _ = self.lstm(x)  # [B, T, lstm_out_dim]
+        
+        # CNN forward (permute for Conv1d: [B, F, T])
+        cnn_in = x.permute(0, 2, 1)
+        cnn_features = F.relu(self.cnn(cnn_in)).permute(0, 2, 1)  # [B, T, cnn_num_filters]
+        
+        # Concatenate CNN and LSTM outputs
+        combined = torch.cat([lstm_out, cnn_features], dim=-1)  # [B, T, output_dim]
+        
+        # Apply attention
         context, attn_weights = self.attention(combined)
-        context = self.dropout(context)
-        return context, attn_weights
+        
+        return self.dropout(context), attn_weights
+
+
+class PriceSequenceEncoder(SharedEncoder):
+    """CNN + (bi)LSTM + temporal attention encoder returning a single embedding.
+    
+    Backward-compatible wrapper around SharedEncoder for price sequence encoding.
+    """
+
+    def __init__(self, cfg: ModelConfig):
+        super().__init__(
+            num_features=cfg.num_features,
+            hidden_size_lstm=cfg.hidden_size_lstm,
+            num_layers_lstm=cfg.num_layers_lstm,
+            cnn_num_filters=cfg.cnn_num_filters,
+            cnn_kernel_size=cfg.cnn_kernel_size,
+            attention_dim=cfg.attention_dim,
+            dropout=cfg.dropout,
+            bidirectional=cfg.bidirectional,
+            use_optimized_attention=cfg.use_optimized_attention,
+            use_multihead_attention=cfg.use_multihead_attention,
+            n_attention_heads=cfg.n_attention_heads,
+            max_seq_length=cfg.max_seq_length,
+            use_adaptive_attention=cfg.use_adaptive_attention,
+        )
 
 
 class DignityModel(nn.Module):
     """
     CNN + BiLSTM + temporal attention Dignity model with multi-head outputs.
+    Enhanced with optimized attention for longer sequences.
     """
 
     def __init__(self, cfg: ModelConfig, task_type: str = "classification"):

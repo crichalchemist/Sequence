@@ -122,3 +122,81 @@ def evaluate_policy_agent(
 
     accuracy = correct / total if total > 0 else 0.0
     return {"action_accuracy": accuracy, "avg_value": value_sum / max(1, total)}
+
+
+def evaluate_a3c_agent(
+    agent, env_factory, num_episodes: int = 100, device: str = "cpu"
+) -> Dict[str, float]:
+    """Evaluate trained A3C agent on simulated execution environment.
+    
+    Parameters
+    ----------
+    agent : A3CAgent
+        Trained A3C agent with global_model available.
+    env_factory : callable
+        Function that creates environment instances.
+    num_episodes : int
+        Number of episodes to run. Default: 100.
+    device : str
+        Device for inference. Default: 'cpu'.
+        
+    Returns
+    -------
+    Dict[str, float]
+        Evaluation metrics including mean reward, win rate, Sharpe ratio.
+    """
+    agent.global_model.eval()
+    episode_rewards = []
+    episode_lengths = []
+    winning_episodes = 0
+    
+    with torch.no_grad():
+        for _ in range(num_episodes):
+            env = env_factory()
+            obs, _ = agent._reset_env(env)
+            done = False
+            episode_reward = 0.0
+            steps = 0
+            
+            while not done:
+                obs_tensor = agent._to_tensor(obs)
+                logits, value, _ = agent.global_model.forward(obs_tensor)
+                
+                # Take greedy action during evaluation
+                action = logits.argmax(dim=-1).item()
+                obs, reward, terminated, truncated, _ = agent._step_env(env, action)
+                done = terminated or truncated
+                
+                episode_reward += reward
+                steps += 1
+                
+                if steps > 1000:  # Prevent infinite episodes
+                    break
+            
+            episode_rewards.append(episode_reward)
+            episode_lengths.append(steps)
+            if episode_reward > 0:
+                winning_episodes += 1
+    
+    # Compute metrics
+    mean_reward = np.mean(episode_rewards)
+    std_reward = np.std(episode_rewards)
+    max_reward = np.max(episode_rewards)
+    min_reward = np.min(episode_rewards)
+    win_rate = winning_episodes / num_episodes if num_episodes > 0 else 0.0
+    mean_episode_length = np.mean(episode_lengths)
+    
+    # Simple Sharpe ratio (assuming 252 trading days and rewards as daily returns)
+    returns_array = np.array(episode_rewards)
+    sharpe_ratio = (returns_array.mean() / returns_array.std()) * np.sqrt(252) if returns_array.std() > 0 else 0.0
+    
+    return {
+        "mean_reward": float(mean_reward),
+        "std_reward": float(std_reward),
+        "max_reward": float(max_reward),
+        "min_reward": float(min_reward),
+        "win_rate": float(win_rate),
+        "mean_episode_length": float(mean_episode_length),
+        "sharpe_ratio": float(sharpe_ratio),
+        "num_episodes": num_episodes,
+    }

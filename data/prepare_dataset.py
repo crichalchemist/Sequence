@@ -19,14 +19,55 @@ if str(ROOT) not in sys.path:
 
 # Local utilities – imported after ensuring the repository root is on ``sys.path``.
 from utils.logger import get_logger
-from utils.datetime import convert_to_utc_and_dedup
+from utils.datetime_utils import convert_to_utc_and_dedup
 from utils.seed import set_seed
 
 logger = get_logger(__name__)
 
 from config.config import DataConfig, FeatureConfig
 from features.agent_features import build_feature_frame
+from features.agent_sentiment import aggregate_sentiment, attach_sentiment_features
 from features.intrinsic_time import build_intrinsic_time_bars
+
+
+def validate_dataframe(df: pd.DataFrame, required_cols: List[str]) -> pd.DataFrame:
+    """Validate and sanitize raw price data."""
+    logger.info(f"Validating DataFrame with {len(df)} rows and columns: {list(df.columns)}")
+    
+    # Check required columns
+    missing = set(required_cols) - set(df.columns)
+    if missing:
+        raise ValueError(f"Missing columns: {missing}")
+    
+    # Check and convert datetime dtype
+    if not pd.api.types.is_datetime64_any_dtype(df["datetime"]):
+        logger.warning("Converting datetime column to datetime64[ns]")
+        df["datetime"] = pd.to_datetime(df["datetime"])
+    
+    # Remove NaN rows for critical columns
+    initial_len = len(df)
+    df = df.dropna(subset=["open", "high", "low", "close"])
+    if len(df) < initial_len:
+        logger.warning(f"Dropped {initial_len - len(df)} NaN rows from OHLC data")
+    
+    # Detect and remove duplicate timestamps
+    dups = df.duplicated(subset=["datetime"], keep="first")
+    if dups.any():
+        logger.warning(f"Removing {dups.sum()} duplicate timestamps")
+        df = df[~dups].reset_index(drop=True)
+    
+    # Validate OHLC relationships
+    invalid_ohlc = (df["high"] < df["low"]) | (df["high"] < df["open"]) | (df["high"] < df["close"]) | (df["low"] > df["open"]) | (df["low"] > df["close"])
+    if invalid_ohlc.any():
+        invalid_count = invalid_ohlc.sum()
+        logger.warning(f"Removing {invalid_count} rows with invalid OHLC relationships")
+        df = df[~invalid_ohlc].reset_index(drop=True)
+    
+    # Sort by datetime and reset index
+    df = df.sort_values("datetime").reset_index(drop=True)
+    
+    logger.info(f"Validation complete. DataFrame reduced to {len(df)} valid rows")
+    return df
 
 
 def parse_args():
@@ -71,6 +112,11 @@ def parse_args():
         type=float,
         default=None,
         help="Fractional decrease needed to flag a downward directional change. Defaults to dc-threshold-up.",
+    )
+    parser.add_argument(
+        "--include-sentiment",
+        action="store_true",
+        help="Include news sentiment features (requires GDELT data). Adds sentiment_score, sentiment_5min, sentiment_15min, sentiment_60min columns.",
     )
     return parser.parse_args()
 
@@ -125,6 +171,11 @@ def _load_pair_data(pair: str, input_root: Path, years: Optional[List[str]]) -> 
     full_df = pd.concat(frames, ignore_index=True)
     full_df["datetime"] = pd.to_datetime(full_df["datetime"], format="%Y%m%d %H%M%S")
     full_df = full_df.sort_values("datetime").reset_index(drop=True)
+    
+    # Validate the data after loading
+    required_cols = ["datetime", "open", "high", "low", "close", "volume"]
+    full_df = validate_dataframe(full_df, required_cols)
+    
     return full_df
 
 
@@ -227,6 +278,16 @@ def process_pair(pair: str, args, batch_size: Optional[int] = None):
         feature_df = build_feature_frame(df_for_features, config=feature_cfg)
         feature_df.to_feather(cache_path)
         logger.info("[cache] saved computed features to %s", cache_path)
+    
+    # Optional: Attach sentiment features if GDELT data available
+    if args.include_sentiment:
+        try:
+            logger.info("[sentiment] attempting to attach news sentiment features...")
+            feature_df = attach_sentiment_features(feature_df, pair=args.pairs)
+            logger.info("[sentiment] successfully added sentiment columns to feature frame")
+        except Exception as e:
+            logger.warning(f"[sentiment] failed to attach sentiment features: {e}. Continuing without sentiment.")
+    
     feature_df["datetime"] = pd.to_datetime(feature_df["datetime"])
 
     train_range, val_range, test_range = _compute_time_ranges(

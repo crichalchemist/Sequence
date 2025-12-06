@@ -6,6 +6,7 @@ from torch.utils.data import DataLoader
 from config.config import MultiTaskLossWeights, TrainingConfig
 from models.agent_multitask import MultiHeadHybrid
 from risk.risk_manager import RiskManager
+from utils.tracing import get_tracer
 
 
 def _to_device(batch, device):
@@ -125,6 +126,24 @@ def train_multitask(
     loss_weights: MultiTaskLossWeights,
     risk_manager: RiskManager | None = None,
 ) -> Dict[str, List[float]]:
+    # ------------------------------------------------------------------
+    # Initialize tracing if enabled
+    # ------------------------------------------------------------------
+    tracer = None
+    if getattr(cfg, "enable_tracing", True):
+        try:
+            from utils.tracing import setup_tracing
+            setup_tracing(
+                service_name=getattr(cfg, "tracing_service_name", "sequence-multitask-training"),
+                otlp_endpoint=getattr(cfg, "tracing_otlp_endpoint", "http://localhost:4318"),
+                environment=getattr(cfg, "tracing_environment", "development")
+            )
+            tracer = get_tracer(__name__)
+        except ImportError:
+            pass  # OpenTelemetry not available
+        except Exception:
+            pass  # Tracing initialization failed, continue without it
+    
     device_str = cfg.device
     if device_str.startswith("cuda") and not torch.cuda.is_available():
         device_str = "cpu"
@@ -151,40 +170,90 @@ def train_multitask(
     for epoch in range(1, cfg.epochs + 1):
         model.train()
         running_loss = 0.0
-        for step, batch in enumerate(train_loader, start=1):
-            x, targets = _to_device(batch, device)
-            outputs, _ = model(x)
-            if risk_manager:
-                context = risk_manager.build_context(x=x)
-                outputs["direction_logits"], reasons = risk_manager.apply_classification_logits(
-                    outputs["direction_logits"], context
-                )
-                outputs["return"], ret_reasons = risk_manager.apply_regression_output(outputs["return"], context)
-                outputs["next_close"], close_reasons = risk_manager.apply_regression_output(
-                    outputs["next_close"], context
-                )
-                all_reasons = sorted(set(reasons + ret_reasons + close_reasons))
-                risk_manager.record_actions(outputs["direction_logits"].argmax(dim=1))
-                risk_manager.log_events(all_reasons, prefix=f"epoch {epoch} step {step}")
-            loss, per_task = _compute_losses(outputs, targets, loss_weights)
-            loss.backward()
-            if cfg.grad_clip:
-                torch.nn.utils.clip_grad_norm_(model.parameters(), cfg.grad_clip)
-            optimizer.step()
-            optimizer.zero_grad()
-            running_loss += loss.item()
-            if step % cfg.log_every == 0:
-                print(f"epoch {epoch} step {step} loss {running_loss / step:.4f} tasks {per_task}")
-
-        train_epoch_loss = running_loss / max(1, len(train_loader))
-        val_metrics = _evaluate(model, val_loader, loss_weights, device, risk_manager=risk_manager)
-        history["train_loss"].append(train_epoch_loss)
-        history["val_loss"].append(val_metrics["loss"])
-        history["val_dir_acc"].append(val_metrics["dir_acc"])
-        history["val_vol_acc"].append(val_metrics["vol_acc"])
-        history["val_trend_acc"].append(val_metrics["trend_acc"])
-        history["val_vol_regime_acc"].append(val_metrics["vol_regime_acc"])
-        history["val_candle_acc"].append(val_metrics["candle_acc"])
+        
+        # Initialize epoch span (null-safe)
+        span = None
+        if tracer is not None:
+            span = tracer.start_span(f"epoch_{epoch}")
+            span.set_attribute("epoch", epoch)
+        
+        try:
+            for step, batch in enumerate(train_loader, start=1):
+                # Initialize batch span (null-safe)
+                batch_span = None
+                if tracer is not None:
+                    batch_span = tracer.start_span(f"batch_{step}")
+                    batch_span.set_attribute("step", step)
+                
+                try:
+                    x, targets = _to_device(batch, device)
+                    outputs, _ = model(x)
+                    if risk_manager:
+                        context = risk_manager.build_context(x=x)
+                        outputs["direction_logits"], reasons = risk_manager.apply_classification_logits(
+                            outputs["direction_logits"], context
+                        )
+                        outputs["return"], ret_reasons = risk_manager.apply_regression_output(outputs["return"], context)
+                        outputs["next_close"], close_reasons = risk_manager.apply_regression_output(
+                            outputs["next_close"], context
+                        )
+                        all_reasons = sorted(set(reasons + ret_reasons + close_reasons))
+                        risk_manager.record_actions(outputs["direction_logits"].argmax(dim=1))
+                        risk_manager.log_events(all_reasons, prefix=f"epoch {epoch} step {step}")
+                    loss, per_task = _compute_losses(outputs, targets, loss_weights)
+                    loss.backward()
+                    if cfg.grad_clip:
+                        torch.nn.utils.clip_grad_norm_(model.parameters(), cfg.grad_clip)
+                    optimizer.step()
+                    optimizer.zero_grad()
+                    running_loss += loss.item()
+                    
+                    # Record batch metrics (null-safe)
+                    if batch_span:
+                        batch_span.set_attribute("loss", loss.item())
+                        for task_name, task_loss in per_task.items():
+                            batch_span.set_attribute(f"task.{task_name}", task_loss)
+                    
+                    if step % cfg.log_every == 0:
+                        print(f"epoch {epoch} step {step} loss {running_loss / step:.4f} tasks {per_task}")
+                        if span:
+                            span.set_attribute(f"loss_at_step_{step}", running_loss / step)
+                finally:
+                    if batch_span:
+                        batch_span.end()
+            
+            train_epoch_loss = running_loss / max(1, len(train_loader))
+            val_metrics = _evaluate(model, val_loader, loss_weights, device, risk_manager=risk_manager)
+            
+            # Initialize validation span (null-safe)
+            val_span = None
+            if tracer is not None:
+                val_span = tracer.start_span(f"validation_{epoch}")
+                val_span.set_attribute("epoch", epoch)
+                for key, val in val_metrics.items():
+                    val_span.set_attribute(f"val.{key}", val)
+            
+            try:
+                history["train_loss"].append(train_epoch_loss)
+                history["val_loss"].append(val_metrics["loss"])
+                history["val_dir_acc"].append(val_metrics["dir_acc"])
+                history["val_vol_acc"].append(val_metrics["vol_acc"])
+                history["val_trend_acc"].append(val_metrics["trend_acc"])
+                history["val_vol_regime_acc"].append(val_metrics["vol_regime_acc"])
+                history["val_candle_acc"].append(val_metrics["candle_acc"])
+                
+                # Record epoch metrics on span (null-safe)
+                if span:
+                    span.set_attribute("train_loss", train_epoch_loss)
+                    span.set_attribute("val_loss", val_metrics["loss"])
+                    for key, val in val_metrics.items():
+                        span.set_attribute(f"val.{key}", val)
+            finally:
+                if val_span:
+                    val_span.end()
+        finally:
+            if span:
+                span.end()
 
         is_better = val_metrics["loss"] < best_loss
         if is_better:

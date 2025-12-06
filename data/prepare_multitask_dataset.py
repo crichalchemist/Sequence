@@ -11,7 +11,7 @@ from zipfile import ZipFile
 
 import pandas as pd
 
-from utils.datetime import convert_to_utc_and_dedup
+from utils.datetime_utils import convert_to_utc_and_dedup
 # Local utilities
 from utils.logger import get_logger
 from utils.seed import set_seed

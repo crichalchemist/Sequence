@@ -33,8 +33,8 @@ jobs:
           modules = [
               "data.download_gdelt",
               "utils.run_training_pipeline",
-              "train.run_finetune_novasky",
-              "train.run_finetune_novasky_lora",
+              "train.experiments.run_finetune_novasky",
+              "train.experiments.run_finetune_novasky_lora",
               "eval.run_evaluation",
           ]
           for m in modules:

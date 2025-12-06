@@ -215,17 +215,18 @@ def main():
     parser.add_argument(
         "--mirror",
         choices=sorted(HUGGINGFACE_MIRRORS.keys()),
-        default="gdelt",
+        default="hf-maxlong-2022",
         help=(
-            "Data source for downloads. Use a Hugging Face mirror when gdeltproject.org is unreliable: "
-            "hf-maxlong-2022, hf-olm, hf-andreas-helgesson"
+            "Primary data source (defaults to the hf-maxlong-2022 mirror to avoid gdeltproject.org TLS issues). "
+            "Options: gdelt, hf-maxlong-2022, hf-olm, hf-andreas-helgesson."
         ),
     )
     parser.add_argument(
         "--mirror-fallbacks",
-        default="",
+        default="hf-olm,hf-andreas-helgesson,gdelt",
         help=(
-            "Comma-separated list of mirrors to try if the primary source fails (ignored when --base-url is set)."
+            "Comma-separated list of mirrors to try if the primary source fails (ignored when --base-url is set). "
+            "Defaults to other Hugging Face mirrors then the primary gdelt host."
         ),
     )
     parser.add_argument(

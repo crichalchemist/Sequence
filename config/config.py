@@ -58,8 +58,17 @@ class ModelConfig:
     return_dim: Optional[int] = None
     num_volatility_classes: int = 2
 
-    # New optional flag to enable multi‑head attention in the encoder.
+    # Attention optimization flags
     use_multihead_attention: bool = False
+    use_optimized_attention: bool = True  # Enable memory-optimized attention
+    max_seq_length: int = 1024  # Max sequence length for attention optimization
+    use_chunking: bool = True  # Use chunking for long sequences
+    chunk_size: int = 512  # Chunk size for memory efficiency
+    use_adaptive_attention: bool = True  # Use adaptive attention mechanism
+    complexity_threshold: float = 0.5  # Threshold for adaptive attention
+    n_attention_heads: int = 4  # Number of attention heads
+    sliding_window_size: int = 512  # Window size for sliding window attention
+    sliding_step_size: int = 256  # Step size for sliding window attention
 
     def __post_init__(self) -> None:
         # Preserve backward compatibility with older configs that only specify
@@ -100,6 +109,22 @@ class TrainingConfig:
     # Early‑stopping patience (epochs without improvement) and checkpoint retention.
     early_stop_patience: int = 3
     top_n_checkpoints: int = 3
+    
+    # Advanced training optimizations
+    use_amp: bool = False  # Enable Automatic Mixed Precision
+    fp16: bool = False     # Use FP16 instead of FP32
+    grad_scaler: Optional[str] = None  # 'grad_scaler' or None for AMP
+    
+    # Asynchronous checkpoint saving
+    async_checkpoint: bool = False
+    checkpoint_workers: int = 2
+    checkpoint_queue_size: int = 10
+    
+    # OpenTelemetry tracing configuration
+    enable_tracing: bool = True  # Enable/disable tracing
+    tracing_service_name: str = "sequence-training"
+    tracing_otlp_endpoint: str = "http://localhost:4318"
+    tracing_environment: str = "development"
 
 
 @dataclass
@@ -169,7 +194,7 @@ class MultiTaskDataConfig:
     train_range: Optional[Tuple[str, str]] = None
     val_range: Optional[Tuple[str, str]] = None
     test_range: Optional[Tuple[str, str]] = None
-    flat_threshold: float = 0.0001  # for direction classes
+    flat_threshold: float = 0.0001
     vol_min_change: float = 0.0     # minimal vol delta to call it "up"
 
 
@@ -203,3 +228,16 @@ class ExperimentConfig:
     model: ModelConfig
     training: TrainingConfig
     export: ExportConfig = field(default_factory=ExportConfig)
+
+
+# New dataclass for integrating PDF research ingestion results.
+@dataclass
+class ResearchConfig:
+    """
+    Configuration for the PDF research ingestion pipeline.
+    Attributes:
+        generated_code_dir: Directory where feature code generated from PDFs will be written.
+        config_path: Optional JSON configuration file produced by the ingestion pipeline.
+    """
+    generated_code_dir: str = "features"
+    config_path: str = "forex_research/config.json"

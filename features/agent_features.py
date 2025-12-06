@@ -4,6 +4,28 @@ import numpy as np
 import pandas as pd
 
 from config.config import FeatureConfig
+import importlib.util
+import sys
+from pathlib import Path
+from config.config import ResearchConfig
+
+def _load_generated_features():
+    cfg = ResearchConfig()
+    gen_dir = Path(cfg.generated_code_dir)
+    features = {}
+    if gen_dir.is_dir():
+        for py_file in gen_dir.glob("*.py"):
+            module_name = py_file.stem
+            spec = importlib.util.spec_from_file_location(module_name, py_file)
+            if spec and spec.loader:
+                mod = importlib.util.module_from_spec(spec)
+                sys.modules[module_name] = mod
+                spec.loader.exec_module(mod)
+                if hasattr(mod, module_name):
+                    features[module_name] = getattr(mod, module_name)
+    return features
+
+GENERATED_FEATURES = _load_generated_features()
 
 
 def sma(series: pd.Series, window: int) -> pd.Series:
