@@ -261,7 +261,7 @@ def render_main_dashboard():
         render_project_overview()
 
     with tab2:
-        render_data_intelligence()
+        render_market_intelligence()
 
     with tab3:
         render_ai_models()
