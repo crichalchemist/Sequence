@@ -73,8 +73,15 @@ class GDELTDownloader:
 
     def fetch_gkg_files(self, start_dt: datetime, end_dt: datetime) -> List[Path]:
         """Download GDELT GKG files between start_dt and end_dt (15-minute resolution)."""
+        if not isinstance(start_dt, datetime) or not isinstance(end_dt, datetime):
+            raise TypeError("start_dt and end_dt must be datetime objects")
         if end_dt < start_dt:
-            raise ValueError("end_dt must be after start_dt")
+            raise ValueError(f"end_dt ({end_dt}) must be after start_dt ({start_dt})")
+        
+        # Warn about very large date ranges
+        days_diff = (end_dt - start_dt).days
+        if days_diff > 365:
+            logger.warning(f"Date range spans {days_diff} days (>365), this may take a long time")
 
         start = self._floor_to_bucket(start_dt)
         end = self._floor_to_bucket(end_dt)
@@ -132,9 +139,12 @@ class GDELTDownloader:
                 target_path.write_bytes(resp.content)
                 return target_path
 
-            except Exception as e:
-                logger.warning(f"Failed to download from {base_url}: {e}")
+            except requests.RequestException as e:
+                logger.warning(f"Network error downloading from {base_url}: {e}")
                 continue
+            except (OSError, PermissionError) as e:
+                logger.error(f"File system error writing to {target_path}: {e}")
+                return None
 
         logger.error(f"Failed to download file from all mirrors: {filename}")
         return None

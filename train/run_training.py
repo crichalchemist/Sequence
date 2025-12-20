@@ -103,11 +103,6 @@ def parse_args():
     parser.add_argument("--entropy-coef", type=float, default=0.01)
     parser.add_argument("--value-coef", type=float, default=0.5)
     parser.add_argument("--detach-signal", action="store_true", help="freeze signal encoder during policy training")
-    parser.add_argument(
-        "--disable-risk",
-        action="store_true",
-        help="Disable risk manager gating during signal pretraining.",
-    )
     return parser.parse_args()
 
 

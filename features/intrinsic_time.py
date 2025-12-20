@@ -14,6 +14,11 @@ import pandas as pd
 def _validate_thresholds(up_threshold: float, down_threshold: float) -> None:
     if up_threshold <= 0 or down_threshold <= 0:
         raise ValueError("Directional-change thresholds must be positive.")
+    if up_threshold > 1.0 or down_threshold > 1.0:
+        raise ValueError(
+            "Directional-change thresholds should be fractional "
+            "(e.g., 0.001 for 0.1%, not 1.0 or greater)"
+        )
 
 
 def detect_directional_changes(
@@ -43,6 +48,10 @@ def detect_directional_changes(
 
     if prices.empty:
         raise ValueError("Price series must contain at least one observation.")
+    if prices.isna().any():
+        raise ValueError("Price series contains NaN values. Please clean the data first.")
+    if (prices <= 0).any():
+        raise ValueError("Price series contains non-positive values. All prices must be positive.")
     if down_threshold is None:
         down_threshold = up_threshold
     _validate_thresholds(up_threshold, down_threshold)

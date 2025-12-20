@@ -61,6 +61,79 @@ class MultiTaskDataAgent:
         self.norm_stats = MultiTaskNormalizationStats(mean=mean, std=std)
         return self.norm_stats
 
+    def _compute_future_targets(self, df, idx, log_close, lookahead, top_k):
+        """Compute future-looking targets for predictions."""
+        future_returns = log_close[idx + 1 : idx + lookahead + 1] - log_close[idx]
+        if len(future_returns) < lookahead or np.isnan(future_returns).any():
+            return None
+        
+        max_future_return = float(np.max(future_returns))
+        sorted_returns = np.sort(future_returns)[::-1]
+        topk_returns = sorted_returns[:top_k]
+        if len(topk_returns) < top_k:
+            topk_returns = np.pad(topk_returns, (0, top_k - len(topk_returns)), constant_values=sorted_returns[-1])
+        topk_prices = np.exp(topk_returns) * df["close"].iloc[idx]
+        
+        return {
+            "max_return": max_future_return,
+            "topk_returns": topk_returns,
+            "topk_prices": topk_prices,
+        }
+
+    def _compute_volatility_targets(self, log_returns, idx, t_out):
+        """Compute volatility-related targets."""
+        past_ret_window = log_returns[idx - t_out + 1 : idx + 1]
+        future_ret_window = log_returns[idx + 1 : idx + t_out + 1]
+        
+        if len(past_ret_window) < t_out or len(future_ret_window) < t_out:
+            return None
+        if np.isnan(past_ret_window).any() or np.isnan(future_ret_window).any():
+            return None
+        
+        past_vol = float(np.std(past_ret_window))
+        future_vol = float(np.std(future_ret_window))
+        vol_label = 1 if (future_vol - past_vol) > self.cfg.vol_min_change else 0
+        
+        trend_avg_return = float(np.mean(future_ret_window))
+        trend_label = int(_label_from_return(trend_avg_return, self.cfg.flat_threshold))
+        
+        vol_delta = future_vol - past_vol
+        if vol_delta > self.cfg.vol_min_change:
+            vol_regime_label = 2
+        elif vol_delta < -self.cfg.vol_min_change:
+            vol_regime_label = 0
+        else:
+            vol_regime_label = 1
+        
+        return {
+            "vol_label": vol_label,
+            "trend_label": trend_label,
+            "vol_regime_label": vol_regime_label,
+        }
+
+    def _compute_candle_pattern(self, candle_row):
+        """Compute candle pattern classification."""
+        open_price = float(candle_row["open"])
+        high_price = float(candle_row["high"])
+        low_price = float(candle_row["low"])
+        close_price = float(candle_row["close"])
+        
+        range_size = max(high_price - low_price, 1e-8)
+        body = close_price - open_price
+        body_ratio = abs(body) / range_size
+        lower_wick = min(open_price, close_price) - low_price
+        
+        if body_ratio < 0.1:
+            return 0  # doji/indecision
+        elif body > 0 and body_ratio > 0.55:
+            return 1  # strong bullish body
+        elif body < 0 and body_ratio > 0.55:
+            return 2  # strong bearish body
+        elif lower_wick / range_size > 0.35:
+            return 3  # hammer/long lower wick
+        else:
+            return 3
+
     def _build_windows(
         self, df: pd.DataFrame, feature_cols: List[str], norm_stats: MultiTaskNormalizationStats
     ) -> Tuple[np.ndarray, Dict[str, np.ndarray]]:
@@ -91,6 +164,7 @@ class MultiTaskDataAgent:
             end_seq = idx + 1
             seq = features[start_seq:end_seq]
 
+            # Basic direction and return targets
             future_close = df["close"].iloc[idx + t_out]
             future_log_ret = log_close[idx + t_out] - log_close[idx]
             if not np.isfinite(future_log_ret):
@@ -100,71 +174,32 @@ class MultiTaskDataAgent:
             return_target = float(future_log_ret)
             next_close_target = float(future_close)
 
-            future_returns = log_close[idx + 1 : idx + lookahead + 1] - log_close[idx]
-            if len(future_returns) < lookahead or np.isnan(future_returns).any():
+            # Compute future targets
+            future_targets = self._compute_future_targets(df, idx, log_close, lookahead, top_k)
+            if future_targets is None:
                 continue
-            max_future_return = float(np.max(future_returns))
-            sorted_returns = np.sort(future_returns)[::-1]
-            topk_returns = sorted_returns[:top_k]
-            if len(topk_returns) < top_k:
-                topk_returns = np.pad(topk_returns, (0, top_k - len(topk_returns)), constant_values=sorted_returns[-1])
-            topk_prices = np.exp(topk_returns) * df["close"].iloc[idx]
 
-            past_ret_window = log_returns[idx - t_out + 1 : idx + 1]
-            future_ret_window = log_returns[idx + 1 : idx + t_out + 1]
-            if len(past_ret_window) < t_out or len(future_ret_window) < t_out:
+            # Compute volatility targets
+            vol_targets = self._compute_volatility_targets(log_returns, idx, t_out)
+            if vol_targets is None:
                 continue
-            if np.isnan(past_ret_window).any() or np.isnan(future_ret_window).any():
-                continue
-            past_vol = float(np.std(past_ret_window))
-            future_vol = float(np.std(future_ret_window))
-            vol_label = 1 if (future_vol - past_vol) > self.cfg.vol_min_change else 0
 
-            trend_avg_return = float(np.mean(future_ret_window))
-            trend_label = int(_label_from_return(trend_avg_return, self.cfg.flat_threshold))
+            # Compute candle pattern
+            candle_label = self._compute_candle_pattern(df.iloc[idx])
 
-            vol_delta = future_vol - past_vol
-            if vol_delta > self.cfg.vol_min_change:
-                vol_regime_label = 2
-            elif vol_delta < -self.cfg.vol_min_change:
-                vol_regime_label = 0
-            else:
-                vol_regime_label = 1
-
-            candle_row = df.iloc[idx]
-            open_price = float(candle_row["open"])
-            high_price = float(candle_row["high"])
-            low_price = float(candle_row["low"])
-            close_price = float(candle_row["close"])
-            range_size = max(high_price - low_price, 1e-8)
-            body = close_price - open_price
-            body_ratio = abs(body) / range_size
-            upper_wick = high_price - max(open_price, close_price)
-            lower_wick = min(open_price, close_price) - low_price
-
-            if body_ratio < 0.1:
-                candle_label = 0  # doji/indecision
-            elif body > 0 and body_ratio > 0.55:
-                candle_label = 1  # strong bullish body
-            elif body < 0 and body_ratio > 0.55:
-                candle_label = 2  # strong bearish body
-            elif lower_wick / range_size > 0.35:
-                candle_label = 3  # hammer/long lower wick
-            else:
-                candle_label = 3
-
+            # Append all targets
             sequences.append(seq)
             targets_dir_cls.append(direction_label)
             targets_ret_reg.append(return_target)
             targets_next_close.append(next_close_target)
-            targets_vol_cls.append(vol_label)
-            targets_max_return.append(max_future_return)
-            targets_topk_returns.append(topk_returns)
-            targets_topk_prices.append(topk_prices)
+            targets_vol_cls.append(vol_targets["vol_label"])
+            targets_max_return.append(future_targets["max_return"])
+            targets_topk_returns.append(future_targets["topk_returns"])
+            targets_topk_prices.append(future_targets["topk_prices"])
             if self.cfg.predict_sell_now:
-                targets_sell_now.append(int(max_future_return <= 0.0))
-            targets_trend_cls.append(trend_label)
-            targets_vol_regime_cls.append(vol_regime_label)
+                targets_sell_now.append(int(future_targets["max_return"] <= 0.0))
+            targets_trend_cls.append(vol_targets["trend_label"])
+            targets_vol_regime_cls.append(vol_targets["vol_regime_label"])
             targets_candle_cls.append(candle_label)
 
         if not sequences:
