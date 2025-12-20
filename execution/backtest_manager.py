@@ -111,8 +111,14 @@ class BacktestManager:
             logger.info(f"Backtest complete: {strategy_name} {symbol} - Return: {result['total_return']}%")
             return result
 
+        except (ValueError, KeyError) as e:
+            logger.error(f"Backtest failed due to invalid data or configuration: {e}")
+            return None
+        except AttributeError as e:
+            logger.error(f"Backtest failed due to strategy implementation error: {e}")
+            return None
         except Exception as e:
-            logger.error(f"Backtest failed: {e}")
+            logger.exception(f"Unexpected error during backtest: {e}")
             return None
 
     def save_result(
