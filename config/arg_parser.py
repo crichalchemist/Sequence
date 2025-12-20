@@ -6,7 +6,6 @@ across different entry points.
 """
 
 import argparse
-from pathlib import Path
 
 from config.constants import (
     DEFAULT_BATCH_SIZE,
