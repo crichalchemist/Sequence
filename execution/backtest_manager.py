@@ -90,6 +90,7 @@ class BacktestManager:
         **strategy_params
     ) -> Dict[str, Any]:
         """Run backtest with strategy."""
+        """Run backtest with strategy."""
         try:
             bt = Backtest(data, strategy_class, cash=cash, commission=commission)
             stats = bt.run(**strategy_params)
@@ -111,8 +112,14 @@ class BacktestManager:
             logger.info(f"Backtest complete: {strategy_name} {symbol} - Return: {result['total_return']}%")
             return result
 
+        except (KeyError, ValueError) as e:
+            logger.error(f"Backtest data error for {strategy_name} on {symbol}: {e}")
+            return None
+        except (AttributeError, TypeError) as e:
+            logger.error(f"Backtest configuration error for {strategy_name}: {e}")
+            return None
         except Exception as e:
-            logger.error(f"Backtest failed: {e}")
+            logger.exception(f"Unexpected backtest error for {strategy_name} on {symbol}: {e}")
             return None
 
     def save_result(
@@ -154,8 +161,17 @@ class BacktestManager:
             logger.info(f"Result saved: {run_id}")
             return True
 
+        except sqlite3.IntegrityError as e:
+            logger.error(f"Database integrity error saving result {run_id}: {e} (duplicate run_id?)")
+            return False
+        except sqlite3.OperationalError as e:
+            logger.error(f"Database operational error saving result {run_id}: {e}")
+            return False
+        except (OSError, PermissionError) as e:
+            logger.error(f"File system error accessing database: {e}")
+            return False
         except Exception as e:
-            logger.error(f"Failed to save result: {e}")
+            logger.exception(f"Unexpected error saving result {run_id}: {e}")
             return False
 
     def compare_strategies(self, run_id_1: str, run_id_2: str) -> Dict[str, Any]:
@@ -172,6 +188,7 @@ class BacktestManager:
             result2 = cursor.fetchone()
 
             if not result1 or not result2:
+                logger.warning(f"One or both run_ids not found: {run_id_1}, {run_id_2}")
                 return None
 
             # Extract key metrics
@@ -223,8 +240,14 @@ class BacktestManager:
             logger.info(f"Comparison complete: {result1[2]} vs {result2[2]}")
             return comparison
 
+        except (sqlite3.OperationalError, sqlite3.DatabaseError) as e:
+            logger.error(f"Database error during comparison: {e}")
+            return None
+        except (IndexError, KeyError, ValueError) as e:
+            logger.error(f"Data extraction error during comparison: {e}")
+            return None
         except Exception as e:
-            logger.error(f"Comparison failed: {e}")
+            logger.exception(f"Unexpected error comparing {run_id_1} vs {run_id_2}: {e}")
             return None
 
     def get_results_dataframe(self, symbol: str = None, limit: int = 20) -> pd.DataFrame:
@@ -247,8 +270,11 @@ class BacktestManager:
 
             return df
 
+        except (sqlite3.OperationalError, sqlite3.DatabaseError) as e:
+            logger.error(f"Database error retrieving results: {e}")
+            return pd.DataFrame()
         except Exception as e:
-            logger.error(f"Failed to get results: {e}")
+            logger.exception(f"Unexpected error retrieving results: {e}")
             return pd.DataFrame()
 
     def export_comparison_csv(self, run_id_1: str, run_id_2: str, output_path: str) -> bool:
@@ -263,8 +289,14 @@ class BacktestManager:
             logger.info(f"Comparison exported to {output_path}")
             return True
 
+        except (OSError, PermissionError) as e:
+            logger.error(f"File system error exporting to {output_path}: {e}")
+            return False
+        except ValueError as e:
+            logger.error(f"Data conversion error during export: {e}")
+            return False
         except Exception as e:
-            logger.error(f"Export failed: {e}")
+            logger.exception(f"Unexpected error exporting comparison: {e}")
             return False
 
     def get_portfolio_stats(self) -> Dict[str, Any]:
@@ -304,11 +336,13 @@ class BacktestManager:
                 "strategies": strategies
             }
 
+        except (sqlite3.OperationalError, sqlite3.DatabaseError) as e:
+            logger.error(f"Database error retrieving portfolio stats: {e}")
+            return {}
         except Exception as e:
-            logger.error(f"Stats failed: {e}")
+            logger.exception(f"Unexpected error retrieving portfolio stats: {e}")
             return {}
 
 
 # Global manager instance
 manager = BacktestManager()
-
