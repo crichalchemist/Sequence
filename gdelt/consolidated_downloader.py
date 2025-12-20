@@ -9,18 +9,18 @@ from pathlib import Path
 from typing import List, Optional, Iterator
 import pandas as pd
 
+from gdelt.config import GDELT_TIME_DELTA_MINUTES
+
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://data.gdeltproject.org/gdeltv2"
 GDELT_GKG_EXTENSION = ".gkg.csv.zip"
-GDELT_TIME_DELTA_MINUTES = 15
 
 HUGGINGFACE_MIRRORS = {
     "gdelt": BASE_URL,
     "hf-maxlong-2022": "https://huggingface.co/datasets/MaxLong/gdelt-news-headlines-2022/resolve/main",
     "hf-olm": "https://huggingface.co/datasets/olm/gdelt-news-headlines/resolve/main",
 }
-
 
 class GDELTDownloader:
     """Enhanced GDELT downloader with mirror support and data processing."""

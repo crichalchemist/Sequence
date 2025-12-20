@@ -10,16 +10,17 @@ from typing import Optional, Sequence
 
 import pandas as pd
 
+from features.constants import MAX_THRESHOLD_VALUE
+
 
 def _validate_thresholds(up_threshold: float, down_threshold: float) -> None:
     if up_threshold <= 0 or down_threshold <= 0:
         raise ValueError("Directional-change thresholds must be positive.")
-    if up_threshold > 1.0 or down_threshold > 1.0:
+    if up_threshold > MAX_THRESHOLD_VALUE or down_threshold > MAX_THRESHOLD_VALUE:
         raise ValueError(
-            "Directional-change thresholds should be fractional "
-            "(e.g., 0.001 for 0.1%, not 1.0 or greater)"
+            f"Directional-change thresholds should be fractional "
+            f"(e.g., 0.001 for 0.1%, not {MAX_THRESHOLD_VALUE} or greater)"
         )
-
 
 def detect_directional_changes(
     prices: pd.Series,

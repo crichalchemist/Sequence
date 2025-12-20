@@ -7,6 +7,16 @@ instances, reducing code duplication and ensuring consistency across entry point
 import argparse
 from typing import Optional
 
+from config.constants import (
+    DEFAULT_BATCH_SIZE,
+    DEFAULT_LEARNING_RATE,
+    DEFAULT_WEIGHT_DECAY,
+    DEFAULT_EPOCHS,
+    DEFAULT_NUM_WORKERS,
+    DEFAULT_PREFETCH_FACTOR,
+)
+from features.constants import DEFAULT_DC_THRESHOLD
+
 
 def add_data_preparation_args(parser: argparse.ArgumentParser) -> None:
     """Add common data preparation arguments.
@@ -62,8 +72,8 @@ def add_intrinsic_time_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--dc-threshold-up",
         type=float,
-        default=0.001,
-        help="Fractional increase needed to flag an upward directional change (e.g., 0.001=0.1%).",
+        default=DEFAULT_DC_THRESHOLD,
+        help=f"Fractional increase needed to flag an upward directional change (e.g., {DEFAULT_DC_THRESHOLD}=0.1%).",
     )
     parser.add_argument(
         "--dc-threshold-down",
@@ -79,10 +89,10 @@ def add_training_args(parser: argparse.ArgumentParser) -> None:
     Args:
         parser: ArgumentParser instance to add arguments to
     """
-    parser.add_argument("--batch-size", type=int, default=64)
-    parser.add_argument("--epochs", type=int, default=10)
-    parser.add_argument("--learning-rate", type=float, default=1e-3)
-    parser.add_argument("--weight-decay", type=float, default=0.0)
+    parser.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE)
+    parser.add_argument("--epochs", type=int, default=DEFAULT_EPOCHS)
+    parser.add_argument("--learning-rate", type=float, default=DEFAULT_LEARNING_RATE)
+    parser.add_argument("--weight-decay", type=float, default=DEFAULT_WEIGHT_DECAY)
     parser.add_argument("--device", default="cuda")
 
 
@@ -92,9 +102,9 @@ def add_dataloader_args(parser: argparse.ArgumentParser) -> None:
     Args:
         parser: ArgumentParser instance to add arguments to
     """
-    parser.add_argument("--num-workers", type=int, default=4, help="DataLoader workers for parallel loading")
+    parser.add_argument("--num-workers", type=int, default=DEFAULT_NUM_WORKERS, help="DataLoader workers for parallel loading")
     parser.add_argument("--pin-memory", action="store_true", default=True, help="Pin DataLoader memory for GPU")
-    parser.add_argument("--prefetch-factor", type=int, default=4, help="DataLoader prefetch factor")
+    parser.add_argument("--prefetch-factor", type=int, default=DEFAULT_PREFETCH_FACTOR, help="DataLoader prefetch factor")
 
 
 def add_checkpoint_args(parser: argparse.ArgumentParser, include_signal_policy: bool = False) -> None:
