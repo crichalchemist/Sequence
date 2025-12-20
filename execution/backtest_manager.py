@@ -11,6 +11,8 @@ from backtesting import Backtest, Strategy
 from backtesting.lib import crossover
 from backtesting.test import SMA, GOOG
 
+from execution.constants import DEFAULT_BACKTEST_CASH, DEFAULT_COMMISSION_RATE
+
 logger = logging.getLogger("BacktestManager")
 
 DB_PATH = Path("output_central/backtest_results.db")
@@ -83,8 +85,8 @@ class BacktestManager:
         strategy_class: type,
         strategy_name: str,
         symbol: str,
-        cash: int = 10000,
-        commission: float = 0.001,
+        cash: int = DEFAULT_BACKTEST_CASH,
+        commission: float = DEFAULT_COMMISSION_RATE,
         **strategy_params
     ) -> Dict[str, Any]:
         """Run backtest with strategy."""
