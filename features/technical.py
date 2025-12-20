@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 from config.config import ResearchConfig
 
+
 def _load_generated_features():
     cfg = ResearchConfig()
     gen_dir = Path(cfg.generated_code_dir)
@@ -24,6 +25,7 @@ def _load_generated_features():
                 if hasattr(mod, module_name):
                     features[module_name] = getattr(mod, module_name)
     return features
+
 
 GENERATED_FEATURES = _load_generated_features()
 
@@ -48,7 +50,9 @@ def rsi(series: pd.Series, window: int = 14) -> pd.Series:
     return rsi_series.fillna(100)
 
 
-def bollinger_bands(series: pd.Series, window: int = 20, num_std: float = 2.0):
+def bollinger_bands(
+    series: pd.Series, window: int = 20, num_std: float = 2.0
+) -> tuple[pd.Series, pd.Series, pd.Series]:
     mid = sma(series, window)
     std = series.rolling(window=window, min_periods=window).std()
     upper = mid + num_std * std
@@ -56,7 +60,7 @@ def bollinger_bands(series: pd.Series, window: int = 20, num_std: float = 2.0):
     return lower, mid, upper
 
 
-def average_true_range(df: pd.DataFrame, window: int) -> pd.Series:
+def average_true_range(df: pd.DataFrame, window: int) -> tuple[pd.Series, pd.Series]:
     prev_close = df["close"].shift(1)
     tr_components = pd.concat(
         [
@@ -70,14 +74,18 @@ def average_true_range(df: pd.DataFrame, window: int) -> pd.Series:
     return true_range.rolling(window=window, min_periods=window).mean(), true_range
 
 
-def bollinger_bandwidth(close: pd.Series, window: int, num_std: float) -> pd.Series:
+def bollinger_bandwidth(
+    close: pd.Series, window: int, num_std: float
+) -> tuple[pd.Series, pd.Series, pd.Series, pd.Series, pd.Series]:
     lower, mid, upper = bollinger_bands(close, window=window, num_std=num_std)
     width = (upper - lower) / mid.replace(0, pd.NA)
     percent_b = (close - lower) / (upper - lower)
     return width, percent_b, lower, mid, upper
 
 
-def volatility_clustering(log_returns: pd.Series, short_window: int, long_window: int) -> pd.DataFrame:
+def volatility_clustering(
+    log_returns: pd.Series, short_window: int, long_window: int
+) -> pd.DataFrame:
     short_vol = log_returns.rolling(window=short_window, min_periods=short_window).std()
     long_vol = log_returns.rolling(window=long_window, min_periods=long_window).std()
     vol_ratio = short_vol / long_vol.replace(0, pd.NA)
@@ -132,7 +140,9 @@ def add_base_features(df: pd.DataFrame, spread_windows: Optional[list[int]] = No
         for window in spread_windows:
             mean_spread = out["high_low_spread"].rolling(window=window, min_periods=window).mean()
             std_spread = out["high_low_spread"].rolling(window=window, min_periods=window).std()
-            out[f"high_low_spread_z_{window}"] = (out["high_low_spread"] - mean_spread) / std_spread.replace(0, pd.NA)
+            out[f"high_low_spread_z_{window}"] = (
+                out["high_low_spread"] - mean_spread
+            ) / std_spread.replace(0, pd.NA)
     return out
 
 
