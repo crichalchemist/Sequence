@@ -1,4 +1,13 @@
 # Exclude the vendored TimesFM stub files, which are Git LFS pointers and not valid TOML/Python.
 exclude = [
     "models/timesFM",
+    "backup_removed_files",
 ]
+
+line-length = 100
+
+[lint]
+select = ["E", "F", "W"]
+
+[format]
+quote-style = "double"

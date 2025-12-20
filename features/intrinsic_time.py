@@ -22,6 +22,7 @@ def _validate_thresholds(up_threshold: float, down_threshold: float) -> None:
             f"(e.g., 0.001 for 0.1%, not {MAX_THRESHOLD_VALUE} or greater)"
         )
 
+
 def detect_directional_changes(
     prices: pd.Series,
     up_threshold: float,

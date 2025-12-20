@@ -1,4 +1,5 @@
 """Consolidated GDELT downloader with enhanced functionality."""
+
 from __future__ import annotations
 
 import logging
@@ -21,6 +22,7 @@ HUGGINGFACE_MIRRORS = {
     "hf-maxlong-2022": "https://huggingface.co/datasets/MaxLong/gdelt-news-headlines-2022/resolve/main",
     "hf-olm": "https://huggingface.co/datasets/olm/gdelt-news-headlines/resolve/main",
 }
+
 
 class GDELTDownloader:
     """Enhanced GDELT downloader with mirror support and data processing."""
@@ -45,7 +47,7 @@ class GDELTDownloader:
         start_date: datetime,
         end_date: datetime,
         countries: Optional[List[str]] = None,
-        resolution: str = "daily"
+        resolution: str = "daily",
     ) -> pd.DataFrame:
         """Download and process GDELT data for a date range."""
         if resolution == "daily":
@@ -77,7 +79,7 @@ class GDELTDownloader:
             raise TypeError("start_dt and end_dt must be datetime objects")
         if end_dt < start_dt:
             raise ValueError(f"end_dt ({end_dt}) must be after start_dt ({start_dt})")
-        
+
         # Warn about very large date ranges
         days_diff = (end_dt - start_dt).days
         if days_diff > 365:
@@ -149,41 +151,64 @@ class GDELTDownloader:
         logger.error(f"Failed to download file from all mirrors: {filename}")
         return None
 
-    def _process_gkg_file(self, file_path: Path, countries: Optional[List[str]] = None) -> pd.DataFrame:
+    def _process_gkg_file(
+        self, file_path: Path, countries: Optional[List[str]] = None
+    ) -> pd.DataFrame:
         """Process a single GKG file and extract relevant data."""
         try:
             # GDELT GKG files are tab-separated
-            df = pd.read_csv(file_path, sep='\t', low_memory=False, on_bad_lines='skip')
+            df = pd.read_csv(file_path, sep="\t", low_memory=False, on_bad_lines="skip")
 
             # Basic column mapping (adjust based on actual GDELT schema)
             if len(df.columns) >= 15:
                 df.columns = [
-                    'GKGRECORDID', 'DATE', 'SourceCollectionIdentifier', 'SourceCommonName',
-                    'DocumentIdentifier', 'Counts', 'V2Counts', 'Themes', 'V2Themes',
-                    'Locations', 'V2Locations', 'Persons', 'V2Persons', 'Organizations',
-                    'V2Organizations', 'V2Tone', 'Dates', 'GCAM', 'SharingImage',
-                    'RelatedImages', 'SocialImageEmbeds', 'SocialVideoEmbeds', 'Quotations',
-                    'AllNames', 'Amounts', 'TranslationInfo', 'Extras'
-                ][:len(df.columns)]
+                    "GKGRECORDID",
+                    "DATE",
+                    "SourceCollectionIdentifier",
+                    "SourceCommonName",
+                    "DocumentIdentifier",
+                    "Counts",
+                    "V2Counts",
+                    "Themes",
+                    "V2Themes",
+                    "Locations",
+                    "V2Locations",
+                    "Persons",
+                    "V2Persons",
+                    "Organizations",
+                    "V2Organizations",
+                    "V2Tone",
+                    "Dates",
+                    "GCAM",
+                    "SharingImage",
+                    "RelatedImages",
+                    "SocialImageEmbeds",
+                    "SocialVideoEmbeds",
+                    "Quotations",
+                    "AllNames",
+                    "Amounts",
+                    "TranslationInfo",
+                    "Extras",
+                ][: len(df.columns)]
 
             # Extract tone information
-            if 'V2Tone' in df.columns:
-                tone_parts = df['V2Tone'].str.split(',')
-                df['AvgTone'] = pd.to_numeric(tone_parts.str[0], errors='coerce')
-                df['PositiveTone'] = pd.to_numeric(tone_parts.str[1], errors='coerce')
-                df['NegativeTone'] = pd.to_numeric(tone_parts.str[2], errors='coerce')
-                df['Polarity'] = pd.to_numeric(tone_parts.str[3], errors='coerce')
-                df['ActivityReferenceDensity'] = pd.to_numeric(tone_parts.str[4], errors='coerce')
-                df['SelfGroupReferenceDensity'] = pd.to_numeric(tone_parts.str[5], errors='coerce')
+            if "V2Tone" in df.columns:
+                tone_parts = df["V2Tone"].str.split(",")
+                df["AvgTone"] = pd.to_numeric(tone_parts.str[0], errors="coerce")
+                df["PositiveTone"] = pd.to_numeric(tone_parts.str[1], errors="coerce")
+                df["NegativeTone"] = pd.to_numeric(tone_parts.str[2], errors="coerce")
+                df["Polarity"] = pd.to_numeric(tone_parts.str[3], errors="coerce")
+                df["ActivityReferenceDensity"] = pd.to_numeric(tone_parts.str[4], errors="coerce")
+                df["SelfGroupReferenceDensity"] = pd.to_numeric(tone_parts.str[5], errors="coerce")
 
             # Filter by countries if specified
-            if countries and 'Locations' in df.columns:
-                country_pattern = '|'.join(countries)
-                df = df[df['Locations'].str.contains(country_pattern, na=False, case=False)]
+            if countries and "Locations" in df.columns:
+                country_pattern = "|".join(countries)
+                df = df[df["Locations"].str.contains(country_pattern, na=False, case=False)]
 
             # Add derived metrics
-            df['NumMentions'] = 1  # Each row is one mention
-            df['NumArticles'] = df.groupby('DocumentIdentifier').ngroup() + 1
+            df["NumMentions"] = 1  # Each row is one mention
+            df["NumArticles"] = df.groupby("DocumentIdentifier").ngroup() + 1
 
             return df
 
