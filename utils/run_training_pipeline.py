@@ -61,50 +61,22 @@ def parse_pairs(pairs: str, pairs_file: Optional[Path]) -> List[str]:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Prepare, train, and optionally evaluate pairs sequentially.")
-    parser.add_argument("--pairs", default="gbpusd", help="Comma-separated pair codes to run first.")
+    # Import shared argument parsers
+    from config.arg_parser import (
+        add_data_preparation_args,
+        add_feature_engineering_args,
+        add_intrinsic_time_args,
+        add_training_args,
+    )
+    
+    # Add shared arguments
+    add_data_preparation_args(parser)
+    add_feature_engineering_args(parser)
+    add_intrinsic_time_args(parser)
+    add_training_args(parser)
+    
+    # Custom arguments specific to this pipeline
     parser.add_argument("--pairs-file", type=Path, help="Optional file with one pair per line to append.")
-    parser.add_argument("--years", default=None, help="Comma-separated years to include (default: all available).")
-    parser.add_argument("--input-root", default="output_central", help="Root containing Central-time zips.")
-    parser.add_argument("--t-in", type=int, default=120, help="Lookback window length.")
-    parser.add_argument("--t-out", type=int, default=10, help="Prediction horizon.")
-    parser.add_argument("--task-type", choices=["classification", "regression"], default="classification")
-    parser.add_argument("--flat-threshold", type=float, default=0.0001)
-    parser.add_argument("--train-ratio", type=float, default=0.7)
-    parser.add_argument("--val-ratio", type=float, default=0.15)
-    parser.add_argument("--feature-groups", default="all", help="Comma-separated feature groups to include or 'all'")
-    parser.add_argument("--exclude-feature-groups", default=None, help="Comma-separated feature groups to drop")
-    parser.add_argument("--sma-windows", default="10,20,50", help="Comma-separated SMA window lengths")
-    parser.add_argument("--ema-windows", default="10,20,50", help="Comma-separated EMA spans")
-    parser.add_argument("--rsi-window", type=int, default=14, help="Window length for RSI")
-    parser.add_argument("--bollinger-window", type=int, default=20, help="Window length for Bollinger bands")
-    parser.add_argument("--bollinger-num-std", type=float, default=2.0, help="Std dev multiplier for Bollinger bands")
-    parser.add_argument("--atr-window", type=int, default=14, help="Window length for ATR")
-    parser.add_argument("--short-vol-window", type=int, default=10, help="Short window for volatility clustering")
-    parser.add_argument("--long-vol-window", type=int, default=50, help="Long window for volatility clustering")
-    parser.add_argument("--spread-windows", default="20", help="Comma-separated windows for normalized spread stats")
-    parser.add_argument("--imbalance-smoothing", type=int, default=5, help="Rolling mean window for wick/body imbalance")
-    parser.add_argument(
-        "--intrinsic-time",
-        action="store_true",
-        help="Convert minute bars to intrinsic-time bars via directional-change events before feature building.",
-    )
-    parser.add_argument(
-        "--dc-threshold-up",
-        type=float,
-        default=0.001,
-        help="Fractional increase needed to flag an upward directional change (e.g., 0.001=0.1%).",
-    )
-    parser.add_argument(
-        "--dc-threshold-down",
-        type=float,
-        default=None,
-        help="Fractional decrease needed to flag a downward directional change. Defaults to dc-threshold-up.",
-    )
-    parser.add_argument("--batch-size", type=int, default=64)
-    parser.add_argument("--epochs", type=int, default=10)
-    parser.add_argument("--learning-rate", type=float, default=1e-3)
-    parser.add_argument("--weight-decay", type=float, default=0.0)
-    parser.add_argument("--device", default="cuda")
     parser.add_argument("--checkpoint-dir", default="models", help="Directory to write checkpoints per pair.")
     parser.add_argument(
         "--force-train",
@@ -248,24 +220,18 @@ def parse_args() -> argparse.Namespace:
         help="Learning rate for A3C training",
     )
     parser.add_argument(
-        "--rl-entropy-coef",
+        "--rl-gamma",
         type=float,
-        default=0.01,
-        help="Entropy coefficient for A3C exploration",
+        default=0.99,
+        help="Discount factor for RL training",
     )
     parser.add_argument(
-        "--rl-initial-balance",
-        type=float,
-        default=10000.0,
-        help="Initial account balance for RL environment",
-    )
-    parser.add_argument(
-        "--rl-checkpoint-dir",
-        default="models/rl",
-        help="Directory for RL agent checkpoints",
+        "--rl-checkpoint-freq",
+        type=int,
+        default=10000,
+        help="Save RL checkpoint every N steps",
     )
     return parser.parse_args()
-
 
 def maybe_prompt_for_more(queue: List[str]) -> List[str]:
     try:

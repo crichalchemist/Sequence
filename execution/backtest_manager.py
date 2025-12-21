@@ -11,6 +11,8 @@ from backtesting import Backtest, Strategy
 from backtesting.lib import crossover
 from backtesting.test import SMA, GOOG
 
+from execution.constants import DEFAULT_BACKTEST_CASH, DEFAULT_COMMISSION_RATE
+
 logger = logging.getLogger("BacktestManager")
 
 DB_PATH = Path("output_central/backtest_results.db")
@@ -83,8 +85,8 @@ class BacktestManager:
         strategy_class: type,
         strategy_name: str,
         symbol: str,
-        cash: int = 10000,
-        commission: float = 0.001,
+        cash: int = DEFAULT_BACKTEST_CASH,
+        commission: float = DEFAULT_COMMISSION_RATE,
         **strategy_params
     ) -> Dict[str, Any]:
         """Run backtest with strategy."""
@@ -109,8 +111,14 @@ class BacktestManager:
             logger.info(f"Backtest complete: {strategy_name} {symbol} - Return: {result['total_return']}%")
             return result
 
+        except (ValueError, KeyError) as e:
+            logger.error(f"Backtest failed due to invalid data or configuration: {e}")
+            return None
+        except AttributeError as e:
+            logger.error(f"Backtest failed due to strategy implementation error: {e}")
+            return None
         except Exception as e:
-            logger.error(f"Backtest failed: {e}")
+            logger.exception(f"Unexpected error during backtest: {e}")
             return None
 
     def save_result(

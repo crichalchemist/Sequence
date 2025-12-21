@@ -10,14 +10,16 @@ from typing import Optional, Sequence
 
 import pandas as pd
 
+from features.constants import MAX_THRESHOLD_VALUE, DEFAULT_DC_THRESHOLD
+
 
 def _validate_thresholds(up_threshold: float, down_threshold: float) -> None:
     if up_threshold <= 0 or down_threshold <= 0:
         raise ValueError("Directional-change thresholds must be positive.")
-    if up_threshold > 1.0 or down_threshold > 1.0:
+    if up_threshold > MAX_THRESHOLD_VALUE or down_threshold > MAX_THRESHOLD_VALUE:
         raise ValueError(
             "Directional-change thresholds should be fractional "
-            "(e.g., 0.001 for 0.1%, not 1.0 or greater)"
+            "(e.g., DEFAULT_DC_THRESHOLD for 0.1%, not MAX_THRESHOLD_VALUE or greater)"
         )
 
 
@@ -33,7 +35,7 @@ def detect_directional_changes(
     Args:
         prices: Series of prices ordered in time.
         up_threshold: Fractional increase required to flag an upward directional
-            change (e.g., 0.001 == 0.1%).
+            change (e.g., DEFAULT_DC_THRESHOLD == 0.1%).
         down_threshold: Fractional decrease required to flag a downward
             directional change. Defaults to ``up_threshold`` if omitted.
         timestamps: Optional timestamps aligned with ``prices``. If omitted, the
@@ -122,7 +124,7 @@ def build_intrinsic_time_bars(
     df: pd.DataFrame,
     price_col: str = "close",
     datetime_col: str = "datetime",
-    up_threshold: float = 0.001,
+    up_threshold: float = DEFAULT_DC_THRESHOLD,
     down_threshold: Optional[float] = None,
 ) -> pd.DataFrame:
     """
