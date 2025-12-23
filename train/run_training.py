@@ -20,6 +20,14 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from config.arg_parser import (  # noqa: E402
+    add_auxiliary_task_args,
+    add_data_preparation_args,
+    add_dataloader_args,
+    add_feature_engineering_args,
+    add_intrinsic_time_args,
+    add_training_args,
+)
 from config.config import (  # noqa: E402
     PolicyConfig,
     RLTrainingConfig,

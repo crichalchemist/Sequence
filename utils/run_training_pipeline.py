@@ -227,24 +227,18 @@ def parse_args() -> argparse.Namespace:
         help="Learning rate for A3C training",
     )
     parser.add_argument(
-        "--rl-entropy-coef",
+        "--rl-gamma",
         type=float,
-        default=0.01,
-        help="Entropy coefficient for A3C exploration",
+        default=0.99,
+        help="Discount factor for RL training",
     )
     parser.add_argument(
-        "--rl-initial-balance",
-        type=float,
-        default=10000.0,
-        help="Initial account balance for RL environment",
-    )
-    parser.add_argument(
-        "--rl-checkpoint-dir",
-        default="models/rl",
-        help="Directory for RL agent checkpoints",
+        "--rl-checkpoint-freq",
+        type=int,
+        default=10000,
+        help="Save RL checkpoint every N steps",
     )
     return parser.parse_args()
-
 
 def maybe_prompt_for_more(queue: List[str]) -> List[str]:
     try:

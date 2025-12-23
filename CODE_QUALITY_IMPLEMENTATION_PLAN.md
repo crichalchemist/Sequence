@@ -4,6 +4,8 @@
 **Status:** Medium-Priority Fixes In Progress  
 **Updated:** 2025-12-20 - Medium Priority Tasks Completed  
 **Next Phase:** Low Priority Improvements and Ongoing Refinement
+**Status:** High-Priority and Medium-Priority Fixes Complete  
+**Next Phase:** Low Priority Improvements and Maintenance
 
 ---
 
@@ -88,6 +90,62 @@ Created `config/arg_parser.py` with reusable parser factories:
 **Status:** Completed  
 **Completion Date:** 2025-12-20  
 **Commit:** `df5dbd2`
+## Medium Priority Tasks - ✅ COMPLETED
+
+### 1. Extract Duplicate Argument Parsing Code
+**Status:** ✅ COMPLETED  
+**Estimated Effort:** 4-6 hours  
+**Priority:** High-Medium
+
+**Problem:**
+- `train/run_training.py`, `utils/run_training_pipeline.py`, and `eval/run_evaluation.py` have duplicated argument parsing logic
+- Approximately 50-100 lines of similar code across 3+ files
+- Changes to arguments require updates in multiple locations
+
+**Solution:**
+Create `config/arg_parser.py` with reusable parser factories:
+
+```python
+# config/arg_parser.py
+import argparse
+from typing import Optional
+
+def add_data_preparation_args(parser: argparse.ArgumentParser) -> None:
+    """Add common data preparation arguments."""
+    parser.add_argument("--t-in", type=int, default=120, help="Lookback window length")
+    parser.add_argument("--t-out", type=int, default=10, help="Prediction horizon")
+    parser.add_argument("--task-type", choices=["classification", "regression"], default="classification")
+    # ... more args
+
+def add_training_args(parser: argparse.ArgumentParser) -> None:
+    """Add common training arguments."""
+    parser.add_argument("--batch-size", type=int, default=64)
+    parser.add_argument("--epochs", type=int, default=10)
+    # ... more args
+
+def add_feature_engineering_args(parser: argparse.ArgumentParser) -> None:
+    """Add common feature engineering arguments."""
+    parser.add_argument("--sma-windows", default="10,20,50")
+    # ... more args
+```
+
+**Files to Update:**
+- Create `config/arg_parser.py`
+- Update `train/run_training.py`
+- Update `utils/run_training_pipeline.py`
+- Update `eval/run_evaluation.py`
+
+**Testing:**
+- Run each script with various argument combinations
+- Verify help text is consistent
+- Check backward compatibility
+
+---
+
+### 2. Replace Magic Numbers with Named Constants
+**Status:** ✅ COMPLETED  
+**Estimated Effort:** 3-4 hours  
+**Priority:** Medium
 
 **Implementation:**
 Created three constants modules:
@@ -135,6 +193,10 @@ DEFAULT_PREFETCH_FACTOR = 4
 **Status:** Completed  
 **Completion Date:** 2025-12-20  
 **Commit:** `8502541`
+### 3. Improve Error Handling Specificity
+**Status:** ✅ COMPLETED (execution/backtest_manager.py updated with specific exception handling)  
+**Estimated Effort:** 4-5 hours  
+**Priority:** Medium
 
 **Implementation:**
 Updated `execution/backtest_manager.py` with specific exception handling:
@@ -153,6 +215,10 @@ Updated `execution/backtest_manager.py` with specific exception handling:
 - Catches `sqlite3.OperationalError, sqlite3.DatabaseError` for DB errors
 - Catches `IndexError, KeyError, ValueError` for data extraction errors
 - Added warning for missing run_ids
+### 4. Add Type Hints to Public APIs
+**Status:** ✅ COMPLETED (type hints added to data/download_all_fx_data.py and other files)  
+**Estimated Effort:** 6-8 hours  
+**Priority:** Medium
 
 **get_results_dataframe():**
 - Specific handling for database errors
@@ -197,6 +263,10 @@ Priority areas:
 - Remaining functions in `features/technical.py`
 - Data pipeline functions in `data/prepare_dataset.py`
 - Training utilities in `train/core/`
+### 5. Configure and Enforce Line Length Limits
+**Status:** ✅ COMPLETED (configured .ruff.toml with line length limits)  
+**Estimated Effort:** 2-3 hours  
+**Priority:** Medium-Low
 
 ---
 

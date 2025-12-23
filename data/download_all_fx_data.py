@@ -2,10 +2,12 @@ import argparse
 import csv
 import os
 from datetime import datetime
+from typing import Tuple
 from histdata.api import download_hist_data
 
 
-def mkdir_p(path):
+
+def mkdir_p(path: str) -> None:
     import errno
     try:
         os.makedirs(path)
@@ -16,7 +18,7 @@ def mkdir_p(path):
             raise
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Download historical FX data for all pairs")
     parser.add_argument("--start-year", type=int, default=2018, help="Start year for downloads")
     parser.add_argument("--end-year", type=int, default=datetime.now().year, help="End year for downloads")
@@ -25,7 +27,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def _find_pairs_file():
+def _find_pairs_file() -> str:
     """Find the pairs.csv file, checking multiple locations."""
     default_pairs = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, 'pairs.csv'))
     alt_pairs = os.path.join(os.path.dirname(__file__), 'pairs.csv')
@@ -35,7 +37,7 @@ def _find_pairs_file():
     return pairs_file
 
 
-def _download_year(year, pair, output_folder):
+def _download_year(year: int, pair: str, output_folder: str) -> int:
     """Download data for a single year, trying full year first then monthly."""
     try:
         result = download_hist_data(year=year, pair=pair, output_directory=output_folder, verbose=False)
@@ -46,7 +48,7 @@ def _download_year(year, pair, output_folder):
         return _download_monthly(year, pair, output_folder)
 
 
-def _download_monthly(year, pair, output_folder):
+def _download_monthly(year: int, pair: str, output_folder: str) -> int:
     """Download data month by month for a given year."""
     downloads = 0
     for month in range(1, 13):
@@ -63,7 +65,7 @@ def _download_monthly(year, pair, output_folder):
     return downloads
 
 
-def _download_pair(currency_pair_name, pair, history_first_trading_month, args, max_downloads, current_downloads):
+def _download_pair(currency_pair_name: str, pair: str, history_first_trading_month: str, args: argparse.Namespace, max_downloads: int, current_downloads: int) -> int:
     """Download all data for a single currency pair."""
     start_year = int(history_first_trading_month[0:4])
     end_year = min(args.end_year, datetime.now().year)

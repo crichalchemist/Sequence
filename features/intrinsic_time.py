@@ -35,7 +35,7 @@ def detect_directional_changes(
     Args:
         prices: Series of prices ordered in time.
         up_threshold: Fractional increase required to flag an upward directional
-            change (e.g., 0.001 == 0.1%).
+            change (e.g., DEFAULT_DC_THRESHOLD == 0.1%).
         down_threshold: Fractional decrease required to flag a downward
             directional change. Defaults to ``up_threshold`` if omitted.
         timestamps: Optional timestamps aligned with ``prices``. If omitted, the
@@ -124,7 +124,7 @@ def build_intrinsic_time_bars(
     df: pd.DataFrame,
     price_col: str = "close",
     datetime_col: str = "datetime",
-    up_threshold: float = 0.001,
+    up_threshold: float = DEFAULT_DC_THRESHOLD,
     down_threshold: Optional[float] = None,
 ) -> pd.DataFrame:
     """
