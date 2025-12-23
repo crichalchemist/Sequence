@@ -59,24 +59,35 @@ def parse_pairs(pairs: str, pairs_file: Optional[Path]) -> List[str]:
     return ordered
 
 
+
+from config.arg_parser import (
+    add_data_preparation_args,
+    add_feature_engineering_args,
+    add_intrinsic_time_args,
+    add_training_args,
+    add_risk_args,
+)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Prepare, train, and optionally evaluate pairs sequentially.")
-    # Import shared argument parsers
-    from config.arg_parser import (
-        add_data_preparation_args,
-        add_feature_engineering_args,
-        add_intrinsic_time_args,
-        add_training_args,
-    )
-    
-    # Add shared arguments
-    add_data_preparation_args(parser)
+    parser.add_argument("--pairs", default="gbpusd", help="Comma-separated pair codes to run first.")
+    parser.add_argument("--pairs-file", type=Path, help="Optional file with one pair per line to append.")
+    parser.add_argument("--years", default=None, help="Comma-separated years to include (default: all available).")
+    parser.add_argument("--input-root", default="output_central", help="Root containing Central-time zips.")
+    parser.add_argument("--t-in", type=int, default=120, help="Lookback window length.")
+    parser.add_argument("--t-out", type=int, default=10, help="Prediction horizon.")
+    parser.add_argument("--task-type", choices=["classification", "regression"], default="classification")
+    parser.add_argument("--flat-threshold", type=float, default=0.0001)
+    parser.add_argument("--train-ratio", type=float, default=0.7)
+    parser.add_argument("--val-ratio", type=float, default=0.15)
     add_feature_engineering_args(parser)
     add_intrinsic_time_args(parser)
-    add_training_args(parser)
-    
-    # Custom arguments specific to this pipeline
-    parser.add_argument("--pairs-file", type=Path, help="Optional file with one pair per line to append.")
+    parser.add_argument("--batch-size", type=int, default=64)
+    parser.add_argument("--epochs", type=int, default=10)
+    parser.add_argument("--learning-rate", type=float, default=1e-3)
+    parser.add_argument("--weight-decay", type=float, default=0.0)
+    parser.add_argument("--device", default="cuda")
     parser.add_argument("--checkpoint-dir", default="models", help="Directory to write checkpoints per pair.")
     parser.add_argument(
         "--force-train",
@@ -99,11 +110,7 @@ def parse_args() -> argparse.Namespace:
         help="Skip offering the optional training mini-game.",
     )
     parser.set_defaults(no_pause=True, offer_game=True)
-    parser.add_argument(
-        "--disable-risk",
-        action="store_true",
-        help="Disable risk manager gating during training and evaluation.",
-    )
+    add_risk_args(parser)
     parser.add_argument(
         "--run-gdelt-download",
         action="store_true",

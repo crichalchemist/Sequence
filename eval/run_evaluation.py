@@ -20,6 +20,12 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from config.arg_parser import (
+    add_data_preparation_args,
+    add_feature_engineering_args,
+    add_intrinsic_time_args,
+    add_risk_args,
+)
 from config.config import ModelConfig, PolicyConfig, SignalModelConfig
 from data.prepare_dataset import process_pair
 from eval.agent_eval import evaluate_model, evaluate_policy_agent
@@ -30,26 +36,17 @@ from risk.risk_manager import RiskManager
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Evaluate trained models on test split.")
-    from config.arg_parser import (
-        add_auxiliary_task_args,
-        add_data_preparation_args,
-        add_feature_engineering_args,
-        add_intrinsic_time_args,
-        add_training_args,
-    )
     add_data_preparation_args(parser)
     add_feature_engineering_args(parser)
     add_intrinsic_time_args(parser)
-    add_auxiliary_task_args(parser)
-    add_training_args(parser)
+    parser.add_argument("--batch-size", type=int, default=64)
     parser.add_argument("--checkpoint-path", default="models/best_model.pt", help="Path to model checkpoint")
     parser.add_argument("--signal-checkpoint-path", default=None, help="Optional path to signal checkpoint (format string {pair} supported)")
     parser.add_argument("--policy-checkpoint-path", default=None, help="Optional path to policy checkpoint (format string {pair} supported)")
     parser.add_argument("--use-policy", action="store_true", help="Load the execution policy head on top of the signal model")
-    parser.add_argument("--disable-risk", action="store_true", help="Disable risk manager gating during evaluation")
+    parser.add_argument("--device", default="cuda")
+    add_risk_args(parser)
     return parser.parse_args()
-
-
 def main():
     args = parse_args()
     pairs = [p.strip().lower() for p in args.pairs.split(",") if p.strip()]

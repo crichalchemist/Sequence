@@ -1,6 +1,4 @@
-"""
-Constants for feature engineering.
-"""
+"""Constants for feature engineering modules."""
 
 MAX_THRESHOLD_VALUE = 1.0
 MIN_THRESHOLD_VALUE = 0.0

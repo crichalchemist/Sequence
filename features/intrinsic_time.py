@@ -10,7 +10,7 @@ from typing import Optional, Sequence
 
 import pandas as pd
 
-from features.constants import MAX_THRESHOLD_VALUE, DEFAULT_DC_THRESHOLD
+from features.constants import MAX_THRESHOLD_VALUE
 
 
 def _validate_thresholds(up_threshold: float, down_threshold: float) -> None:
@@ -18,8 +18,8 @@ def _validate_thresholds(up_threshold: float, down_threshold: float) -> None:
         raise ValueError("Directional-change thresholds must be positive.")
     if up_threshold > MAX_THRESHOLD_VALUE or down_threshold > MAX_THRESHOLD_VALUE:
         raise ValueError(
-            "Directional-change thresholds should be fractional "
-            "(e.g., DEFAULT_DC_THRESHOLD for 0.1%, not MAX_THRESHOLD_VALUE or greater)"
+            f"Directional-change thresholds should be fractional "
+            f"(e.g., 0.001 for 0.1%, not {MAX_THRESHOLD_VALUE} or greater)"
         )
 
 

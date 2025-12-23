@@ -1,6 +1,4 @@
-"""
-Constants for training and model configuration.
-"""
+"""Constants for training configuration."""
 
 DEFAULT_BATCH_SIZE = 64
 DEFAULT_LEARNING_RATE = 1e-3

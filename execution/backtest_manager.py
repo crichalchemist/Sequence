@@ -1,4 +1,5 @@
 """Backtesting manager with comparison and result storage."""
+
 import sqlite3
 import json
 import logging
@@ -31,7 +32,7 @@ class BacktestManager:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
 
-        cursor.execute('''
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS backtest_runs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 run_id TEXT UNIQUE,
@@ -56,10 +57,10 @@ class BacktestManager:
                 result_json TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
-        ''')
+        """)
 
         # Comparison table for side-by-side analysis
-        cursor.execute('''
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS backtest_comparisons (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 comparison_id TEXT UNIQUE,
@@ -73,7 +74,7 @@ class BacktestManager:
                 FOREIGN KEY(strategy_1_id) REFERENCES backtest_runs(id),
                 FOREIGN KEY(strategy_2_id) REFERENCES backtest_runs(id)
             )
-        ''')
+        """)
 
         conn.commit()
         conn.close()
@@ -87,8 +88,9 @@ class BacktestManager:
         symbol: str,
         cash: int = DEFAULT_BACKTEST_CASH,
         commission: float = DEFAULT_COMMISSION_RATE,
-        **strategy_params
+        **strategy_params,
     ) -> Dict[str, Any]:
+        """Run backtest with strategy."""
         """Run backtest with strategy."""
         try:
             bt = Backtest(data, strategy_class, cash=cash, commission=commission)
@@ -98,27 +100,33 @@ class BacktestManager:
             result = {
                 "strategy_name": strategy_name,
                 "symbol": symbol,
-                "total_return": float(stats['Return [%]']) if 'Return [%]' in stats else 0,
-                "sharpe_ratio": float(stats['Sharpe Ratio']) if 'Sharpe Ratio' in stats else 0,
-                "sortino_ratio": float(stats['Sortino Ratio']) if 'Sortino Ratio' in stats else 0,
-                "max_drawdown": float(stats['Max. Drawdown [%]']) if 'Max. Drawdown [%]' in stats else 0,
-                "win_rate": float(stats['Win Rate [%]']) if 'Win Rate [%]' in stats else 0,
-                "trades": int(stats['# Trades']) if '# Trades' in stats else 0,
-                "equity_final": float(stats['Equity Final [$]']) if 'Equity Final [$]' in stats else 0,
-                "_stats": stats  # Store full stats for detailed analysis
+                "total_return": float(stats["Return [%]"]) if "Return [%]" in stats else 0,
+                "sharpe_ratio": float(stats["Sharpe Ratio"]) if "Sharpe Ratio" in stats else 0,
+                "sortino_ratio": float(stats["Sortino Ratio"]) if "Sortino Ratio" in stats else 0,
+                "max_drawdown": float(stats["Max. Drawdown [%]"])
+                if "Max. Drawdown [%]" in stats
+                else 0,
+                "win_rate": float(stats["Win Rate [%]"]) if "Win Rate [%]" in stats else 0,
+                "trades": int(stats["# Trades"]) if "# Trades" in stats else 0,
+                "equity_final": float(stats["Equity Final [$]"])
+                if "Equity Final [$]" in stats
+                else 0,
+                "_stats": stats,  # Store full stats for detailed analysis
             }
 
-            logger.info(f"Backtest complete: {strategy_name} {symbol} - Return: {result['total_return']}%")
+            logger.info(
+                f"Backtest complete: {strategy_name} {symbol} - Return: {result['total_return']}%"
+            )
             return result
 
-        except (ValueError, KeyError) as e:
-            logger.error(f"Backtest failed due to invalid data or configuration: {e}")
+        except (KeyError, ValueError) as e:
+            logger.error(f"Backtest data error for {strategy_name} on {symbol}: {e}")
             return None
-        except AttributeError as e:
-            logger.error(f"Backtest failed due to strategy implementation error: {e}")
+        except (AttributeError, TypeError) as e:
+            logger.error(f"Backtest configuration error for {strategy_name}: {e}")
             return None
         except Exception as e:
-            logger.exception(f"Unexpected error during backtest: {e}")
+            logger.exception(f"Unexpected backtest error for {strategy_name} on {symbol}: {e}")
             return None
 
     def save_result(
@@ -131,27 +139,40 @@ class BacktestManager:
         end_date: str,
         cash: int,
         commission: float,
-        result: Dict[str, Any]
+        result: Dict[str, Any],
     ) -> bool:
         """Save backtest result to database."""
         try:
             conn = sqlite3.connect(DB_PATH)
             cursor = conn.cursor()
 
-            cursor.execute('''
+            cursor.execute(
+                """
                 INSERT INTO backtest_runs
                 (run_id, strategy_name, symbol, timeframe, start_date, end_date,
                  cash, commission, total_return, sharpe_ratio, sortino_ratio,
                  max_drawdown, win_rate, trades_count, equity_peak, result_json)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                run_id, strategy_name, symbol, timeframe, start_date, end_date,
-                cash, commission, result.get('total_return', 0),
-                result.get('sharpe_ratio', 0), result.get('sortino_ratio', 0),
-                result.get('max_drawdown', 0), result.get('win_rate', 0),
-                result.get('trades', 0), result.get('equity_final', 0),
-                json.dumps(result)
-            ))
+            """,
+                (
+                    run_id,
+                    strategy_name,
+                    symbol,
+                    timeframe,
+                    start_date,
+                    end_date,
+                    cash,
+                    commission,
+                    result.get("total_return", 0),
+                    result.get("sharpe_ratio", 0),
+                    result.get("sortino_ratio", 0),
+                    result.get("max_drawdown", 0),
+                    result.get("win_rate", 0),
+                    result.get("trades", 0),
+                    result.get("equity_final", 0),
+                    json.dumps(result),
+                ),
+            )
 
             conn.commit()
             conn.close()
@@ -160,8 +181,19 @@ class BacktestManager:
             logger.info(f"Result saved: {run_id}")
             return True
 
+        except sqlite3.IntegrityError as e:
+            logger.error(
+                f"Database integrity error saving result {run_id}: {e} (duplicate run_id?)"
+            )
+            return False
+        except sqlite3.OperationalError as e:
+            logger.error(f"Database operational error saving result {run_id}: {e}")
+            return False
+        except (OSError, PermissionError) as e:
+            logger.error(f"File system error accessing database: {e}")
+            return False
         except Exception as e:
-            logger.error(f"Failed to save result: {e}")
+            logger.exception(f"Unexpected error saving result {run_id}: {e}")
             return False
 
     def compare_strategies(self, run_id_1: str, run_id_2: str) -> Dict[str, Any]:
@@ -171,13 +203,14 @@ class BacktestManager:
             cursor = conn.cursor()
 
             # Get both results
-            cursor.execute('SELECT * FROM backtest_runs WHERE run_id = ?', (run_id_1,))
+            cursor.execute("SELECT * FROM backtest_runs WHERE run_id = ?", (run_id_1,))
             result1 = cursor.fetchone()
 
-            cursor.execute('SELECT * FROM backtest_runs WHERE run_id = ?', (run_id_2,))
+            cursor.execute("SELECT * FROM backtest_runs WHERE run_id = ?", (run_id_2,))
             result2 = cursor.fetchone()
 
             if not result1 or not result2:
+                logger.warning(f"One or both run_ids not found: {run_id_1}, {run_id_2}")
                 return None
 
             # Extract key metrics
@@ -206,31 +239,34 @@ class BacktestManager:
                     "return": {
                         "strategy_1": r1_return,
                         "strategy_2": r2_return,
-                        "delta": r1_return - r2_return
+                        "delta": r1_return - r2_return,
                     },
                     "sharpe_ratio": {
                         "strategy_1": r1_sharpe,
                         "strategy_2": r2_sharpe,
-                        "delta": r1_sharpe - r2_sharpe
+                        "delta": r1_sharpe - r2_sharpe,
                     },
                     "max_drawdown": {
                         "strategy_1": r1_drawdown,
                         "strategy_2": r2_drawdown,
-                        "delta": r1_drawdown - r2_drawdown
+                        "delta": r1_drawdown - r2_drawdown,
                     },
-                    "trades": {
-                        "strategy_1": int(result1[14]),
-                        "strategy_2": int(result2[14])
-                    }
-                }
+                    "trades": {"strategy_1": int(result1[14]), "strategy_2": int(result2[14])},
+                },
             }
 
             conn.close()
             logger.info(f"Comparison complete: {result1[2]} vs {result2[2]}")
             return comparison
 
+        except (sqlite3.OperationalError, sqlite3.DatabaseError) as e:
+            logger.error(f"Database error during comparison: {e}")
+            return None
+        except (IndexError, KeyError, ValueError) as e:
+            logger.error(f"Data extraction error during comparison: {e}")
+            return None
         except Exception as e:
-            logger.error(f"Comparison failed: {e}")
+            logger.exception(f"Unexpected error comparing {run_id_1} vs {run_id_2}: {e}")
             return None
 
     def get_results_dataframe(self, symbol: str = None, limit: int = 20) -> pd.DataFrame:
@@ -238,14 +274,14 @@ class BacktestManager:
         try:
             conn = sqlite3.connect(DB_PATH)
 
-            query = 'SELECT * FROM backtest_runs'
+            query = "SELECT * FROM backtest_runs"
             params = []
 
             if symbol:
-                query += ' WHERE symbol = ?'
+                query += " WHERE symbol = ?"
                 params.append(symbol)
 
-            query += ' ORDER BY created_at DESC LIMIT ?'
+            query += " ORDER BY created_at DESC LIMIT ?"
             params.append(limit)
 
             df = pd.read_sql_query(query, conn, params=params)
@@ -253,8 +289,11 @@ class BacktestManager:
 
             return df
 
+        except (sqlite3.OperationalError, sqlite3.DatabaseError) as e:
+            logger.error(f"Database error retrieving results: {e}")
+            return pd.DataFrame()
         except Exception as e:
-            logger.error(f"Failed to get results: {e}")
+            logger.exception(f"Unexpected error retrieving results: {e}")
             return pd.DataFrame()
 
     def export_comparison_csv(self, run_id_1: str, run_id_2: str, output_path: str) -> bool:
@@ -269,8 +308,14 @@ class BacktestManager:
             logger.info(f"Comparison exported to {output_path}")
             return True
 
+        except (OSError, PermissionError) as e:
+            logger.error(f"File system error exporting to {output_path}: {e}")
+            return False
+        except ValueError as e:
+            logger.error(f"Data conversion error during export: {e}")
+            return False
         except Exception as e:
-            logger.error(f"Export failed: {e}")
+            logger.exception(f"Unexpected error exporting comparison: {e}")
             return False
 
     def get_portfolio_stats(self) -> Dict[str, Any]:
@@ -279,22 +324,22 @@ class BacktestManager:
             conn = sqlite3.connect(DB_PATH)
             cursor = conn.cursor()
 
-            cursor.execute('SELECT COUNT(*) FROM backtest_runs')
+            cursor.execute("SELECT COUNT(*) FROM backtest_runs")
             total_runs = cursor.fetchone()[0]
 
-            cursor.execute('SELECT AVG(total_return) FROM backtest_runs')
+            cursor.execute("SELECT AVG(total_return) FROM backtest_runs")
             avg_return = cursor.fetchone()[0] or 0
 
-            cursor.execute('SELECT AVG(sharpe_ratio) FROM backtest_runs')
+            cursor.execute("SELECT AVG(sharpe_ratio) FROM backtest_runs")
             avg_sharpe = cursor.fetchone()[0] or 0
 
-            cursor.execute('SELECT AVG(max_drawdown) FROM backtest_runs')
+            cursor.execute("SELECT AVG(max_drawdown) FROM backtest_runs")
             avg_drawdown = cursor.fetchone()[0] or 0
 
-            cursor.execute('SELECT DISTINCT symbol FROM backtest_runs')
+            cursor.execute("SELECT DISTINCT symbol FROM backtest_runs")
             symbols = [row[0] for row in cursor.fetchall()]
 
-            cursor.execute('SELECT DISTINCT strategy_name FROM backtest_runs')
+            cursor.execute("SELECT DISTINCT strategy_name FROM backtest_runs")
             strategies = [row[0] for row in cursor.fetchall()]
 
             conn.close()
@@ -307,14 +352,16 @@ class BacktestManager:
                 "unique_symbols": len(symbols),
                 "unique_strategies": len(strategies),
                 "symbols": symbols,
-                "strategies": strategies
+                "strategies": strategies,
             }
 
+        except (sqlite3.OperationalError, sqlite3.DatabaseError) as e:
+            logger.error(f"Database error retrieving portfolio stats: {e}")
+            return {}
         except Exception as e:
-            logger.error(f"Stats failed: {e}")
+            logger.exception(f"Unexpected error retrieving portfolio stats: {e}")
             return {}
 
 
 # Global manager instance
 manager = BacktestManager()
-

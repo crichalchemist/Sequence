@@ -42,34 +42,35 @@ from train.core.agent_train import (  # noqa: E402
 )
 
 
+
+from config.arg_parser import (
+    add_data_preparation_args,
+    add_feature_engineering_args,
+    add_intrinsic_time_args,
+    add_training_args,
+    add_dataloader_args,
+    add_risk_args,
+    add_auxiliary_head_weights,
+    add_rl_training_args,
+    add_amp_args,
+)
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Run training for all pairs.")
     add_data_preparation_args(parser)
     add_feature_engineering_args(parser)
     add_intrinsic_time_args(parser)
-    add_auxiliary_task_args(parser)
     add_training_args(parser)
     add_dataloader_args(parser)
-    parser.add_argument("--use-amp", action="store_true", help="Enable mixed precision (AMP) training for GPU")
+    add_amp_args(parser)
     parser.add_argument("--checkpoint-path", default="models/best_model.pt")
-    parser.add_argument(
-        "--disable-risk",
-        action="store_true",
-        help="Disable risk manager gating during signal pretraining.",
-    )
-    parser.add_argument("--max-return-weight", type=float, default=1.0)
-    parser.add_argument("--topk-return-weight", type=float, default=1.0)
-    parser.add_argument("--topk-price-weight", type=float, default=1.0)
-    parser.add_argument("--sell-now-weight", type=float, default=1.0)
+    add_risk_args(parser)
+    add_auxiliary_head_weights(parser)
     parser.add_argument("--signal-checkpoint-path", default="models/signal_{pair}.pt")
     parser.add_argument("--policy-checkpoint-path", default="models/policy_{pair}.pt")
-    parser.add_argument("--pretrain-epochs", type=int, default=5, help="epochs for signal pretraining")
-    parser.add_argument("--policy-epochs", type=int, default=5, help="epochs for execution policy training")
-    parser.add_argument("--entropy-coef", type=float, default=0.01)
-    parser.add_argument("--value-coef", type=float, default=0.5)
-    parser.add_argument("--detach-signal", action="store_true", help="freeze signal encoder during policy training")
+    add_rl_training_args(parser)
     return parser.parse_args()
-
 
 def main():
     # Initialize tracing for observability

@@ -1,6 +1,4 @@
-"""
-Constants for backtesting and execution configuration.
-"""
+"""Constants for execution and backtesting modules."""
 
 DEFAULT_BACKTEST_CASH = 10000
 DEFAULT_COMMISSION_RATE = 0.001
