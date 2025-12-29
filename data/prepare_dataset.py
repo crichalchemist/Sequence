@@ -25,6 +25,7 @@ from utils.seed import set_seed
 logger = get_logger(__name__)
 
 from config.config import DataConfig, FeatureConfig
+from data.gdelt_ingest import load_gdelt_gkg
 from features.agent_features import build_feature_frame
 from features.agent_sentiment import aggregate_sentiment, attach_sentiment_features
 from features.intrinsic_time import build_intrinsic_time_bars
@@ -117,6 +118,16 @@ def parse_args():
         "--include-sentiment",
         action="store_true",
         help="Include news sentiment features (requires GDELT data). Adds sentiment_score, sentiment_5min, sentiment_15min, sentiment_60min columns.",
+    )
+    parser.add_argument(
+        "--gdelt-path",
+        default=None,
+        help="Path to GDELT GKG file or directory of .zip files (required when --include-sentiment is set)",
+    )
+    parser.add_argument(
+        "--gdelt-tz",
+        default="UTC",
+        help="Timezone to convert GDELT timestamps to (default: UTC)",
     )
     return parser.parse_args()
 
@@ -281,12 +292,29 @@ def process_pair(pair: str, args, batch_size: Optional[int] = None):
     
     # Optional: Attach sentiment features if GDELT data available
     if args.include_sentiment:
-        try:
-            logger.info("[sentiment] attempting to attach news sentiment features...")
-            feature_df = attach_sentiment_features(feature_df, pair=args.pairs)
-            logger.info("[sentiment] successfully added sentiment columns to feature frame")
-        except Exception as e:
-            logger.warning(f"[sentiment] failed to attach sentiment features: {e}. Continuing without sentiment.")
+        if not args.gdelt_path:
+            logger.warning(
+                "[sentiment] --include-sentiment specified but --gdelt-path not provided. Skipping sentiment features.")
+        else:
+            try:
+                logger.info("[sentiment] loading GDELT data from %s", args.gdelt_path)
+                gdelt_df = load_gdelt_gkg(Path(args.gdelt_path), target_tz=args.gdelt_tz)
+                logger.info("[sentiment] loaded %d GDELT records", len(gdelt_df))
+
+                logger.info("[sentiment] aggregating sentiment to bar frequency...")
+                sent_feats = aggregate_sentiment(
+                    gdelt_df,
+                    feature_df,
+                    time_col="datetime",
+                    score_col="sentiment_score"
+                )
+                logger.info("[sentiment] created %d sentiment features", len(sent_feats.columns))
+
+                feature_df = attach_sentiment_features(feature_df, sent_feats)
+                logger.info("[sentiment] successfully merged %d sentiment features to feature frame",
+                            len(sent_feats.columns))
+            except Exception as e:
+                logger.warning(f"[sentiment] failed to attach sentiment features: {e}. Continuing without sentiment.")
     
     feature_df["datetime"] = pd.to_datetime(feature_df["datetime"])
 
