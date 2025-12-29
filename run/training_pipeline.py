@@ -17,10 +17,10 @@ import argparse
 import os
 import subprocess
 import sys
+from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
-from copy import deepcopy
 
 import torch
 
@@ -296,9 +296,9 @@ def cleanup_pair_zips(pair: str, input_root: Path, years: Optional[str]) -> None
             zp.unlink()
             removed += 1
         except Exception as exc:  # pragma: no cover - defensive
-            print(f"[warn] could not delete {zp}: {exc}")
+            log.warning(f"could not delete {zp}: {exc}")
     if removed:
-        print(f"[info] deleted {removed} zip(s) for {pair} under {target_dir}")
+        log.info(f"deleted {removed} zip(s) for {pair} under {target_dir}")
 
 
 def has_local_data(pair: str, input_root: Path, years: Optional[str]) -> bool:
@@ -317,11 +317,11 @@ def has_local_data(pair: str, input_root: Path, years: Optional[str]) -> bool:
 def run_yfinance_download(args) -> None:
     script = ROOT / "data" / "downloaders" / "yfinance_downloader.py"
     if not script.exists():
-        print("[warn] yfinance downloader script not found; skipping.")
+        log.warning("yfinance downloader script not found; skipping.")
         return
     output_root = args.yf_output_root or args.input_root
     if not args.yf_start or not args.yf_end:
-        print("[warn] yfinance download requires --yf-start and --yf-end; skipping.")
+        log.warning("yfinance download requires --yf-start and --yf-end; skipping.")
         return
     cmd = [
         sys.executable,
@@ -343,7 +343,7 @@ def run_yfinance_download(args) -> None:
         for pair in [p.strip().lower() for p in args.pairs.split(",") if p.strip()]:
             (Path(output_root) / pair).mkdir(parents=True, exist_ok=True)
     except Exception as exc:  # pragma: no cover - defensive
-        print(f"[warn] yfinance download failed: {exc}")
+        log.warning(f"yfinance download failed: {exc}")
 
 
 def normalize_yfinance(args) -> None:
@@ -351,7 +351,7 @@ def normalize_yfinance(args) -> None:
         return
     script = ROOT / "data" / "downloaders" / "normalize_yfinance.py"
     if not script.exists():
-        print("[warn] yfinance normalization script not found; skipping.")
+        log.warning("yfinance normalization script not found; skipping.")
         return
     output_root = args.yf_output_root or args.input_root
     cmd = [
@@ -367,7 +367,7 @@ def normalize_yfinance(args) -> None:
     try:
         subprocess.run(cmd, check=True, cwd=ROOT)
     except Exception as exc:  # pragma: no cover - defensive
-        print(f"[warn] yfinance normalization failed: {exc}")
+        log.warning(f"yfinance normalization failed: {exc}")
 
 
 def auto_download_if_missing(pair: str, args) -> None:
@@ -375,7 +375,7 @@ def auto_download_if_missing(pair: str, args) -> None:
         return
     if has_local_data(pair, Path(args.input_root), args.years):
         return
-    print(f"[info] No local data found for {pair}; triggering downloads.")
+    log.info(f"No local data found for {pair}; triggering downloads.")
     tmp_args = deepcopy(args)
     tmp_args.pairs = pair
     # Run histdata if requested globally.
@@ -384,7 +384,7 @@ def auto_download_if_missing(pair: str, args) -> None:
     # Run yfinance if requested and start/end provided.
     if args.run_yfinance_download:
         if not (args.yf_start and args.yf_end):
-            print("[warn] yfinance download skipped: --yf-start/--yf-end required.")
+            log.warning("yfinance download skipped: --yf-start/--yf-end required.")
         else:
             run_yfinance_download(tmp_args)
             normalize_yfinance(tmp_args)
@@ -393,7 +393,7 @@ def auto_download_if_missing(pair: str, args) -> None:
 def run_histdata_download(args) -> None:
     script = ROOT / "data" / "download_all_fx_data.py"
     if not script.exists():
-        print("[warn] HistData downloader script not found; skipping.")
+        log.warning("HistData downloader script not found; skipping.")
         return
     env = os.environ.copy()
     output_root = args.histdata_output_root or args.input_root
@@ -416,7 +416,7 @@ def run_histdata_download(args) -> None:
                 env["PAIRS_CSV"] = str(tmp_csv)
         subprocess.run([sys.executable, str(script)], check=True, env=env, cwd=ROOT)
     except Exception as exc:  # pragma: no cover - defensive
-        print(f"[warn] HistData download failed: {exc}")
+        log.warning(f"HistData download failed: {exc}")
 
 
 def maybe_offer_game(enabled: bool) -> None:
@@ -433,7 +433,7 @@ def maybe_offer_game(enabled: bool) -> None:
         return
     if resp.lower() != "y":
         return
-    print("Starting mini-game in this terminal. Quit with Q to return.")
+    log.info("Starting mini-game in this terminal. Quit with Q to return.")
     subprocess.Popen([sys.executable, str(game_path)])
 
 
@@ -467,8 +467,8 @@ def run_gdelt_download(args) -> None:
         cmd.append("--overwrite")
     if args.gdelt_base_url:
         cmd.extend(["--base-url", args.gdelt_base_url])
-    print(
-        f"[info] Downloading GDELT to {args.gdelt_out_dir} "
+    log.info(
+        f"Downloading GDELT to {args.gdelt_out_dir} "
         f"({args.gdelt_resolution}, {args.gdelt_start_date} -> {end_date})"
     )
     subprocess.run(cmd, check=True)
@@ -499,11 +499,11 @@ def run_rl_training(pair: str, args, prepared_data_path: Path) -> None:
     import pandas as pd
     
     load_rl_modules()
-    
-    print(f"\n[rl] Starting RL training for {pair}")
-    print(f"[rl] Environment mode: {args.rl_env_mode}")
-    print(f"[rl] Workers: {args.rl_num_workers}")
-    print(f"[rl] Total steps: {args.rl_total_steps}")
+
+    log.info(f"\nRL: Starting RL training for {pair}")
+    log.info(f"RL: Environment mode: {args.rl_env_mode}")
+    log.info(f"RL: Workers: {args.rl_num_workers}")
+    log.info(f"RL: Total steps: {args.rl_total_steps}")
     
     # Create RL checkpoint directory
     rl_ckpt_root = Path(args.rl_checkpoint_dir)
@@ -552,21 +552,22 @@ def run_rl_training(pair: str, args, prepared_data_path: Path) -> None:
                 pair=pair,
                 initial_balance=args.rl_initial_balance,
             )
-        print(f"[rl] Using SimulatedRetailExecutionEnv (stochastic)")
+
+        log.info(f"RL: Using SimulatedRetailExecutionEnv (stochastic)")
     
     else:  # backtesting mode
         if BacktestingRetailExecutionEnv is None:
-            print("[error] backtesting.py is required for --rl-env-mode=backtesting")
-            print("[error] Install with: pip install backtesting>=0.3.2")
+            log.error("backtesting.py is required for --rl-env-mode=backtesting")
+            log.error("Install with: pip install backtesting>=0.3.2")
             return
         
         # Load historical OHLCV data
         if not prepared_data_path.exists():
-            print(f"[error] Prepared data not found: {prepared_data_path}")
-            print(f"[error] Cannot run backtesting mode without historical data")
+            log.error(f"Prepared data not found: {prepared_data_path}")
+            log.error(f"Cannot run backtesting mode without historical data")
             return
-        
-        print(f"[rl] Loading historical data from {prepared_data_path}")
+
+        log.info(f"RL: Loading historical data from {prepared_data_path}")
         price_df = pd.read_csv(prepared_data_path)
         
         # Ensure datetime column and required OHLCV columns
@@ -578,11 +579,11 @@ def run_rl_training(pair: str, args, prepared_data_path: Path) -> None:
         available_cols = {c.lower() for c in price_df.columns}
         if not required_cols.issubset(available_cols):
             missing = required_cols - available_cols
-            print(f"[error] Missing required OHLCV columns: {missing}")
-            print(f"[error] Cannot run backtesting mode")
+            log.error(f"Missing required OHLCV columns: {missing}")
+            log.error(f"Cannot run backtesting mode")
             return
-        
-        print(f"[rl] Loaded {len(price_df)} bars for backtesting")
+
+        log.info(f"RL: Loaded {len(price_df)} bars for backtesting")
         
         def make_env():
             exec_cfg = ExecutionConfig(initial_cash=args.rl_initial_balance)
@@ -590,28 +591,34 @@ def run_rl_training(pair: str, args, prepared_data_path: Path) -> None:
                 price_df=price_df.copy(),
                 config=exec_cfg,
             )
-        print(f"[rl] Using BacktestingRetailExecutionEnv (deterministic historical)")
+
+        log.info(f"RL: Using BacktestingRetailExecutionEnv (deterministic historical)")
     
     # Create and train agent
     try:
-        print(f"[rl] Initializing A3C agent...")
+        log.info(f"RL: Initializing A3C agent...")
         agent = A3CAgent(
             model_cfg=model_cfg,
             a3c_cfg=a3c_cfg,
             action_dim=3,  # hold, buy, sell
             env_factory=make_env,
         )
-        
-        print(f"[rl] Starting training...")
+
+        log.info(f"RL: Starting training...")
         agent.train()
-        
-        print(f"[rl] Training complete! Checkpoint saved to: {rl_ckpt_path}")
+
+        log.info(f"RL: Training complete! Checkpoint saved to: {rl_ckpt_path}")
     
     except KeyboardInterrupt:
-        print(f"[warn] RL training interrupted for {pair}")
+        log.warning(f"RL training interrupted for {pair}")
     except Exception as exc:
-        print(f"[error] RL training failed for {pair}: {exc}")
+        log.error(f"RL training failed for {pair}: {exc}")
         import traceback
+
+
+from utils.logger import get_logger
+
+log = get_logger(__name__)
         traceback.print_exc()
 
 
@@ -626,7 +633,7 @@ def main() -> None:
         try:
             run_gdelt_download(args)
         except Exception as exc:  # pragma: no cover - defensive
-            print(f"[warn] GDELT download failed: {exc}")
+            log.warning(f"GDELT download failed: {exc}")
     if args.run_histdata_download:
         run_histdata_download(args)
     if args.run_yfinance_download:
@@ -647,7 +654,7 @@ def main() -> None:
 
     while pair_queue:
         pair = pair_queue.pop(0)
-        print(f"\n=== Running pair: {pair} ===")
+        log.info(f"\n=== Running pair: {pair} ===")
 
         # Auto-download if the pair folder is missing or empty.
         auto_download_if_missing(pair, args)
@@ -686,7 +693,7 @@ def main() -> None:
         try:
             pair_name, loaders = process_pair(pair, PrepArgs)
         except Exception as exc:  # pragma: no cover - defensive logging only
-            print(f"[error] data prep failed for {pair}: {exc}")
+            log.error(f"data prep failed for {pair}: {exc}")
             continue
 
         train_loader = loaders["train"]
@@ -718,9 +725,9 @@ def main() -> None:
             try:
                 state = torch.load(ckpt_path, map_location=device)
                 model.load_state_dict(state)
-                print(f"[info] Found checkpoint for {pair_name}, skipping training (use --force-train to retrain).")
+                log.info(f"Found checkpoint for {pair_name}, skipping training (use --force-train to retrain).")
             except Exception as exc:  # pragma: no cover - defensive
-                print(f"[warn] Failed to load existing checkpoint for {pair_name}: {exc}")
+                log.warning(f"Failed to load existing checkpoint for {pair_name}: {exc}")
 
         if not (ckpt_exists and args.resume_if_ckpt):
             try:
@@ -732,18 +739,18 @@ def main() -> None:
                     task_type=args.task_type,
                     risk_manager=risk_manager,
                 )
-                print(f"[done] training {pair_name}; history keys: {list(history.keys())}")
+                log.info(f"training {pair_name}; history keys: {list(history.keys())}")
             except KeyboardInterrupt:
-                print(f"[warn] Training interrupted for {pair_name}; keeping current model state.")
+                log.warning(f"Training interrupted for {pair_name}; keeping current model state.")
             except Exception as exc:  # pragma: no cover - defensive
-                print(f"[error] training failed for {pair_name}: {exc}")
+                log.error(f"training failed for {pair_name}: {exc}")
                 continue
 
         if not args.skip_eval:
             metrics = evaluate_model(
                 model, test_loader, task_type=args.task_type, risk_manager=risk_manager
             )
-            print(f"[eval] {pair_name}: {metrics}")
+            log.info(f"Eval: {pair_name}: {metrics}")
 
         # Run RL training if requested
         if args.run_rl_training:

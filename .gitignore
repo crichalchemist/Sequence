@@ -42,3 +42,4 @@ models/*.pth
 *.tar
 *.tar.gz
 *.log
+!/tests/__init__.py

@@ -86,7 +86,7 @@ def main():
     # Validate device
     device = args.device
     if device.startswith("cuda") and not torch.cuda.is_available():
-        print("[warn] CUDA not available, falling back to CPU")
+        log.warning("CUDA not available, falling back to CPU")
         device = "cpu"
     
     # Validate environment mode
@@ -95,8 +95,8 @@ def main():
         try:
             from execution.backtesting_env import BacktestingRetailExecutionEnv  # noqa: F401
         except ImportError as exc:
-            print(f"[error] backtesting.py is required for --env-mode=backtesting")
-            print(f"[error] Install with: pip install backtesting>=0.3.2")
+            log.error(f"backtesting.py is required for --env-mode=backtesting")
+            log.error(f"Install with: pip install backtesting>=0.3.2")
             sys.exit(1)
         
         # Locate historical data
@@ -118,20 +118,20 @@ def main():
                         break
         
         if not data_path.exists():
-            print(f"[error] Historical data not found: {data_path}")
-            print(f"[error] Provide --historical-data or prepare data at {data_path}")
+            log.error(f"Historical data not found: {data_path}")
+            log.error(f"Provide --historical-data or prepare data at {data_path}")
             sys.exit(1)
-        
-        print(f"[a3c] Using historical data: {data_path}")
-    
-    print(f"[a3c] Training configuration:")
-    print(f"  - Pair: {args.pair}")
-    print(f"  - Environment mode: {args.env_mode}")
-    print(f"  - Workers: {args.num_workers}")
-    print(f"  - Total steps: {args.total_steps}")
-    print(f"  - Learning rate: {args.learning_rate}")
-    print(f"  - Device: {device}")
-    print(f"  - Checkpoint: {args.checkpoint_path}")
+
+        log.info(f"[a3c] Using historical data: {data_path}")
+
+    log.info(f"[a3c] Training configuration:")
+    log.info(f"  - Pair: {args.pair}")
+    log.info(f"  - Environment mode: {args.env_mode}")
+    log.info(f"  - Workers: {args.num_workers}")
+    log.info(f"  - Total steps: {args.total_steps}")
+    log.info(f"  - Learning rate: {args.learning_rate}")
+    log.info(f"  - Device: {device}")
+    log.info(f"  - Checkpoint: {args.checkpoint_path}")
     
     # Create model config
     model_cfg = ModelConfig(
@@ -170,14 +170,20 @@ def main():
                 pair=args.pair,
                 initial_balance=args.initial_balance,
             )
-        print(f"[a3c] Environment: SimulatedRetailExecutionEnv (stochastic)")
+
+        log.info(f"[a3c] Environment: SimulatedRetailExecutionEnv (stochastic)")
     
     else:  # backtesting mode
         # Deterministic historical replay with backtesting.py
-        from execution.backtesting_env import BacktestingRetailExecutionEnv
+        pass
+
+
+from utils.logger import get_logger
+
+log = get_logger(__name__)
         
         # Load historical data once (shared across workers)
-        print(f"[a3c] Loading historical OHLCV data from {data_path}...")
+log.info(f"[a3c] Loading historical OHLCV data from {data_path}...")
         price_df = pd.read_csv(data_path)
         
         # Ensure datetime column exists and is parsed
@@ -190,11 +196,11 @@ def main():
         available_cols = {c.lower() for c in price_df.columns}
         if not required_cols.issubset(available_cols):
             missing = required_cols - available_cols
-            print(f"[error] Missing required OHLCV columns: {missing}")
-            print(f"[error] Available columns: {list(price_df.columns)}")
+            log.error(f"Missing required OHLCV columns: {missing}")
+            log.error(f"Available columns: {list(price_df.columns)}")
             sys.exit(1)
-        
-        print(f"[a3c] Loaded {len(price_df)} bars for backtesting")
+
+log.info(f"[a3c] Loaded {len(price_df)} bars for backtesting")
         
         def make_env():
             exec_cfg = ExecutionConfig(initial_cash=args.initial_balance)
@@ -202,21 +208,23 @@ def main():
                 price_df=price_df.copy(),
                 config=exec_cfg,
             )
-        print(f"[a3c] Environment: BacktestingRetailExecutionEnv (deterministic historical)")
+
+
+log.info(f"[a3c] Environment: BacktestingRetailExecutionEnv (deterministic historical)")
     
     # Create and train agent
-    print(f"\n[a3c] Initializing agent...")
+log.info(f"\n[a3c] Initializing agent...")
     agent = A3CAgent(
         model_cfg=model_cfg,
         a3c_cfg=a3c_cfg,
         action_dim=3,  # hold, buy, sell
         env_factory=make_env,
     )
-    
-    print(f"[a3c] Starting training ({args.num_workers} workers)...")
+
+log.info(f"[a3c] Starting training ({args.num_workers} workers)...")
     agent.train()
-    
-    print(f"[a3c] Training complete! Checkpoint saved to: {args.checkpoint_path}")
+
+log.info(f"[a3c] Training complete! Checkpoint saved to: {args.checkpoint_path}")
 
 
 if __name__ == "__main__":

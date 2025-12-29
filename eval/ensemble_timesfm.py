@@ -19,10 +19,9 @@ Usage example:
 import argparse
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
 import numpy as np
-import pandas as pd
 import torch
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -30,7 +29,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from config.config import DataConfig, FeatureConfig, ModelConfig
-from data.agent_data import DataAgent
+from data.agents.single_task_agent import SingleTaskDataAgent as DataAgent
 from data.prepare_dataset import _compute_time_ranges, _load_pair_data
 from features.agent_features import build_feature_frame
 from models.agent_hybrid import build_model
