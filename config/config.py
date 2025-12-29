@@ -18,6 +18,9 @@ class FeatureConfig:
     long_vol_window: int = 50
     spread_windows: List[int] = field(default_factory=lambda: [20])
     imbalance_smoothing: int = 5
+    microstructure_windows: List[int] = field(default_factory=lambda: [5, 10, 20])
+    dc_threshold_up: float = 0.001  # Directional change threshold for upward moves (0.1%)
+    dc_threshold_down: Optional[float] = None  # Defaults to dc_threshold_up if not specified
     include_groups: Optional[List[str]] = None
     exclude_groups: Optional[List[str]] = None
 

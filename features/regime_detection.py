@@ -12,10 +12,11 @@ Example:
   regimes = detector.fit_predict(price_data)
 """
 
-from typing import Tuple, Optional
+from dataclasses import dataclass
+from typing import Optional
+
 import numpy as np
 import pandas as pd
-from dataclasses import dataclass
 from sklearn.mixture import GaussianMixture
 from sklearn.preprocessing import StandardScaler
 
@@ -82,7 +83,7 @@ class RegimeDetector:
         features = df[["returns", "volatility", "range_pct", "close_position", "volume_surge"]].values
         
         # Fill NaN with forward fill then back fill
-        features = pd.DataFrame(features).fillna(method="bfill").fillna(method="ffill").values
+        features = pd.DataFrame(features).bfill().ffill().values
         
         return features
     

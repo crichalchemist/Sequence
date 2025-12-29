@@ -1,29 +1,49 @@
+import importlib.util
+import sys
+from pathlib import Path
 from typing import Optional
 
 import numpy as np
 import pandas as pd
 
 from config.config import FeatureConfig
-import importlib.util
-import sys
-from pathlib import Path
 from config.config import ResearchConfig
 
+
 def _load_generated_features():
-    cfg = ResearchConfig()
-    gen_dir = Path(cfg.generated_code_dir)
-    features = {}
-    if gen_dir.is_dir():
+    """Load generated feature modules with recursion protection."""
+    try:
+        cfg = ResearchConfig()
+        gen_dir = Path(cfg.generated_code_dir)
+        features = {}
+
+        # Check if directory exists and is valid
+        if not gen_dir.exists() or not gen_dir.is_dir():
+            return features
+
         for py_file in gen_dir.glob("*.py"):
             module_name = py_file.stem
-            spec = importlib.util.spec_from_file_location(module_name, py_file)
-            if spec and spec.loader:
-                mod = importlib.util.module_from_spec(spec)
-                sys.modules[module_name] = mod
-                spec.loader.exec_module(mod)
-                if hasattr(mod, module_name):
-                    features[module_name] = getattr(mod, module_name)
-    return features
+
+            # Skip if already loaded (recursion protection)
+            if module_name in sys.modules:
+                continue
+
+            try:
+                spec = importlib.util.spec_from_file_location(module_name, py_file)
+                if spec and spec.loader:
+                    mod = importlib.util.module_from_spec(spec)
+                    sys.modules[module_name] = mod
+                    spec.loader.exec_module(mod)
+                    if hasattr(mod, module_name):
+                        features[module_name] = getattr(mod, module_name)
+            except Exception:
+                # Silently skip modules that fail to load
+                continue
+
+        return features
+    except Exception:
+        # If anything fails, return empty dict (fail-safe)
+        return {}
 
 GENERATED_FEATURES = _load_generated_features()
 
@@ -151,6 +171,7 @@ def build_feature_frame(df: pd.DataFrame, config: Optional[FeatureConfig] = None
     """
 
     config = config or FeatureConfig()
+    raw_df = df.copy()  # Keep reference to raw data for regime detection
     feature_df = add_base_features(df, spread_windows=config.spread_windows)
 
     if _should_add("trend", config):
@@ -190,6 +211,26 @@ def build_feature_frame(df: pd.DataFrame, config: Optional[FeatureConfig] = None
     if _should_add("imbalance", config):
         imbalance_df = candle_imbalance_features(feature_df, smoothing=config.imbalance_smoothing)
         feature_df = pd.concat([feature_df, imbalance_df], axis=1)
+
+    if _should_add("microstructure", config):
+        from features.microstructure import build_microstructure_features
+        feature_df = build_microstructure_features(
+            feature_df,
+            windows=config.microstructure_windows
+        )
+
+    if _should_add("regime", config):
+        from features.regime_detection import integrate_regime_features
+        feature_df = integrate_regime_features(feature_df, raw_df)
+
+    if _should_add("intrinsic_time", config):
+        from features.intrinsic_time import add_intrinsic_time_features
+        feature_df = add_intrinsic_time_features(
+            feature_df,
+            price_col="close",
+            up_threshold=config.dc_threshold_up,
+            down_threshold=config.dc_threshold_down,
+        )
 
     feature_df = feature_df.dropna().reset_index(drop=True)
     return feature_df

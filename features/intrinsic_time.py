@@ -8,9 +8,10 @@ preparation.
 
 from typing import Optional, Sequence
 
+import numpy as np
 import pandas as pd
 
-from features.constants import MAX_THRESHOLD_VALUE
+from features.constants import MAX_THRESHOLD_VALUE, DEFAULT_DC_THRESHOLD
 
 
 def _validate_thresholds(up_threshold: float, down_threshold: float) -> None:
@@ -158,3 +159,87 @@ def build_intrinsic_time_bars(
     bars["direction"] = events["direction"].to_list()
     bars["overshoot"] = events["overshoot"].to_list()
     return bars.reset_index(drop=True)
+
+
+def add_intrinsic_time_features(
+        df: pd.DataFrame,
+        price_col: str = "close",
+        up_threshold: float = DEFAULT_DC_THRESHOLD,
+        down_threshold: Optional[float] = None,
+        timestamp_col: str = "datetime",
+) -> pd.DataFrame:
+    """
+    Add intrinsic time features to existing dataframe without subsampling.
+
+    This differs from build_intrinsic_time_bars() which filters rows.
+    Instead, this annotates ALL rows with DC-based features:
+      - dc_direction: Binary (1=up, 0=down, NaN=no DC yet)
+      - dc_overshoot: Overshoot magnitude at last DC
+      - dc_bars_since: Number of bars since last DC event
+      - dc_event_flag: Binary flag marking DC event rows
+
+    Args:
+        df: DataFrame with OHLC data
+        price_col: Column to use for DC detection (default: "close")
+        up_threshold: Upward DC threshold (default: 0.001 = 0.1%)
+        down_threshold: Downward DC threshold (default: same as up_threshold)
+        timestamp_col: Timestamp column name
+
+    Returns:
+        DataFrame with added intrinsic time feature columns
+    """
+    if down_threshold is None:
+        down_threshold = up_threshold
+
+    _validate_thresholds(up_threshold, down_threshold)
+
+    # Detect DC events
+    events = detect_directional_changes(
+        df[price_col].reset_index(drop=True),
+        up_threshold=up_threshold,
+        down_threshold=down_threshold,
+        timestamps=df[timestamp_col] if timestamp_col in df.columns else None,
+    )
+
+    if events.empty:
+        # No DC events - add NaN columns
+        df = df.copy()
+        df["dc_direction"] = np.nan
+        df["dc_overshoot"] = np.nan
+        df["dc_bars_since"] = np.nan
+        df["dc_event_flag"] = 0
+        return df
+
+    # Create feature columns
+    df = df.copy()
+
+    # Initialize all rows
+    df["dc_direction"] = np.nan
+    df["dc_overshoot"] = np.nan
+    df["dc_bars_since"] = np.nan
+    df["dc_event_flag"] = 0
+
+    # Mark DC event rows and propagate features forward
+    event_indices = events["idx"].to_list()
+
+    for i, (idx, row) in enumerate(events.iterrows()):
+        event_idx = row["idx"]
+
+        # Mark this row as DC event
+        df.loc[event_idx, "dc_event_flag"] = 1
+        df.loc[event_idx, "dc_direction"] = 1 if row["direction"] == "up" else 0
+        df.loc[event_idx, "dc_overshoot"] = row["overshoot"]
+
+        # Propagate to subsequent rows until next event
+        next_event_idx = event_indices[i + 1] if i + 1 < len(event_indices) else len(df)
+
+        for j in range(event_idx + 1, next_event_idx):
+            if j < len(df):
+                df.loc[j, "dc_direction"] = 1 if row["direction"] == "up" else 0
+                df.loc[j, "dc_overshoot"] = row["overshoot"]
+                df.loc[j, "dc_bars_since"] = j - event_idx
+
+    # Fill bars_since for event rows
+    df.loc[df["dc_event_flag"] == 1, "dc_bars_since"] = 0
+
+    return df

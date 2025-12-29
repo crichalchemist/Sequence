@@ -11,7 +11,6 @@ References:
 
 import numpy as np
 import pandas as pd
-from typing import Tuple
 
 
 def high_low_imbalance(df: pd.DataFrame, window: int = 20) -> pd.Series:
@@ -221,7 +220,7 @@ def build_microstructure_features(df: pd.DataFrame, windows: list = None) -> pd.
         features[f"price_impact{suffix}"] = price_impact_proxy(df, window)
     
     # Fill any NaN values
-    features = features.fillna(method="bfill").fillna(method="ffill")
+    features = features.bfill().ffill()
     
     return features
 
