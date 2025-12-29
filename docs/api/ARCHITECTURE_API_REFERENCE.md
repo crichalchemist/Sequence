@@ -1,8 +1,8 @@
 # Architecture & API Reference
 
-**Date:** 2025-12-06  
-**Version:** 1.0  
-**Status:** Complete implementation (Phases 1-6)
+**Date:** 2025-12-29 (Updated for Phase 3)
+**Version:** 2.0
+**Status:** Complete implementation (Phases 1-3, includes transaction costs, position sizing, risk management)
 
 ---
 
@@ -471,13 +471,166 @@ df_clean = validate_dataframe(df_raw)
 
 ---
 
+## Phase 3: Production Enhancements
+
+### Overview
+
+Phase 3 adds production-ready features to bridge the gap between backtesting and live trading:
+
+- **Transaction Cost Modeling**: Realistic commission, spreads, and slippage
+- **Dynamic Position Sizing**: Kelly-criterion-inspired risk-based sizing
+- **Risk Management**: Stop-loss, take-profit, and drawdown limits
+
+### 3.1 Transaction Cost Modeling
+
+#### ExecutionConfig - Transaction Cost Parameters
+
+```python
+from execution.simulated_retail_env import ExecutionConfig
+
+config = ExecutionConfig(
+    # Commission costs
+    commission_per_lot=7.0,            # Fixed $7 per lot (FX retail)
+    commission_pct=0.0001,             # OR 0.01% of notional
+
+    # Variable spreads
+    variable_spread=True,              # Enable volatility-based widening
+    spread_volatility_multiplier=2.0,  # 2x spread during high volatility
+)
+```
+
+**Cost Tracking**:
+- `env._commission_paid`: Total commission costs
+- `env._spread_paid`: Total spread costs
+- `env._slippage_paid`: Total slippage costs
+
+**Behavior**:
+- Spreads widen when `volatility_ratio > 1.5`
+- Uses EMA of recent price shocks to detect volatility regimes
+- All costs deducted from cash on every fill
+
+### 3.2 Dynamic Position Sizing
+
+#### ActionConverter - Position Sizing Logic
+
+```python
+from train.core.env_based_rl_training import ActionConverter
+
+converter = ActionConverter(
+    lot_size=1.0,               # Base lot size
+    max_position=10.0,          # Maximum inventory (long or short)
+    risk_per_trade=0.02,        # Risk 2% of portfolio per trade
+    use_dynamic_sizing=True,    # Enable Kelly-inspired sizing
+)
+```
+
+**Sizing Formula** (when `use_dynamic_sizing=True`):
+```python
+portfolio_value = cash + (inventory * mid_price)
+risk_amount = portfolio_value * risk_per_trade
+size = risk_amount / mid_price
+```
+
+**Constraints Applied**:
+1. **Position Limits**: Size capped to prevent exceeding `max_position`
+2. **Cash Constraints**: Buy orders limited by available cash
+3. **Lot Rounding**: Sizes rounded to `lot_size` increments
+
+**Multi-Pair Behavior**:
+- `max_position` is per-pair (independent inventory tracking)
+- Enables diversification: long 8 EUR/USD AND long 6 GBP/USD simultaneously
+
+### 3.3 Risk Management
+
+#### Risk Control Parameters
+
+```python
+config = ExecutionConfig(
+    # Stop-loss (per-position)
+    enable_stop_loss=False,     # Disabled by default - let agent learn
+    stop_loss_pct=0.02,         # Close at 2% loss from entry
+
+    # Take-profit (per-position)
+    enable_take_profit=False,   # Disabled by default
+    take_profit_pct=0.04,       # Close at 4% gain from entry
+
+    # Drawdown limit (portfolio-level)
+    enable_drawdown_limit=True,  # Recommended for training
+    max_drawdown_pct=0.20,       # Terminate episode at 20% drawdown
+)
+```
+
+**Risk Metrics**:
+- `env._stop_loss_triggered`: Count of stop-loss exits
+- `env._take_profit_triggered`: Count of take-profit exits
+- `env._peak_portfolio_value`: Peak portfolio for drawdown calculation
+
+**Behavior**:
+- Stop-loss/take-profit checked every step after price update
+- Drawdown = `(peak_portfolio - current_portfolio) / peak_portfolio`
+- Episode terminates early if `drawdown >= max_drawdown_pct`
+
+### Production Configuration Examples
+
+#### Balanced (Recommended)
+```python
+env_config = ExecutionConfig(
+    initial_cash=50_000.0,
+    commission_pct=0.0001,          # 1 basis point
+    variable_spread=True,
+    enable_drawdown_limit=True,
+    max_drawdown_pct=0.20,
+)
+
+converter = ActionConverter(
+    max_position=10.0,
+    risk_per_trade=0.02,
+    use_dynamic_sizing=True,
+)
+```
+
+#### Conservative (High Safety)
+```python
+env_config = ExecutionConfig(
+    initial_cash=50_000.0,
+    commission_pct=0.0001,
+    variable_spread=True,
+    enable_stop_loss=True,
+    stop_loss_pct=0.01,             # Tight 1% stop
+    enable_take_profit=True,
+    take_profit_pct=0.02,
+    enable_drawdown_limit=True,
+    max_drawdown_pct=0.10,          # Conservative 10%
+)
+
+converter = ActionConverter(
+    max_position=5.0,               # Lower limit
+    risk_per_trade=0.01,            # 1% risk
+    use_dynamic_sizing=True,
+)
+```
+
+See [Configuration Reference](../CONFIGURATION_REFERENCE.md) for complete options.
+
+### Testing & Validation
+
+All Phase 3 features validated with comprehensive test suite:
+- **16/16 Phase 3 tests passing**
+- **25/25 total tests passing** (Phases 1-3)
+
+See [Testing & Validation Report](../TESTING_VALIDATION_REPORT.md) for details.
+
+---
+
 ## References
 
 - **Attention Mechanisms:** `utils/attention_optimization.py`
 - **Risk Management:** `risk/risk_manager.py`
 - **Feature Engineering:** `features/agent_features.py`
 - **Sentiment Analysis:** `features/agent_sentiment.py`
+- **Phase 3 Implementation:** See [Phase 3 Implementation Summary](../implementation/PHASE_3_IMPLEMENTATION_SUMMARY.md)
+- **Configuration Guide:** See [Configuration Reference](../CONFIGURATION_REFERENCE.md)
 
 ---
 
-*Document updated: 2025-12-06 | Implementation status: Complete (Phases 1-6)*
+*Document updated: 2025-12-29 | Implementation status: Complete (Phases 1-3)*

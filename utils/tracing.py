@@ -20,87 +20,124 @@ Usage:
 """
 
 import os
-from typing import Optional
+from typing import Optional, Any
 
-from opentelemetry import trace
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.instrumentation.torch import TorchInstrumentor
-from opentelemetry.instrumentation.logging import LoggingInstrumentor
+# Optional OpenTelemetry imports - gracefully degrade if not installed
+try:
+    from opentelemetry import trace
+    from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import BatchSpanProcessor
+    from opentelemetry.instrumentation.torch import TorchInstrumentor
+    from opentelemetry.instrumentation.logging import LoggingInstrumentor
+    OTEL_AVAILABLE = True
+except ImportError:
+    # OpenTelemetry not installed - use no-op implementations
+    OTEL_AVAILABLE = False
+    TracerProvider = None
+    trace = None
+
+
+class NoOpTracer:
+    """No-op tracer when OpenTelemetry is not available."""
+
+    def start_as_current_span(self, name: str):
+        """No-op context manager."""
+        return NoOpSpan()
+
+
+class NoOpSpan:
+    """No-op span when OpenTelemetry is not available."""
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
+
+    def set_attribute(self, key, value):
+        pass
+
+    def end(self):
+        pass
 
 
 def setup_tracing(
     service_name: str = "sequence",
     otlp_endpoint: str = "http://localhost:4318",
     environment: str = "development",
-) -> TracerProvider:
+) -> Optional[TracerProvider]:
     """
     Initialize OpenTelemetry tracing for the application.
-    
+
     Args:
         service_name: Service name for tracing (default: "sequence")
         otlp_endpoint: OTLP collector HTTP endpoint (default: localhost:4318 for AI Toolkit)
         environment: Environment name (development, staging, production)
-    
+
     Returns:
-        Configured TracerProvider instance
-    
+        Configured TracerProvider instance, or None if OpenTelemetry is not available
+
     Example:
         >>> setup_tracing(service_name="sequence-training")
         >>> tracer = get_tracer(__name__)
         >>> with tracer.start_as_current_span("training") as span:
         ...     span.set_attribute("epochs", 10)
     """
+    if not OTEL_AVAILABLE:
+        return None
+
     # Create OTLP exporter
     otlp_exporter = OTLPSpanExporter(
         endpoint=otlp_endpoint,
         timeout=10,
     )
-    
+
     # Create tracer provider with batch processor
     tracer_provider = TracerProvider()
     tracer_provider.add_span_processor(BatchSpanProcessor(otlp_exporter))
-    
+
     # Set as global tracer provider
     trace.set_tracer_provider(tracer_provider)
-    
+
     # Auto-instrument PyTorch
     TorchInstrumentor().instrument()
-    
+
     # Auto-instrument logging
     LoggingInstrumentor().instrument()
-    
+
     # Set global service attributes
     resource_attributes = {
         "service.name": service_name,
         "service.version": "1.0.0",
         "deployment.environment": environment,
     }
-    
+
     for key, value in resource_attributes.items():
         trace.get_current_span().set_attribute(key, value)
-    
+
     return tracer_provider
 
 
-def get_tracer(module_name: str) -> trace.Tracer:
+def get_tracer(module_name: str):
     """
     Get a tracer instance for the given module.
-    
+
     Args:
         module_name: Module name (typically __name__)
-    
+
     Returns:
-        Tracer instance for the module
+        Tracer instance for the module, or NoOpTracer if OpenTelemetry is not available
     """
+    if not OTEL_AVAILABLE:
+        return NoOpTracer()
     return trace.get_tracer(module_name)
 
 
 class TracingContext:
     """Context manager for tracing named spans with attributes."""
-    
-    def __init__(self, tracer: Optional[trace.Tracer], span_name: str, attributes: Optional[dict] = None):
+
+    def __init__(self, tracer: Optional[Any], span_name: str, attributes: Optional[dict] = None):
         """
         Initialize tracing context. Works gracefully with None tracer.
         
@@ -131,7 +168,7 @@ class TracingContext:
         self.span.end()
 
 
-def trace_function(tracer: Optional[trace.Tracer], func_name: str = None):
+def trace_function(tracer: Optional[Any], func_name: str = None):
     """
     Decorator to automatically trace a function's execution.
     
@@ -164,7 +201,7 @@ def trace_function(tracer: Optional[trace.Tracer], func_name: str = None):
 
 # Convenience functions for common tracing scenarios
 
-def trace_training_epoch(tracer: trace.Tracer, epoch: int, num_epochs: int):
+def trace_training_epoch(tracer: Any, epoch: int, num_epochs: int):
     """Context manager for tracing a training epoch."""
     return TracingContext(tracer, "training_epoch", {
         "epoch": epoch,
@@ -172,7 +209,7 @@ def trace_training_epoch(tracer: trace.Tracer, epoch: int, num_epochs: int):
     })
 
 
-def trace_batch_processing(tracer: trace.Tracer, batch_idx: int, batch_size: int):
+def trace_batch_processing(tracer: Any, batch_idx: int, batch_size: int):
     """Context manager for tracing batch processing."""
     return TracingContext(tracer, "batch_processing", {
         "batch_index": batch_idx,
@@ -180,7 +217,7 @@ def trace_batch_processing(tracer: trace.Tracer, batch_idx: int, batch_size: int
     })
 
 
-def trace_validation(tracer: trace.Tracer, val_loss: float, val_metric: float):
+def trace_validation(tracer: Any, val_loss: float, val_metric: float):
     """Context manager for tracing validation."""
     return TracingContext(tracer, "validation", {
         "val_loss": val_loss,
@@ -188,7 +225,7 @@ def trace_validation(tracer: trace.Tracer, val_loss: float, val_metric: float):
     })
 
 
-def trace_data_loading(tracer: trace.Tracer, pair: str, num_samples: int):
+def trace_data_loading(tracer: Any, pair: str, num_samples: int):
     """Context manager for tracing data loading."""
     return TracingContext(tracer, "data_loading", {
         "pair": pair,
@@ -196,7 +233,7 @@ def trace_data_loading(tracer: trace.Tracer, pair: str, num_samples: int):
     })
 
 
-def trace_feature_engineering(tracer: trace.Tracer, pair: str, feature_count: int):
+def trace_feature_engineering(tracer: Any, pair: str, feature_count: int):
     """Context manager for tracing feature engineering."""
     return TracingContext(tracer, "feature_engineering", {
         "pair": pair,

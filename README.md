@@ -331,7 +331,6 @@ The A3C execution policy is inspired by optimal execution research [5, 6] and mo
 
 For detailed usage guides and integration examples, see:
 
-- [Matrix Dashboard Guide](DASHBOARD.md) - Interactive Matrix-themed monitoring dashboard
 - [Backtesting Integration Guide](docs/guides/BACKTESTING_INTEGRATION_GUIDE.md) - Comprehensive guide to RL training with backtesting.py
 - [Architecture & API Reference](docs/api/ARCHITECTURE_API_REFERENCE.md) - Technical deep-dive into model architecture
 - [Tracing Implementation Guide](docs/guides/TRACING_IMPLEMENTATION.md) - Observability and debugging with tracing

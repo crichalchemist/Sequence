@@ -7,11 +7,18 @@ Modules:
     simulated_retail_env: Stochastic retail execution simulation
 """
 
-from execution.backtesting_env import BacktestingRetailExecutionEnv
 from execution.simulated_retail_env import SimulatedRetailExecutionEnv
 
-__all__ = [
-    "BacktestingRetailExecutionEnv",
-    "SimulatedRetailExecutionEnv",
-]
+# Optional import for backtesting environment (requires backtesting library)
+try:
+    from execution.backtesting_env import BacktestingRetailExecutionEnv
+    __all__ = [
+        "BacktestingRetailExecutionEnv",
+        "SimulatedRetailExecutionEnv",
+    ]
+except ImportError:
+    # backtesting library not installed, only export simulated env
+    __all__ = [
+        "SimulatedRetailExecutionEnv",
+    ]
 
