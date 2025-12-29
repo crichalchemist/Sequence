@@ -114,6 +114,46 @@ config = ExecutionConfig(
 - Example: 0.20 = terminate if portfolio drops 20% from peak
 - Acts as circuit breaker for training stability
 
+#### Reward Engineering
+
+**`reward_type`** (str, default: "incremental_pnl")
+
+- Type of reward function to use
+- Options: "portfolio_value", "incremental_pnl", "sharpe", "cost_aware"
+- **portfolio_value**: Raw portfolio value (original, can cause training instability)
+- **incremental_pnl**: Change in portfolio value (recommended for most use cases)
+- **sharpe**: Risk-adjusted returns using rolling Sharpe-like metric
+- **cost_aware**: Incremental PnL with explicit transaction cost penalties
+
+**`cost_penalty_weight`** (float, default: 0.0)
+
+- Weight for transaction cost penalty in reward calculation
+- Only used with "cost_aware" reward type
+- Example: 1.0 = each dollar of cost reduces reward by 1.0
+- **Recommendation**: Start with 1.0-5.0 to discourage excessive trading
+
+**`drawdown_penalty_weight`** (float, default: 0.0)
+
+- Weight for drawdown penalty in reward calculation
+- Used with "incremental_pnl" and "cost_aware" reward types
+- Penalizes portfolio decline from peak
+- Example: 1000.0 = 10% drawdown reduces reward by 100
+- **Recommendation**: 500-2000 for moderate drawdown sensitivity
+
+**`sharpe_window`** (int, default: 50)
+
+- Window size for Sharpe ratio calculation
+- Only used with "sharpe" reward type
+- Number of recent steps to include in risk-adjusted return calculation
+- **Recommendation**: 30-100 steps (balance responsiveness vs. stability)
+
+**`reward_scaling`** (float, default: 1e-4)
+
+- Scaling factor applied to all rewards
+- Helps normalize reward magnitudes for training stability
+- Portfolio values are large ($50k+), scaling brings them to reasonable range
+- **Recommendation**: 1e-4 for portfolio_value, 1.0 for incremental rewards
+
 ---
 
 ## Position Sizing Configuration
@@ -270,6 +310,11 @@ config = ExecutionConfig(
     enable_take_profit=False,      # Let agent learn profit-taking
     enable_drawdown_limit=True,    # Portfolio-level safety net
     max_drawdown_pct=0.20,         # 20% max drawdown
+
+    # Phase 4: Reward engineering
+    reward_type="incremental_pnl",  # Stable training with incremental rewards
+    drawdown_penalty_weight=1000.0,  # Discourage large drawdowns
+    reward_scaling=1.0,  # No scaling needed for incremental rewards
 )
 
 converter = ActionConverter(
@@ -358,6 +403,59 @@ for pair in ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", ...]:
 - **Moderate stops**: 1-2% (0.01 to 0.02) - swing trading
 - **Wide stops**: 2-5% (0.02 to 0.05) - position trading
 - **Pair volatility**: Use tighter stops for low volatility, wider for high volatility
+
+---
+
+## Reward Engineering Configurations
+
+### Incremental PnL with Drawdown Penalty (Recommended)
+
+```python
+config = ExecutionConfig(
+    reward_type="incremental_pnl",
+    drawdown_penalty_weight=1000.0,  # Discourage drawdowns
+    reward_scaling=1.0,
+)
+```
+
+**When to use**: Default for most training scenarios. Provides stable training with explicit drawdown discouragement.
+
+### Cost-Aware Reward (Discourage Overtrading)
+
+```python
+config = ExecutionConfig(
+    reward_type="cost_aware",
+    cost_penalty_weight=3.0,  # Penalize transaction costs
+    drawdown_penalty_weight=500.0,  # Also penalize drawdowns
+    reward_scaling=1.0,
+)
+```
+
+**When to use**: When agent tends to overtrade. Explicitly penalizes commissions, spreads, and slippage.
+
+### Sharpe Ratio (Risk-Adjusted Returns)
+
+```python
+config = ExecutionConfig(
+    reward_type="sharpe",
+    sharpe_window=50,  # 50-step rolling window
+    reward_scaling=1.0,
+)
+```
+
+**When to use**: When optimizing for risk-adjusted performance. Best for longer training runs where volatility can be
+measured.
+
+### Portfolio Value (Baseline)
+
+```python
+config = ExecutionConfig(
+    reward_type="portfolio_value",
+    reward_scaling=1e-4,  # Important: scale down large values
+)
+```
+
+**When to use**: Testing/comparison only. Not recommended for training due to potential instability.
 
 ---
 

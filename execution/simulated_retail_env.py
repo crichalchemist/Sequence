@@ -80,6 +80,13 @@ class ExecutionConfig:
     max_drawdown_pct: float = 0.20  # Maximum portfolio drawdown before episode termination (20%)
     enable_drawdown_limit: bool = False  # Enable drawdown-based episode termination
 
+    # Phase 4: Reward engineering
+    reward_type: str = "incremental_pnl"  # "portfolio_value", "incremental_pnl", "sharpe", "cost_aware"
+    cost_penalty_weight: float = 0.0  # Weight for transaction cost penalty (0.0 = no penalty)
+    drawdown_penalty_weight: float = 0.0  # Weight for drawdown penalty (0.0 = no penalty)
+    sharpe_window: int = 50  # Window size for Sharpe ratio calculation
+    reward_scaling: float = 1e-4  # Scale reward to improve training stability
+
     def validate(self) -> None:
         if self.spread < 0:
             raise ValueError("Spread must be non-negative")
@@ -95,6 +102,10 @@ class ExecutionConfig:
             raise ValueError("Price volatility must be non-negative")
         if self.initial_cash < 0:
             raise ValueError("Initial cash must be non-negative")
+        if self.reward_type not in ["portfolio_value", "incremental_pnl", "sharpe", "cost_aware"]:
+            raise ValueError(f"Invalid reward_type: {self.reward_type}")
+        if self.sharpe_window <= 0:
+            raise ValueError("sharpe_window must be positive")
 
 
 @dataclass
@@ -202,6 +213,11 @@ class SimulatedRetailExecutionEnv:
         self._stop_loss_triggered = 0  # Count stop-loss exits
         self._take_profit_triggered = 0  # Count take-profit exits
 
+        # Phase 4: Reward engineering tracking
+        self._previous_portfolio_value = self.config.initial_cash  # For incremental rewards
+        self._portfolio_value_history: List[float] = []  # For Sharpe ratio calculation
+        self._costs_at_last_step = 0.0  # Track total costs for cost-aware rewards
+
     def reset(self) -> Dict[str, float]:
         """Reset the environment and return the initial observation."""
 
@@ -221,6 +237,9 @@ class SimulatedRetailExecutionEnv:
         self._stop_loss_triggered = 0
         self._take_profit_triggered = 0
         self._fill_events.clear()
+        self._previous_portfolio_value = self.config.initial_cash
+        self._portfolio_value_history.clear()
+        self._costs_at_last_step = 0.0
         return self._observation()
 
     def step(self, action: Optional[OrderAction]):
@@ -257,7 +276,12 @@ class SimulatedRetailExecutionEnv:
         drawdown_exceeded = self._check_drawdown(obs["portfolio_value"])
         done = self.step_count >= self.config.time_horizon or drawdown_exceeded
 
-        reward = obs["portfolio_value"]
+        # Phase 4: Calculate reward using configured reward function
+        reward = self._calculate_reward(obs["portfolio_value"])
+
+        # Update tracking variables for next step
+        self._previous_portfolio_value = obs["portfolio_value"]
+        self._costs_at_last_step = self._commission_paid + self._spread_paid + self._slippage_paid
 
         if done:
             self._log_metrics()
@@ -506,6 +530,96 @@ class SimulatedRetailExecutionEnv:
 
         if remaining != 0:
             self.positions.append(Position(quantity=remaining, entry_price=price))
+
+    def _calculate_reward(self, portfolio_value: float) -> float:
+        """Calculate reward based on configured reward_type.
+
+        Args:
+            portfolio_value: Current total portfolio value
+
+        Returns:
+            Calculated reward value
+        """
+        if self.config.reward_type == "portfolio_value":
+            return self._calculate_reward_portfolio_value(portfolio_value)
+        elif self.config.reward_type == "incremental_pnl":
+            return self._calculate_reward_incremental_pnl(portfolio_value)
+        elif self.config.reward_type == "sharpe":
+            return self._calculate_reward_sharpe(portfolio_value)
+        elif self.config.reward_type == "cost_aware":
+            return self._calculate_reward_cost_aware(portfolio_value)
+        else:
+            raise ValueError(f"Unknown reward_type: {self.config.reward_type}")
+
+    def _calculate_reward_portfolio_value(self, portfolio_value: float) -> float:
+        """Simple reward: raw portfolio value (original implementation)."""
+        return portfolio_value * self.config.reward_scaling
+
+    def _calculate_reward_incremental_pnl(self, portfolio_value: float) -> float:
+        """Reward based on change in portfolio value since last step."""
+        pnl_change = portfolio_value - self._previous_portfolio_value
+
+        # Apply penalties
+        penalty = 0.0
+        if self.config.drawdown_penalty_weight > 0:
+            drawdown = max(0.0, (self._peak_portfolio_value - portfolio_value) / self._peak_portfolio_value)
+            penalty += self.config.drawdown_penalty_weight * drawdown * self.config.initial_cash
+
+        reward = pnl_change - penalty
+        return reward * self.config.reward_scaling
+
+    def _calculate_reward_sharpe(self, portfolio_value: float) -> float:
+        """Risk-adjusted reward using rolling Sharpe-like metric."""
+        # Track portfolio value history
+        self._portfolio_value_history.append(portfolio_value)
+
+        # Keep only recent history for Sharpe calculation
+        if len(self._portfolio_value_history) > self.config.sharpe_window:
+            self._portfolio_value_history.pop(0)
+
+        # Compute returns
+        if len(self._portfolio_value_history) < 2:
+            return 0.0  # Not enough data yet
+
+        returns = [
+            (self._portfolio_value_history[i] - self._portfolio_value_history[i - 1]) / self._portfolio_value_history[
+                i - 1]
+            for i in range(1, len(self._portfolio_value_history))
+        ]
+
+        if not returns:
+            return 0.0
+
+        mean_return = np.mean(returns)
+        std_return = np.std(returns)
+
+        # Sharpe-like ratio (annualization factor omitted for simplicity)
+        if std_return > 1e-9:
+            sharpe = mean_return / std_return
+        else:
+            sharpe = 0.0
+
+        return sharpe * self.config.reward_scaling
+
+    def _calculate_reward_cost_aware(self, portfolio_value: float) -> float:
+        """Reward that explicitly penalizes transaction costs."""
+        pnl_change = portfolio_value - self._previous_portfolio_value
+
+        # Calculate cost incurred since last step
+        total_costs = self._commission_paid + self._spread_paid + self._slippage_paid
+        costs_this_step = total_costs - self._costs_at_last_step
+
+        # Apply cost penalty
+        cost_penalty = self.config.cost_penalty_weight * costs_this_step
+
+        # Apply drawdown penalty
+        drawdown_penalty = 0.0
+        if self.config.drawdown_penalty_weight > 0:
+            drawdown = max(0.0, (self._peak_portfolio_value - portfolio_value) / self._peak_portfolio_value)
+            drawdown_penalty = self.config.drawdown_penalty_weight * drawdown * self.config.initial_cash
+
+        reward = pnl_change - cost_penalty - drawdown_penalty
+        return reward * self.config.reward_scaling
 
     def _observation(self) -> Dict[str, float]:
         unrealized = sum(
