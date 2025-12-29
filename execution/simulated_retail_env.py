@@ -24,9 +24,9 @@ interfaces.
 from __future__ import annotations
 
 import logging
+from collections import deque
 from dataclasses import dataclass, field
 from typing import Deque, Dict, List, Optional
-from collections import deque
 
 import numpy as np
 
@@ -56,7 +56,7 @@ class ExecutionConfig:
 
     initial_mid_price: float = 100.0
     initial_cash: float = 50_000.0
-    spread: float = 0.02  # dollars
+    spread: float = 0.02  # dollars (base spread)
     price_drift: float = 0.0
     price_volatility: float = 0.05
     time_horizon: int = 390  # minutes in a trading day
@@ -65,6 +65,20 @@ class ExecutionConfig:
     limit_fill_probability: float = 0.35
     limit_price_improvement: float = 0.01
     slippage_model: SlippageModel = field(default_factory=SlippageModel)
+
+    # Phase 3: Transaction costs
+    commission_per_lot: float = 0.0  # Commission per lot (e.g., $7 per 100k lot in FX)
+    commission_pct: float = 0.0  # Commission as % of notional (alternative to per-lot)
+    variable_spread: bool = False  # Enable volatility-dependent spread widening
+    spread_volatility_multiplier: float = 2.0  # Spread multiplier during high volatility
+
+    # Phase 3.3: Risk management
+    enable_stop_loss: bool = False  # Enable automatic stop-loss exits
+    stop_loss_pct: float = 0.02  # Stop loss as % of entry price (2% default)
+    enable_take_profit: bool = False  # Enable automatic take-profit exits
+    take_profit_pct: float = 0.04  # Take profit as % of entry price (4% default)
+    max_drawdown_pct: float = 0.20  # Maximum portfolio drawdown before episode termination (20%)
+    enable_drawdown_limit: bool = False  # Enable drawdown-based episode termination
 
     def validate(self) -> None:
         if self.spread < 0:
@@ -179,7 +193,14 @@ class SimulatedRetailExecutionEnv:
         self.inventory = 0.0
         self._slippage_paid = 0.0
         self._spread_paid = 0.0
+        self._commission_paid = 0.0  # Phase 3: Track commission costs
         self._fill_events: List[Dict[str, float]] = []
+        self._recent_volatility = self.config.price_volatility  # Track for variable spreads
+
+        # Phase 3.3: Risk management tracking
+        self._peak_portfolio_value = self.config.initial_cash  # Track peak for drawdown
+        self._stop_loss_triggered = 0  # Count stop-loss exits
+        self._take_profit_triggered = 0  # Count take-profit exits
 
     def reset(self) -> Dict[str, float]:
         """Reset the environment and return the initial observation."""
@@ -194,6 +215,11 @@ class SimulatedRetailExecutionEnv:
         self.inventory = 0.0
         self._slippage_paid = 0.0
         self._spread_paid = 0.0
+        self._commission_paid = 0.0
+        self._recent_volatility = self.config.price_volatility
+        self._peak_portfolio_value = self.config.initial_cash
+        self._stop_loss_triggered = 0
+        self._take_profit_triggered = 0
         self._fill_events.clear()
         return self._observation()
 
@@ -221,9 +247,16 @@ class SimulatedRetailExecutionEnv:
         self._advance_mid_price()
         self._try_fill_limits()
 
+        # Phase 3.3: Check for stop-loss and take-profit triggers
+        self._check_stop_loss_take_profit()
+
         self.step_count += 1
         obs = self._observation()
-        done = self.step_count >= self.config.time_horizon
+
+        # Phase 3.3: Check for drawdown-based termination
+        drawdown_exceeded = self._check_drawdown(obs["portfolio_value"])
+        done = self.step_count >= self.config.time_horizon or drawdown_exceeded
+
         reward = obs["portfolio_value"]
 
         if done:
@@ -253,6 +286,13 @@ class SimulatedRetailExecutionEnv:
         shock = self.rng.normal(0.0, self.config.price_volatility)
         self.mid_price = max(0.01, self.mid_price * (1.0 + drift + shock))
 
+        # Phase 3: Track recent volatility with exponential moving average
+        # Use the absolute shock as a proxy for instantaneous volatility
+        alpha = 0.1  # Smoothing factor for EMA
+        self._recent_volatility = (
+                alpha * abs(shock) + (1 - alpha) * self._recent_volatility
+        )
+
     def _apply_action(self, action: OrderAction) -> None:
         if action.action_type == "hold":
             return
@@ -265,7 +305,16 @@ class SimulatedRetailExecutionEnv:
 
     def _execution_price(self, side: str, size: float) -> float:
         direction = 1.0 if side == "buy" else -1.0
-        half_spread = self.config.spread / 2.0
+
+        # Phase 3: Variable spread based on volatility
+        base_spread = self.config.spread
+        if self.config.variable_spread:
+            # Widen spread during high volatility
+            volatility_ratio = self._recent_volatility / max(self.config.price_volatility, 1e-9)
+            if volatility_ratio > 1.5:  # High volatility threshold
+                base_spread *= self.config.spread_volatility_multiplier
+
+        half_spread = base_spread / 2.0
         slippage = self.config.slippage_model.sample(self.rng) * self.mid_price
         exec_price = self.mid_price + direction * (half_spread + slippage)
         spread_cost = half_spread * 2 * size  # distance between bid/ask around mid scaled by size
@@ -313,12 +362,110 @@ class SimulatedRetailExecutionEnv:
             return False
         return bool(self.rng.random() <= self.config.limit_fill_probability)
 
+    def _check_stop_loss_take_profit(self) -> None:
+        """
+        Phase 3.3: Check if any positions should be closed due to stop-loss or take-profit.
+
+        For each open position, calculate unrealized PnL as a percentage of entry price.
+        If stop-loss or take-profit thresholds are breached, close the position at market.
+        """
+        if not self.positions:
+            return
+
+        if not (self.config.enable_stop_loss or self.config.enable_take_profit):
+            return
+
+        # Check each position for stop/take-profit triggers
+        positions_to_close = []
+        for pos in self.positions:
+            # Calculate unrealized PnL percentage
+            if pos.quantity > 0:  # Long position
+                pnl_pct = (self.mid_price - pos.entry_price) / pos.entry_price
+            else:  # Short position
+                pnl_pct = (pos.entry_price - self.mid_price) / pos.entry_price
+
+            # Check stop-loss (negative PnL exceeds threshold)
+            if self.config.enable_stop_loss and pnl_pct <= -self.config.stop_loss_pct:
+                positions_to_close.append((pos, "stop_loss"))
+
+            # Check take-profit (positive PnL exceeds threshold)
+            elif self.config.enable_take_profit and pnl_pct >= self.config.take_profit_pct:
+                positions_to_close.append((pos, "take_profit"))
+
+        # Close triggered positions
+        for pos, trigger_type in positions_to_close:
+            side = "sell" if pos.quantity > 0 else "buy"
+            size = abs(pos.quantity)
+
+            # Execute market order to close position
+            price = self._execution_price(side, size)
+            self._fill(order_type=trigger_type, side=side, size=size, price=price)
+
+            if trigger_type == "stop_loss":
+                self._stop_loss_triggered += 1
+                self.logger.info(
+                    "Stop-loss triggered at step %d | closed %.2f at %.4f",
+                    self.step_count, size, price
+                )
+            else:
+                self._take_profit_triggered += 1
+                self.logger.info(
+                    "Take-profit triggered at step %d | closed %.2f at %.4f",
+                    self.step_count, size, price
+                )
+
+    def _check_drawdown(self, portfolio_value: float) -> bool:
+        """
+        Phase 3.3: Check if portfolio drawdown exceeds maximum threshold.
+
+        Args:
+            portfolio_value: Current total portfolio value
+
+        Returns:
+            True if drawdown limit exceeded (episode should terminate)
+        """
+        if not self.config.enable_drawdown_limit:
+            return False
+
+        # Update peak portfolio value
+        if portfolio_value > self._peak_portfolio_value:
+            self._peak_portfolio_value = portfolio_value
+
+        # Calculate current drawdown
+        if self._peak_portfolio_value > 0:
+            drawdown = (self._peak_portfolio_value - portfolio_value) / self._peak_portfolio_value
+        else:
+            drawdown = 0.0
+
+        # Check if drawdown exceeds limit
+        if drawdown >= self.config.max_drawdown_pct:
+            self.logger.warning(
+                "Drawdown limit exceeded at step %d | drawdown=%.2f%% | peak=%.2f | current=%.2f",
+                self.step_count, drawdown * 100, self._peak_portfolio_value, portfolio_value
+            )
+            return True
+
+        return False
+
     def _fill(self, order_type: str, side: str, size: float, price: float) -> None:
         if size <= 0:
             return
         signed_size = size if side == "buy" else -size
         self._apply_fifo_fill(signed_size, price)
         self.cash -= signed_size * price
+
+        # Phase 3: Apply commission costs
+        notional = abs(signed_size * price)
+        commission = 0.0
+        if self.config.commission_per_lot > 0:
+            num_lots = abs(signed_size) / self.config.lot_size
+            commission += num_lots * self.config.commission_per_lot
+        if self.config.commission_pct > 0:
+            commission += notional * self.config.commission_pct
+
+        self.cash -= commission
+        self._commission_paid += commission
+
         self.inventory += signed_size
         self._fill_events.append(
             {
@@ -326,15 +473,17 @@ class SimulatedRetailExecutionEnv:
                 "side": side,
                 "size": size,
                 "price": price,
+                "commission": commission,
                 "step": self.step_count,
             }
         )
         self.logger.debug(
-            "Filled %s %s of size %.2f at %.4f | inventory %.2f",
+            "Filled %s %s of size %.2f at %.4f | commission %.4f | inventory %.2f",
             order_type,
             side,
             size,
             price,
+            commission,
             self.inventory,
         )
 
@@ -382,14 +531,37 @@ class SimulatedRetailExecutionEnv:
     def _log_metrics(self) -> None:
         total_fills = len(self._fill_events)
         avg_slippage = self._slippage_paid / max(total_fills, 1)
+        total_costs = self._spread_paid + self._slippage_paid + self._commission_paid
+
+        # Phase 3.3: Calculate final drawdown
+        final_portfolio = self.cash + self.inventory * self.mid_price
+        final_drawdown = 0.0
+        if self._peak_portfolio_value > 0:
+            final_drawdown = (self._peak_portfolio_value - final_portfolio) / self._peak_portfolio_value
+
         self.logger.info(
-            "Execution summary | fills=%d | realized_pnl=%.4f | inventory=%.2f | avg_slippage=%.4f | spread_paid=%.4f",
+            "Execution summary | fills=%d | realized_pnl=%.4f | inventory=%.2f | "
+            "avg_slippage=%.4f | spread_paid=%.4f | commission_paid=%.4f | total_costs=%.4f",
             total_fills,
             self.realized_pnl,
             self.inventory,
             avg_slippage,
             self._spread_paid,
+            self._commission_paid,
+            total_costs,
         )
+
+        # Phase 3.3: Log risk management statistics
+        if self.config.enable_stop_loss or self.config.enable_take_profit or self.config.enable_drawdown_limit:
+            self.logger.info(
+                "Risk management | stop_loss_triggers=%d | take_profit_triggers=%d | "
+                "max_drawdown=%.2f%% | final_portfolio=%.2f",
+                self._stop_loss_triggered,
+                self._take_profit_triggered,
+                final_drawdown * 100,
+                final_portfolio,
+            )
+
         if total_fills:
             last_fill = self._fill_events[-1]
             self.logger.debug("Last fill: %s", last_fill)
