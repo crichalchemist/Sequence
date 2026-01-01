@@ -17,10 +17,9 @@ import argparse
 import os
 import subprocess
 import sys
+from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional
-from copy import deepcopy
 
 import torch
 
@@ -43,15 +42,15 @@ BacktestingRetailExecutionEnv = None
 ExecutionConfig = None
 
 
-def parse_pairs(pairs: str, pairs_file: Optional[Path]) -> List[str]:
-    seeds: List[str] = []
+def parse_pairs(pairs: str, pairs_file: Path | None) -> list[str]:
+    seeds: list[str] = []
     if pairs:
         seeds.extend([p.strip().lower() for p in pairs.split(",") if p.strip()])
     if pairs_file:
         seeds.extend([line.strip().lower() for line in pairs_file.read_text().splitlines() if line.strip()])
     # Preserve order, drop duplicates.
     seen = set()
-    ordered: List[str] = []
+    ordered: list[str] = []
     for p in seeds:
         if p not in seen:
             seen.add(p)
@@ -61,10 +60,8 @@ def parse_pairs(pairs: str, pairs_file: Optional[Path]) -> List[str]:
 
 
 from config.arg_parser import (
-    add_data_preparation_args,
     add_feature_engineering_args,
     add_intrinsic_time_args,
-    add_training_args,
     add_risk_args,
 )
 
@@ -194,7 +191,7 @@ def parse_args() -> argparse.Namespace:
         help="Disable automatic download when pair data is missing.",
     )
     parser.set_defaults(auto_download_missing=True)
-    
+
     # RL Training arguments
     parser.add_argument(
         "--run-rl-training",
@@ -240,7 +237,8 @@ def parse_args() -> argparse.Namespace:
     )
     return parser.parse_args()
 
-def maybe_prompt_for_more(queue: List[str]) -> List[str]:
+
+def maybe_prompt_for_more(queue: list[str]) -> list[str]:
     try:
         extra = input("Add more pairs (comma-separated) or press Enter to continue: ").strip()
     except EOFError:
@@ -253,7 +251,7 @@ def maybe_prompt_for_more(queue: List[str]) -> List[str]:
     return queue
 
 
-def cleanup_pair_zips(pair: str, input_root: Path, years: Optional[str]) -> None:
+def cleanup_pair_zips(pair: str, input_root: Path, years: str | None) -> None:
     root = Path(input_root)
     target_dir = root / pair
     if not target_dir.exists():
@@ -274,7 +272,7 @@ def cleanup_pair_zips(pair: str, input_root: Path, years: Optional[str]) -> None
         print(f"[info] deleted {removed} zip(s) for {pair} under {target_dir}")
 
 
-def has_local_data(pair: str, input_root: Path, years: Optional[str]) -> bool:
+def has_local_data(pair: str, input_root: Path, years: str | None) -> bool:
     pair_dir = Path(input_root) / pair
     if not pair_dir.exists():
         return False
@@ -378,7 +376,7 @@ def run_histdata_download(args) -> None:
             pairs_csv = ROOT / "pairs.csv"
             if pairs_csv.exists():
                 tmp_csv = Path(env.get("TMPDIR", "/tmp")) / "pairs_filtered.csv"
-                with open(pairs_csv, "r") as src, open(tmp_csv, "w") as dst:
+                with open(pairs_csv) as src, open(tmp_csv, "w") as dst:
                     for i, line in enumerate(src):
                         if i == 0:
                             dst.write(line)
@@ -451,17 +449,23 @@ def load_rl_modules():
     """Lazy load RL modules to avoid import overhead when not needed."""
     global A3CAgent, A3CConfig, SimulatedRetailExecutionEnv, BacktestingRetailExecutionEnv, ExecutionConfig
     if A3CAgent is None:
-        from rl.agents.a3c_agent import A3CAgent as A3C, A3CConfig as A3CCfg  # noqa: E402
-        from execution.simulated_retail_env import SimulatedRetailExecutionEnv as SimEnv, ExecutionConfig as ExecCfg  # noqa: E402
+        from execution.simulated_retail_env import ExecutionConfig as ExecCfg
+        from execution.simulated_retail_env import (  # noqa: E402
+            SimulatedRetailExecutionEnv as SimEnv,
+        )
+        from rl.agents.a3c_agent import A3CAgent as A3C  # noqa: E402
+        from rl.agents.a3c_agent import A3CConfig as A3CCfg
         A3CAgent = A3C
         A3CConfig = A3CCfg
         SimulatedRetailExecutionEnv = SimEnv
         ExecutionConfig = ExecCfg
-        
+
         # Backtesting environment is optional
         if BacktestingRetailExecutionEnv is None:
             try:
-                from execution.backtesting_env import BacktestingRetailExecutionEnv as BTEnv  # noqa: E402
+                from execution.backtesting_env import (
+                    BacktestingRetailExecutionEnv as BTEnv,  # noqa: E402
+                )
                 BacktestingRetailExecutionEnv = BTEnv
             except ImportError:
                 pass  # Backtesting mode will fail gracefully if selected
@@ -470,24 +474,24 @@ def load_rl_modules():
 def run_rl_training(pair: str, args, prepared_data_path: Path) -> None:
     """Run A3C RL training for a single pair."""
     import pandas as pd
-    
+
     load_rl_modules()
-    
+
     print(f"\n[rl] Starting RL training for {pair}")
     print(f"[rl] Environment mode: {args.rl_env_mode}")
     print(f"[rl] Workers: {args.rl_num_workers}")
     print(f"[rl] Total steps: {args.rl_total_steps}")
-    
+
     # Create RL checkpoint directory
     rl_ckpt_root = Path(args.rl_checkpoint_dir)
     rl_ckpt_root.mkdir(parents=True, exist_ok=True)
     rl_ckpt_path = rl_ckpt_root / f"a3c_{pair}.pt"
-    
+
     # Determine device
     device = args.device
     if device.startswith("cuda") and not torch.cuda.is_available():
         device = "cpu"
-    
+
     # Create model config (reuse supervised model architecture)
     model_cfg = ModelConfig(
         num_features=20,  # Will be adjusted based on environment observations
@@ -498,7 +502,7 @@ def run_rl_training(pair: str, args, prepared_data_path: Path) -> None:
         attention_dim=64,
         dropout=0.1,
     )
-    
+
     # Create A3C config
     a3c_cfg = A3CConfig(
         n_workers=args.rl_num_workers,
@@ -514,7 +518,7 @@ def run_rl_training(pair: str, args, prepared_data_path: Path) -> None:
         log_interval=1000,
         device=device,
     )
-    
+
     # Create environment factory based on mode
     if args.rl_env_mode == "simulated":
         # Stochastic retail simulation
@@ -525,61 +529,63 @@ def run_rl_training(pair: str, args, prepared_data_path: Path) -> None:
                 pair=pair,
                 initial_balance=args.rl_initial_balance,
             )
-        print(f"[rl] Using SimulatedRetailExecutionEnv (stochastic)")
-    
+
+        print("[rl] Using SimulatedRetailExecutionEnv (stochastic)")
+
     else:  # backtesting mode
         if BacktestingRetailExecutionEnv is None:
             print("[error] backtesting.py is required for --rl-env-mode=backtesting")
             print("[error] Install with: pip install backtesting>=0.3.2")
             return
-        
+
         # Load historical OHLCV data
         if not prepared_data_path.exists():
             print(f"[error] Prepared data not found: {prepared_data_path}")
-            print(f"[error] Cannot run backtesting mode without historical data")
+            print("[error] Cannot run backtesting mode without historical data")
             return
-        
+
         print(f"[rl] Loading historical data from {prepared_data_path}")
         price_df = pd.read_csv(prepared_data_path)
-        
+
         # Ensure datetime column and required OHLCV columns
         if "datetime" in price_df.columns:
             price_df["datetime"] = pd.to_datetime(price_df["datetime"])
             price_df = price_df.set_index("datetime")
-        
+
         required_cols = {"open", "high", "low", "close"}
         available_cols = {c.lower() for c in price_df.columns}
         if not required_cols.issubset(available_cols):
             missing = required_cols - available_cols
             print(f"[error] Missing required OHLCV columns: {missing}")
-            print(f"[error] Cannot run backtesting mode")
+            print("[error] Cannot run backtesting mode")
             return
-        
+
         print(f"[rl] Loaded {len(price_df)} bars for backtesting")
-        
+
         def make_env():
             exec_cfg = ExecutionConfig(initial_cash=args.rl_initial_balance)
             return BacktestingRetailExecutionEnv(
                 price_df=price_df.copy(),
                 config=exec_cfg,
             )
-        print(f"[rl] Using BacktestingRetailExecutionEnv (deterministic historical)")
-    
+
+        print("[rl] Using BacktestingRetailExecutionEnv (deterministic historical)")
+
     # Create and train agent
     try:
-        print(f"[rl] Initializing A3C agent...")
+        print("[rl] Initializing A3C agent...")
         agent = A3CAgent(
             model_cfg=model_cfg,
             a3c_cfg=a3c_cfg,
             action_dim=3,  # hold, buy, sell
             env_factory=make_env,
         )
-        
-        print(f"[rl] Starting training...")
+
+        print("[rl] Starting training...")
         agent.train()
-        
+
         print(f"[rl] Training complete! Checkpoint saved to: {rl_ckpt_path}")
-    
+
     except KeyboardInterrupt:
         print(f"[warn] RL training interrupted for {pair}")
     except Exception as exc:
@@ -727,7 +733,7 @@ def main() -> None:
                     if alt.exists():
                         prepared_data_path = alt
                         break
-            
+
             run_rl_training(pair, args, prepared_data_path)
 
         if args.delete_input_zips:

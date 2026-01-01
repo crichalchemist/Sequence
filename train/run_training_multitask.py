@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from config.config import MultiTaskModelConfig, MultiTaskLossWeights, TrainingConfig
+from config.config import MultiTaskLossWeights, MultiTaskModelConfig, TrainingConfig
 from data.prepare_multitask_dataset import process_pair
 from models.agent_multitask import build_multitask_model
 from train.core.agent_train_multitask import train_multitask
@@ -96,7 +96,7 @@ def main():
         print("[warn] OpenTelemetry not available; running without tracing")
     except Exception as e:
         print(f"[warn] Failed to initialize tracing: {e}; continuing without tracing")
-    
+
     args = parse_args()
     pairs = [p.strip().lower() for p in args.pairs.split(",") if p.strip()]
 

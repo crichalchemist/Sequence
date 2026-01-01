@@ -21,11 +21,14 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from config.arg_parser import (  # noqa: E402
-    add_auxiliary_task_args,
+    add_amp_args,
+    add_auxiliary_head_weights,
     add_data_preparation_args,
     add_dataloader_args,
     add_feature_engineering_args,
     add_intrinsic_time_args,
+    add_risk_args,
+    add_rl_training_args,
     add_training_args,
 )
 from config.config import (  # noqa: E402
@@ -39,20 +42,6 @@ from models.signal_policy import ExecutionPolicy, SignalModel  # noqa: E402
 from train.core.agent_train import (  # noqa: E402
     pretrain_signal_model,
     train_execution_policy,
-)
-
-
-
-from config.arg_parser import (
-    add_data_preparation_args,
-    add_feature_engineering_args,
-    add_intrinsic_time_args,
-    add_training_args,
-    add_dataloader_args,
-    add_risk_args,
-    add_auxiliary_head_weights,
-    add_rl_training_args,
-    add_amp_args,
 )
 
 
@@ -85,7 +74,7 @@ def main():
         print("[warn] OpenTelemetry not available; running without tracing")
     except Exception as e:
         print(f"[warn] Failed to initialize tracing: {e}; continuing without tracing")
-    
+
     args = parse_args()
     pairs = [p.strip().lower() for p in args.pairs.split(",") if p.strip()]
 

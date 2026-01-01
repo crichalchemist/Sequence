@@ -1,15 +1,13 @@
 """Flask REST API server for MQL5 integration."""
 import logging
-import json
-from flask import Flask, request, jsonify
-from flask_cors import CORS
 from datetime import datetime
-from pathlib import Path
 
-from mql5.bridge import bridge as mql5_bridge
-from execution.backtest_manager import manager as backtest_manager
-from train.training_manager import manager as training_manager
+from flask import Flask, jsonify, request
+from flask_cors import CORS
+
 from data.pipeline_controller import controller as data_controller
+from mql5.bridge import bridge as mql5_bridge
+from train.training_manager import manager as training_manager
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)

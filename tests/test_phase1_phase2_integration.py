@@ -106,16 +106,16 @@ def test_1_2_real_rl_training():
     print("=" * 60)
 
     try:
+        from execution.simulated_retail_env import (
+            ExecutionConfig,
+            OrderAction,
+            SimulatedRetailExecutionEnv,
+        )
         from train.core.env_based_rl_training import (
             ActionConverter,
             Episode,
             collect_episode,
             update_policy,
-        )
-        from execution.simulated_retail_env import (
-            ExecutionConfig,
-            OrderAction,
-            SimulatedRetailExecutionEnv,
         )
 
         print("✓ Imports successful")
@@ -126,7 +126,7 @@ def test_1_2_real_rl_training():
 
         assert order.action_type == "market"
         assert order.side == "buy"
-        print(f"✓ ActionConverter: converts policy actions to OrderActions")
+        print("✓ ActionConverter: converts policy actions to OrderActions")
 
         # Test environment
         env_cfg = ExecutionConfig(
@@ -139,12 +139,12 @@ def test_1_2_real_rl_training():
         obs = env.reset()
 
         assert "portfolio_value" in obs
-        print(f"✓ Trading environment: initialized successfully")
+        print("✓ Trading environment: initialized successfully")
 
         # Test episode container
         episode = Episode()
         assert len(episode.states) == 0
-        print(f"✓ Episode container: ready for trajectory collection")
+        print("✓ Episode container: ready for trajectory collection")
 
         print("\n✅ Phase 1.2 PASSED")
         return True
@@ -184,9 +184,9 @@ def test_2_1_microstructure_features():
         # Check for NaN issues
         nan_cols = result[micro_features].isna().sum()
         if nan_cols.max() > len(result) * 0.5:
-            print(f"⚠ Warning: Some features have >50% NaN values")
+            print("⚠ Warning: Some features have >50% NaN values")
         else:
-            print(f"✓ NaN handling: acceptable (<50% NaN per feature)")
+            print("✓ NaN handling: acceptable (<50% NaN per feature)")
 
         print("\n✅ Phase 2.1 PASSED")
         return True
@@ -206,8 +206,8 @@ def test_2_2_regime_detection():
 
     try:
         from features.regime_detection import (
-            RegimeDetector,
             RegimeConfig,
+            RegimeDetector,
             integrate_regime_features,
         )
 
@@ -222,7 +222,7 @@ def test_2_2_regime_detection():
         regimes = detector.predict(df)
         unique_regimes = np.unique(regimes)
 
-        print(f"✓ Regime detection: fitted and predicted")
+        print("✓ Regime detection: fitted and predicted")
         print(f"  Regimes found: {unique_regimes}")
         print(f"  Regime names: {detector.REGIME_NAMES}")
 
@@ -237,7 +237,7 @@ def test_2_2_regime_detection():
         # Check one-hot encoding
         regime_flags = result[[c for c in regime_cols if c.startswith('regime_is_')]]
         assert regime_flags.sum(axis=1).max() == 1, "One-hot encoding broken"
-        print(f"✓ One-hot encoding: correct (each row has exactly 1 active regime)")
+        print("✓ One-hot encoding: correct (each row has exactly 1 active regime)")
 
         print("\n✅ Phase 2.2 PASSED")
         return True
@@ -257,8 +257,8 @@ def test_2_3_intrinsic_time_features():
 
     try:
         from features.intrinsic_time import (
-            detect_directional_changes,
             add_intrinsic_time_features,
+            detect_directional_changes,
         )
 
         print("✓ Import successful")
@@ -312,9 +312,9 @@ def test_fx_patterns():
     try:
         from features.fx_patterns import (
             add_fx_session_features,
+            add_price_action_patterns,
             add_support_resistance_features,
             add_trend_strength_features,
-            add_price_action_patterns,
             build_fx_feature_frame,
         )
 
@@ -405,7 +405,7 @@ def test_full_integration():
             'intrinsic_time': ['dc_'],
         }
 
-        print(f"\n  Feature breakdown:")
+        print("\n  Feature breakdown:")
         for category, keywords in feature_categories.items():
             cols = [c for c in feature_df.columns if any(kw in c for kw in keywords)]
             if cols:
@@ -416,14 +416,14 @@ def test_full_integration():
         total_cells = feature_df.shape[0] * feature_df.shape[1]
         nan_pct = (total_nans / total_cells) * 100
 
-        print(f"\n  Data quality:")
+        print("\n  Data quality:")
         print(f"    Total NaN: {total_nans:,} ({nan_pct:.2f}% of cells)")
         print(f"    Rows after dropna: {len(feature_df)}")
 
         if nan_pct > 20:
-            print(f"    ⚠ Warning: High NaN percentage")
+            print("    ⚠ Warning: High NaN percentage")
         else:
-            print(f"    ✓ NaN percentage acceptable")
+            print("    ✓ NaN percentage acceptable")
 
         # Add FX patterns
         feature_df = build_fx_feature_frame(
@@ -434,7 +434,7 @@ def test_full_integration():
             include_patterns=True,
         )
 
-        print(f"\n✓ FX patterns added")
+        print("\n✓ FX patterns added")
         print(f"  Final feature count: {len(feature_df.columns)} columns")
 
         print("\n✅ Full Integration PASSED")

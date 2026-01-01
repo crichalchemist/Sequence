@@ -1,16 +1,14 @@
 """Backtesting manager with comparison and result storage."""
 
-import sqlite3
 import json
 import logging
+import sqlite3
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Callable
+from typing import Any
+
 import pandas as pd
-import numpy as np
-from backtesting import Backtest, Strategy
-from backtesting.lib import crossover
-from backtesting.test import SMA, GOOG
+from backtesting import Backtest
 
 from execution.constants import DEFAULT_BACKTEST_CASH, DEFAULT_COMMISSION_RATE
 
@@ -89,7 +87,7 @@ class BacktestManager:
         cash: int = DEFAULT_BACKTEST_CASH,
         commission: float = DEFAULT_COMMISSION_RATE,
         **strategy_params,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Run backtest with strategy."""
         """Run backtest with strategy."""
         try:
@@ -139,7 +137,7 @@ class BacktestManager:
         end_date: str,
         cash: int,
         commission: float,
-        result: Dict[str, Any],
+            result: dict[str, Any],
     ) -> bool:
         """Save backtest result to database."""
         try:
@@ -196,7 +194,7 @@ class BacktestManager:
             logger.exception(f"Unexpected error saving result {run_id}: {e}")
             return False
 
-    def compare_strategies(self, run_id_1: str, run_id_2: str) -> Dict[str, Any]:
+    def compare_strategies(self, run_id_1: str, run_id_2: str) -> dict[str, Any]:
         """Compare two backtest results."""
         try:
             conn = sqlite3.connect(DB_PATH)
@@ -318,7 +316,7 @@ class BacktestManager:
             logger.exception(f"Unexpected error exporting comparison: {e}")
             return False
 
-    def get_portfolio_stats(self) -> Dict[str, Any]:
+    def get_portfolio_stats(self) -> dict[str, Any]:
         """Get aggregated portfolio statistics."""
         try:
             conn = sqlite3.connect(DB_PATH)

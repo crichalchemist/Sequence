@@ -1,9 +1,8 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 from config.config import PolicyConfig, SignalModelConfig
-from models.agent_hybrid import SharedEncoder, TemporalAttention
+from models.agent_hybrid import SharedEncoder
 
 
 class SignalBackbone(SharedEncoder):

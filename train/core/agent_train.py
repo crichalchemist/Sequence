@@ -1,4 +1,3 @@
-from typing import Dict, List, Tuple
 
 import torch
 import torch.nn.functional as F
@@ -8,8 +7,6 @@ from config.config import RLTrainingConfig, TrainingConfig
 from models.agent_hybrid import DignityModel
 from models.signal_policy import ExecutionPolicy, SignalModel
 from risk.risk_manager import RiskManager
-from utils.amp import AMPTrainer
-from utils.training_checkpoint import CheckpointManager, EarlyStopping
 
 
 def _to_device(batch, device):
@@ -34,21 +31,21 @@ def _regression_rmse(preds: torch.Tensor, targets: torch.Tensor) -> float:
     return torch.sqrt(mse).item()
 
 
-def _select_outputs(outputs: Dict[str, torch.Tensor], task_type: str) -> torch.Tensor:
+def _select_outputs(outputs: dict[str, torch.Tensor], task_type: str) -> torch.Tensor:
     if task_type == "classification":
         return outputs["direction_logits"]
     return outputs["return"]
 
 
-def _align_regression(preds: torch.Tensor, targets: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+def _align_regression(preds: torch.Tensor, targets: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
     preds = preds.squeeze(-1)
     targets = targets.squeeze(-1)
     return preds, targets
 
 
 def _compute_losses(
-    outputs: Dict[str, torch.Tensor], targets: Dict[str, torch.Tensor], cfg: TrainingConfig, task_type: str
-) -> Tuple[torch.Tensor, Dict[str, float]]:
+        outputs: dict[str, torch.Tensor], targets: dict[str, torch.Tensor], cfg: TrainingConfig, task_type: str
+) -> tuple[torch.Tensor, dict[str, float]]:
     ce = torch.nn.CrossEntropyLoss()
     mse = torch.nn.MSELoss()
     primary_out = outputs["primary"]
@@ -93,7 +90,7 @@ def _evaluate(
     device,
     task_type: str,
     risk_manager: RiskManager | None = None,
-) -> Tuple[float, float]:
+) -> tuple[float, float]:
     model.eval()
     total_loss = 0.0
     metric_accum = 0.0
@@ -135,7 +132,7 @@ def train_model(
     scheduler=None,
     task_type: str = "classification",
     risk_manager: RiskManager | None = None,
-) -> Dict[str, List[float]]:
+) -> dict[str, list[float]]:
     # ------------------------------------------------------------------
     # Logging configuration and device handling
     # ------------------------------------------------------------------
@@ -231,7 +228,7 @@ def train_model(
     return history
 
 
-def _signal_losses(signal_out: Dict, targets: torch.Tensor, task_type: str):
+def _signal_losses(signal_out: dict, targets: torch.Tensor, task_type: str):
     losses = []
     metrics = {}
     aux = signal_out.get("aux", {})
@@ -254,7 +251,7 @@ def pretrain_signal_model(
     val_loader: DataLoader,
     cfg: TrainingConfig,
     task_type: str = "classification",
-) -> Dict[str, List[float]]:
+) -> dict[str, list[float]]:
     device_str = cfg.device
     if device_str.startswith("cuda") and not torch.cuda.is_available():
         device_str = "cpu"

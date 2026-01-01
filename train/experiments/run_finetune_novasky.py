@@ -27,11 +27,10 @@ Notes:
 """
 
 import argparse
-import sys
-from typing import Callable, Dict, Iterable, List, Optional
+from collections.abc import Callable, Iterable
 
-from datasets import Dataset, DatasetDict, concatenate_datasets, load_dataset
 import torch
+from datasets import Dataset, concatenate_datasets, load_dataset
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
@@ -48,7 +47,7 @@ DEFAULT_DATASETS = [
 ]
 
 
-def _safe_get(example: dict, keys: Iterable[str]) -> Optional[str]:
+def _safe_get(example: dict, keys: Iterable[str]) -> str | None:
     for k in keys:
         if k in example and example[k] is not None:
             val = str(example[k]).strip()
@@ -57,7 +56,7 @@ def _safe_get(example: dict, keys: Iterable[str]) -> Optional[str]:
     return None
 
 
-def fmt_auditor(example: dict) -> Optional[str]:
+def fmt_auditor(example: dict) -> str | None:
     text = _safe_get(example, ["sentence", "text"])
     label = example.get("label")
     if text is None or label is None:
@@ -70,7 +69,7 @@ def fmt_auditor(example: dict) -> Optional[str]:
     return f"Instruction: Classify the sentiment of the following financial statement as negative, neutral, or positive.\nStatement: {text}\nResponse: {label_str}"
 
 
-def fmt_financemath(example: dict) -> Optional[str]:
+def fmt_financemath(example: dict) -> str | None:
     question = _safe_get(example, ["question", "prompt", "input"])
     answer = _safe_get(example, ["answer", "output"])
     if question and answer:
@@ -78,7 +77,7 @@ def fmt_financemath(example: dict) -> Optional[str]:
     return None
 
 
-def fmt_financebench(example: dict) -> Optional[str]:
+def fmt_financebench(example: dict) -> str | None:
     question = _safe_get(example, ["question", "prompt"])
     answer = _safe_get(example, ["answer", "response"])
     if question and answer:
@@ -86,7 +85,7 @@ def fmt_financebench(example: dict) -> Optional[str]:
     return None
 
 
-def fmt_instruct(example: dict) -> Optional[str]:
+def fmt_instruct(example: dict) -> str | None:
     instr = _safe_get(example, ["instruction", "prompt"])
     resp = _safe_get(example, ["output", "response", "completion"])
     if instr and resp:
@@ -98,7 +97,7 @@ def fmt_instruct(example: dict) -> Optional[str]:
     return None
 
 
-FORMATTERS: Dict[str, Callable[[dict], Optional[str]]] = {
+FORMATTERS: dict[str, Callable[[dict], str | None]] = {
     "FinanceInc/auditor_sentiment": fmt_auditor,
     "yale-nlp/FinanceMath": fmt_financemath,
     "PatronusAI/financebench": fmt_financebench,
@@ -108,9 +107,9 @@ FORMATTERS: Dict[str, Callable[[dict], Optional[str]]] = {
 
 def load_and_format_dataset(
     name: str,
-    formatter: Callable[[dict], Optional[str]],
+        formatter: Callable[[dict], str | None],
     split: str,
-    max_samples: Optional[int] = None,
+        max_samples: int | None = None,
     streaming: bool = False,
 ) -> Dataset:
     ds = load_dataset(name, split=split, streaming=streaming)
@@ -129,11 +128,11 @@ def load_and_format_dataset(
 
 
 def build_dataset_list(
-    dataset_names: List[str],
-    max_samples: Optional[int],
+        dataset_names: list[str],
+        max_samples: int | None,
     streaming: bool,
 ) -> Dataset:
-    prepared: List[Dataset] = []
+    prepared: list[Dataset] = []
     for name in dataset_names:
         formatter = FORMATTERS.get(name, fmt_instruct)
         for split in ["train", "validation", "test"]:

@@ -22,17 +22,16 @@ disjoint chunks.
 
 from __future__ import annotations
 
-import hashlib
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator, Tuple
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 import torch
 from torch.utils.data import IterableDataset, get_worker_info
 
 from config.config import DataConfig, FeatureConfig
-from data.agents.base_agent import BaseDataAgent, NormalizationStats, _label_from_return
+from data.agents.base_agent import BaseDataAgent, _label_from_return
 
 
 class IterableFXDataset(IterableDataset):
@@ -131,7 +130,7 @@ class IterableFXDataset(IterableDataset):
     # ------------------------------------------------------------------
     # Core iterator – yields (sequence, target) tensors from cached features.
     # ------------------------------------------------------------------
-    def __iter__(self) -> Iterator[Tuple[torch.Tensor, dict]]:
+    def __iter__(self) -> Iterator[tuple[torch.Tensor, dict]]:
         """Yield windowed sequences and targets from cached feature file.
 
         Yields

@@ -1,6 +1,6 @@
 """Configuration and constants for the GDELT ingestion pipeline."""
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Dict, List, Sequence
 
 GDELT_GKG_BASE_URL = "https://data.gdeltproject.org/gdeltv2"
 GDELT_GKG_EXTENSION = ".gkg.csv.zip"
@@ -93,7 +93,7 @@ EM_COUNTRY_CODES: Sequence[str] = (
     "KR",
 )
 
-REGIME_FEATURE_NAMES: List[str] = [
+REGIME_FEATURE_NAMES: list[str] = [
     "econ_policy_intensity",
     "central_bank_intensity",
     "conflict_intensity",
@@ -117,7 +117,7 @@ REGIME_FEATURE_NAMES: List[str] = [
 REGIME_FEATURE_DIM = len(REGIME_FEATURE_NAMES)
 
 # Per-feature reference counts used for log scaling; tweak based on historical maxima.
-DEFAULT_MAX_COUNT_REF: Dict[str, float] = {
+DEFAULT_MAX_COUNT_REF: dict[str, float] = {
     "themes": 50.0,
     "counts": 25.0,
 }

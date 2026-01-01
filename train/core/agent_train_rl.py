@@ -22,28 +22,24 @@ Example:
 
 import argparse
 import sys
-from pathlib import Path
 from dataclasses import dataclass
-from typing import Tuple, Optional
+from pathlib import Path
 
 import numpy as np
-import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
-from tqdm import tqdm
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from config.config import ModelConfig
-from models.signal_policy import ExecutionPolicy, PolicyConfig
 from data.prepare_dataset import prepare_data
+from models.signal_policy import ExecutionPolicy, PolicyConfig
 from utils.logger import get_logger
 from utils.seed import set_seed
-from utils.tracing import init_tracing_from_config, get_tracer
+from utils.tracing import get_tracer, init_tracing_from_config
 
 logger = get_logger(__name__)
 
@@ -67,7 +63,7 @@ def compute_gae(
     values: np.ndarray,
     gamma: float = 0.99,
     lambda_: float = 0.95,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Compute Generalized Advantage Estimation (GAE).
     
@@ -86,7 +82,7 @@ def compute_gae(
     T = len(rewards)
     advantages = np.zeros(T)
     gae = 0.0
-    
+
     # Backward pass for GAE computation
     for t in reversed(range(T)):
         # Temporal difference (TD) error
@@ -94,18 +90,18 @@ def compute_gae(
             next_value = 0.0  # Bootstrap: assume terminal state has value 0
         else:
             next_value = values[t + 1]
-        
+
         td_error = rewards[t] + gamma * next_value - values[t]
-        
+
         # GAE accumulation
         gae = td_error + gamma * lambda_ * gae
         advantages[t] = gae
-    
+
     returns = advantages + values
-    
+
     # Normalize advantages for stability
     advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
-    
+
     return advantages, returns
 
 
@@ -123,12 +119,12 @@ def train_epoch(
         metrics: dict with 'policy_loss', 'value_loss', 'entropy', 'total_loss'
     """
     policy.train()
-    
+
     total_policy_loss = 0.0
     total_value_loss = 0.0
     total_entropy = 0.0
     num_batches = 0
-    
+
     for batch in train_loader:
         if len(batch) == 2:
             x, y = batch
@@ -139,37 +135,37 @@ def train_epoch(
             x, y = x.to(device), y.to(device)
             rewards = rewards.to(device)
             values = values.to(device)
-        
+
         # Forward pass: get policy logits and value
         policy_logits, value_pred = policy(x)  # logits: (B, 3), value: (B, 1)
-        
+
         # Policy gradient loss: cross-entropy for action classification
         policy_loss = nn.functional.cross_entropy(policy_logits, y)
-        
+
         # Value loss: MSE between predicted and target value
         value_loss = nn.functional.mse_loss(value_pred.squeeze(), rewards)
-        
+
         # Entropy regularization: encourage exploration
         action_probs = torch.softmax(policy_logits, dim=-1)
         entropy = -torch.sum(action_probs * torch.log(action_probs + 1e-8), dim=-1).mean()
-        
+
         # Combined loss
         loss = (
             policy_loss
             + rl_cfg.value_loss_coeff * value_loss
             - rl_cfg.entropy_coeff * entropy
         )
-        
+
         optimizer.zero_grad()
         loss.backward()
         torch.nn.utils.clip_grad_norm_(policy.parameters(), rl_cfg.clip_norm)
         optimizer.step()
-        
+
         total_policy_loss += policy_loss.item()
         total_value_loss += value_loss.item()
         total_entropy += entropy.item()
         num_batches += 1
-    
+
     return {
         "policy_loss": total_policy_loss / num_batches,
         "value_loss": total_value_loss / num_batches,
@@ -208,10 +204,10 @@ def main():
         action="store_true",
         help="Enable OpenTelemetry tracing",
     )
-    
+
     args = parser.parse_args()
     set_seed(args.seed)
-    
+
     # Initialize tracing if enabled
     tracer = None
     if args.tracing_enabled:
@@ -222,17 +218,17 @@ def main():
         }
         init_tracing_from_config(tracing_cfg)
         tracer = get_tracer(__name__)
-    
+
     logger.info(f"Starting RL policy training with config:\n{args}")
-    
+
     device = torch.device(args.device)
-    
+
     # Load data
     with tracer.start_as_current_span("data_loading") if tracer else open('/dev/null'):
         try:
             pairs = [p.strip() for p in args.pairs.split(",")]
             logger.info(f"Loading data for pairs: {pairs}")
-            
+
             data_dict = {}
             for pair in pairs:
                 data_dict[pair] = prepare_data(
@@ -245,23 +241,23 @@ def main():
         except Exception as e:
             logger.error(f"Failed to load data: {e}")
             raise
-    
+
     # Combine all training data
     all_x_train = []
     all_y_train = []
-    
+
     for pair, data in data_dict.items():
         x_train = torch.FloatTensor(data["x_train"])
         y_train = torch.LongTensor(data["y_train"])
         all_x_train.append(x_train)
         all_y_train.append(y_train)
         logger.info(f"{pair}: {x_train.shape[0]} train samples")
-    
+
     x_train = torch.cat(all_x_train, dim=0)
     y_train = torch.cat(all_y_train, dim=0)
-    
+
     logger.info(f"Combined training set: {x_train.shape}")
-    
+
     # Create DataLoader
     train_dataset = TensorDataset(x_train, y_train)
     train_loader = DataLoader(
@@ -269,7 +265,7 @@ def main():
         batch_size=args.batch_size,
         shuffle=True,
     )
-    
+
     # Initialize policy
     policy_cfg = PolicyConfig(
         input_size=x_train.shape[1],
@@ -278,11 +274,11 @@ def main():
         dropout=0.2,
     )
     policy = ExecutionPolicy(policy_cfg).to(device)
-    
+
     # Optimizer
     optimizer = optim.Adam(policy.parameters(), lr=args.learning_rate)
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
-    
+
     rl_cfg = RLConfig(
         entropy_coeff=args.entropy_coeff,
         value_loss_coeff=args.value_loss_coeff,
@@ -293,24 +289,24 @@ def main():
         epochs=args.epochs,
         device=args.device,
     )
-    
+
     logger.info(f"RL Config:\n{rl_cfg}")
-    
+
     best_loss = float("inf")
     checkpoint_path = Path(args.checkpoint_path)
     checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
-    
+
     # Training loop
     with tracer.start_as_current_span("training") if tracer else open('/dev/null'):
         for epoch in range(1, args.epochs + 1):
             epoch_span = tracer.start_span(f"epoch_{epoch}") if tracer else None
             if epoch_span:
                 epoch_span.__enter__()
-            
+
             try:
                 metrics = train_epoch(policy, optimizer, train_loader, rl_cfg, device)
                 scheduler.step()
-                
+
                 logger.info(
                     f"Epoch {epoch}/{args.epochs} | "
                     f"Policy Loss: {metrics['policy_loss']:.4f} | "
@@ -318,16 +314,16 @@ def main():
                     f"Entropy: {metrics['entropy']:.4f} | "
                     f"Total Loss: {metrics['total_loss']:.4f}"
                 )
-                
+
                 if metrics["total_loss"] < best_loss:
                     best_loss = metrics["total_loss"]
                     torch.save(policy.state_dict(), checkpoint_path)
                     logger.info(f"✅ Saved checkpoint to {checkpoint_path}")
-            
+
             finally:
                 if epoch_span:
                     epoch_span.__exit__(None, None, None)
-    
+
     logger.info(f"✅ RL policy training complete. Best checkpoint: {checkpoint_path}")
 
 

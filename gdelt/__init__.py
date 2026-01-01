@@ -3,14 +3,14 @@
 from gdelt.alignment import align_candle_to_regime
 from gdelt.cache import RegimeCache
 from gdelt.config import (
-    GDELT_GKG_BASE_URL,
     GCAM_FEAR_KEYS,
-    GDELTThemeConfig,
+    GDELT_GKG_BASE_URL,
     REGIME_FEATURE_DIM,
     REGIME_FEATURE_NAMES,
+    GDELTThemeConfig,
 )
 from gdelt.consolidated_downloader import GDELTDownloader
-from gdelt.feature_builder import RegimeFeatureBuilder, GDELTTimeSeriesBuilder
+from gdelt.feature_builder import GDELTTimeSeriesBuilder, RegimeFeatureBuilder
 from gdelt.parser import GDELTRecord
 
 __all__ = [

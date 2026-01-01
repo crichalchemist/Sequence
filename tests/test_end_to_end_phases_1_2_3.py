@@ -11,26 +11,25 @@ This test validates that all components work together in a realistic training sc
 Run with: pytest tests/test_end_to_end_phases_1_2_3.py -v -s
 """
 
-import pytest
 import numpy as np
 import pandas as pd
+import pytest
 import torch
-from pathlib import Path
 
 # Phase 1: RL Training Infrastructure
 from train.core.env_based_rl_training import ActionConverter
 
 # Phase 2: Feature Engineering (optional - simplified for testing)
 try:
+    from features.fx_patterns import (
+        add_adx_features,
+        add_forex_session_features,
+        add_price_action_patterns,
+        add_support_resistance_features,
+    )
+    from features.intrinsic_time import add_intrinsic_time_features
     from features.microstructure import build_microstructure_features
     from features.regime_detection import RegimeDetector
-    from features.intrinsic_time import add_intrinsic_time_features
-    from features.fx_patterns import (
-        add_forex_session_features,
-        add_support_resistance_features,
-        add_adx_features,
-        add_price_action_patterns,
-    )
     FEATURES_AVAILABLE = True
 except ImportError:
     FEATURES_AVAILABLE = False
@@ -197,7 +196,7 @@ class TestEndToEndPhases123:
         )
 
         env = SimulatedRetailExecutionEnv(env_config, seed=42)
-        print(f"   ✓ Environment configured with transaction costs and risk management")
+        print("   ✓ Environment configured with transaction costs and risk management")
 
         # ===== Step 4: Setup Phase 3 Position Sizing =====
         print("\n📏 Step 4: Configuring Phase 3 position sizing...")
@@ -208,7 +207,7 @@ class TestEndToEndPhases123:
             risk_per_trade=0.02,  # 2% risk per trade
             use_dynamic_sizing=True,
         )
-        print(f"   ✓ Dynamic position sizing enabled (2% risk per trade)")
+        print("   ✓ Dynamic position sizing enabled (2% risk per trade)")
 
         # ===== Step 5: Create Phase 1 RL Policy =====
         print("\n🧠 Step 5: Creating Phase 1 RL policy network...")
@@ -294,7 +293,7 @@ class TestEndToEndPhases123:
                 assert final_drawdown <= env_config.max_drawdown_pct, \
                     f"Drawdown {final_drawdown:.2%} should not exceed {env_config.max_drawdown_pct:.2%}"
 
-        print(f"\n✅ END-TO-END TEST PASSED: All phases integrated successfully!")
+        print("\n✅ END-TO-END TEST PASSED: All phases integrated successfully!")
 
         # Final assertions
         assert len(data) > 500, "Should have sufficient data for testing"

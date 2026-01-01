@@ -9,12 +9,12 @@ included to make it easy to diagnose why actions were blocked.
 from __future__ import annotations
 
 import logging
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any
 
 import torch
-
 
 logger = logging.getLogger(__name__)
 if not logger.handlers:
@@ -44,7 +44,7 @@ class RiskConfig:
     max_drawdown_pct: float = 0.2
     max_positions: int = 3
     volatility_threshold: float = 0.02
-    no_trade_hours: List[Tuple[int, int]] = field(default_factory=list)
+    no_trade_hours: list[tuple[int, int]] = field(default_factory=list)
     max_spread: float = 0.0002
     flat_class_index: int = 1
     throttle_factor: float = 0.5
@@ -53,10 +53,10 @@ class RiskConfig:
 class RiskManager:
     """Stateful risk manager used by training and inference loops."""
 
-    def __init__(self, cfg: Optional[RiskConfig] = None):
+    def __init__(self, cfg: RiskConfig | None = None):
         self.cfg = cfg or RiskConfig()
-        self.current_equity: Optional[float] = None
-        self.peak_equity: Optional[float] = None
+        self.current_equity: float | None = None
+        self.peak_equity: float | None = None
         self.open_positions: int = 0
 
     def update_equity(self, equity: float) -> None:
@@ -70,7 +70,7 @@ class RiskManager:
             self.peak_equity = equity
 
     # --- Gate helpers -------------------------------------------------
-    def _in_no_trade_window(self, timestamp: Optional[datetime]) -> bool:
+    def _in_no_trade_window(self, timestamp: datetime | None) -> bool:
         if not timestamp or not self.cfg.no_trade_hours:
             return False
         hour = timestamp.hour
@@ -85,11 +85,11 @@ class RiskManager:
         drawdown = (self.peak_equity - self.current_equity) / max(self.peak_equity, 1e-9)
         return drawdown >= self.cfg.max_drawdown_pct
 
-    def _active_gates(self, context: Optional[Dict[str, Any]]) -> List[str]:
+    def _active_gates(self, context: dict[str, Any] | None) -> list[str]:
         if not self.cfg.enabled:
             return []
         context = context or {}
-        reasons: List[str] = []
+        reasons: list[str] = []
         if self._drawdown_exceeded():
             reasons.append("max_drawdown")
         if self.cfg.max_positions and self.open_positions >= self.cfg.max_positions:
@@ -107,8 +107,8 @@ class RiskManager:
 
     # --- Public API ----------------------------------------------------
     def apply_classification_logits(
-        self, logits: torch.Tensor, context: Optional[Dict[str, Any]] = None
-    ) -> Tuple[torch.Tensor, List[str]]:
+            self, logits: torch.Tensor, context: dict[str, Any] | None = None
+    ) -> tuple[torch.Tensor, list[str]]:
         """Mask or override logits based on risk gates.
 
         When a gate is active, all logits are suppressed except for the flat
@@ -126,8 +126,8 @@ class RiskManager:
         return adjusted, reasons
 
     def apply_regression_output(
-        self, preds: torch.Tensor, context: Optional[Dict[str, Any]] = None
-    ) -> Tuple[torch.Tensor, List[str]]:
+            self, preds: torch.Tensor, context: dict[str, Any] | None = None
+    ) -> tuple[torch.Tensor, list[str]]:
         """Throttle regression outputs when gates are active."""
 
         reasons = self._active_gates(context)
@@ -153,13 +153,13 @@ class RiskManager:
     # --- Convenience ---------------------------------------------------
     def build_context(
         self,
-        x: Optional[torch.Tensor] = None,
-        timestamp: Optional[datetime] = None,
-        spread: Optional[float] = None,
-    ) -> Dict[str, Any]:
+            x: torch.Tensor | None = None,
+            timestamp: datetime | None = None,
+            spread: float | None = None,
+    ) -> dict[str, Any]:
         """Derive a minimal context dict from optional inputs."""
 
-        context: Dict[str, Any] = {}
+        context: dict[str, Any] = {}
         if timestamp:
             context["timestamp"] = timestamp
         if spread is not None:

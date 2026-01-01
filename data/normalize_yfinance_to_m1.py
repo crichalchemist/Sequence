@@ -11,7 +11,6 @@ Output columns match HistData schema: datetime, open, high, low, close, volume.
 
 import argparse
 from pathlib import Path
-from typing import List
 
 import pandas as pd
 
@@ -70,7 +69,7 @@ def main():
 
     input_root = Path(args.input_root).resolve()
     output_root = Path(args.output_root).resolve()
-    pair_filter: List[str] = [p.strip().lower() for p in args.pairs.split(",") if p.strip()]
+    pair_filter: list[str] = [p.strip().lower() for p in args.pairs.split(",") if p.strip()]
 
     if not input_root.exists():
         raise FileNotFoundError(f"Input root {input_root} not found")

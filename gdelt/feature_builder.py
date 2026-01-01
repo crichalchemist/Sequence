@@ -2,20 +2,21 @@
 from __future__ import annotations
 
 import math
-import pandas as pd
-import numpy as np
 from collections import Counter, defaultdict
-from datetime import datetime, timedelta
-from typing import Iterable, List, Dict, Optional, Union
+from collections.abc import Iterable
+from datetime import datetime
+
+import numpy as np
+import pandas as pd
 
 from gdelt.config import (
     COUNTS_OF_INTEREST,
     DEFAULT_MAX_COUNT_REF,
     EM_COUNTRY_CODES,
-    GCAM_FEAR_KEYS,
     G10_COUNTRY_CODES,
-    GDELTThemeConfig,
+    GCAM_FEAR_KEYS,
     REGIME_FEATURE_DIM,
+    GDELTThemeConfig,
 )
 from gdelt.parser import GDELTRecord
 
@@ -109,7 +110,7 @@ class RegimeFeatureBuilder:
     def build_features(
         self, records: Iterable[GDELTRecord], bucket_start: datetime, bucket_end: datetime
     ) -> np.ndarray:
-        relevant_records: List[GDELTRecord] = [
+        relevant_records: list[GDELTRecord] = [
             r for r in records if bucket_start <= r.datetime < bucket_end
         ]
         if not relevant_records:

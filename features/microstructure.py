@@ -27,7 +27,7 @@ def high_low_imbalance(df: pd.DataFrame, window: int = 20) -> pd.Series:
     close_position = (df["close"] - df["low"]) / (df["high"] - df["low"] + 1e-8)
     # Normalize to [-1, 1]: 0.5 -> 0, 1 -> 1, 0 -> -1
     imbalance = 2 * close_position - 1
-    
+
     # Smooth over window
     return imbalance.rolling(window).mean()
 
@@ -47,7 +47,7 @@ def volume_direction_score(df: pd.DataFrame, window: int = 20) -> pd.Series:
     imbalance = high_low_imbalance(df, window=1)
     volume_ma = df["volume"].rolling(window).mean()
     volume_relative = df["volume"] / (volume_ma + 1e-8)
-    
+
     return imbalance * volume_relative
 
 
@@ -74,21 +74,21 @@ def order_flow_toxicity(df: pd.DataFrame, window: int = 20) -> pd.Series:
     )
     atr = tr.rolling(window).mean()
     range_ratio = (df["high"] - df["low"]) / (atr + 1e-8)
-    
+
     # 2. Volume surge (high volume -> more competition, wider spreads)
     volume_ma = df["volume"].rolling(window).mean()
     volume_surge = df["volume"] / (volume_ma + 1e-8)
-    
+
     # 3. Intrabar reversal (close far from open = orders whipped)
     intrabar_move = abs(df["close"] - df["open"]) / (df["high"] - df["low"] + 1e-8)
-    
+
     # Combine: all scaled to [0, 1]
     toxicity = (
         0.4 * np.clip(range_ratio / range_ratio.rolling(window).mean(), 0, 1) +
         0.4 * np.clip(volume_surge / volume_surge.rolling(window).mean(), 0, 1) +
         0.2 * intrabar_move
     )
-    
+
     return toxicity
 
 
@@ -117,10 +117,10 @@ def depth_proxy(df: pd.DataFrame, window: int = 20) -> pd.Series:
     """
     range_pct = (df["high"] - df["low"]) / df["close"]
     volume_ma = df["volume"].rolling(window).mean()
-    
+
     # Depth ~ volume / range: more volume, less range -> deeper
     depth = volume_ma / (range_pct * 1000 + 1e-8)
-    
+
     return depth / depth.rolling(window).mean()  # Normalize by recent mean
 
 
@@ -138,9 +138,9 @@ def vwap_deviation(df: pd.DataFrame, window: int = 20) -> pd.Series:
     """
     typical_price = (df["high"] + df["low"] + df["close"]) / 3
     vwap = (typical_price * df["volume"]).rolling(window).sum() / df["volume"].rolling(window).sum()
-    
+
     vwap_dev = (df["close"] - vwap) / (vwap + 1e-8) * 100
-    
+
     return vwap_dev
 
 
@@ -161,10 +161,10 @@ def momentum_imbalance(df: pd.DataFrame, window: int = 20) -> pd.Series:
     buy_mask = df["close"] > df["open"]
     buy_volume = df["volume"] * buy_mask
     sell_volume = df["volume"] * ~buy_mask
-    
+
     total_volume = buy_volume + sell_volume
     imbalance = (buy_volume - sell_volume) / (total_volume + 1e-8)
-    
+
     return imbalance.rolling(window).mean()
 
 
@@ -180,14 +180,14 @@ def price_impact_proxy(df: pd.DataFrame, window: int = 20) -> pd.Series:
     """
     volume_ma = df["volume"].rolling(window).mean()
     volume_relative = df["volume"] / (volume_ma + 1e-8)
-    
+
     # Range relative to volume (smaller range per unit volume = more liquidity)
     range_pct = (df["high"] - df["low"]) / df["close"]
     range_ma = range_pct.rolling(window).mean()
-    
+
     # Impact = volume surge * (current range / average range)
     impact = volume_relative * (range_pct / (range_ma + 1e-8))
-    
+
     return np.clip(impact, 0, 2)  # Clip to [0, 2]
 
 
@@ -204,12 +204,12 @@ def build_microstructure_features(df: pd.DataFrame, windows: list = None) -> pd.
     """
     if windows is None:
         windows = [5, 10, 20]
-    
+
     features = df.copy()
-    
+
     for window in windows:
         suffix = f"_{window}" if window != windows[-1] else ""  # Default window has no suffix
-        
+
         features[f"hl_imbalance{suffix}"] = high_low_imbalance(df, window)
         features[f"vol_direction{suffix}"] = volume_direction_score(df, window)
         features[f"toxicity{suffix}"] = order_flow_toxicity(df, window)
@@ -218,10 +218,10 @@ def build_microstructure_features(df: pd.DataFrame, windows: list = None) -> pd.
         features[f"vwap_dev{suffix}"] = vwap_deviation(df, window)
         features[f"momentum_imbalance{suffix}"] = momentum_imbalance(df, window)
         features[f"price_impact{suffix}"] = price_impact_proxy(df, window)
-    
+
     # Fill any NaN values
     features = features.bfill().ffill()
-    
+
     return features
 
 

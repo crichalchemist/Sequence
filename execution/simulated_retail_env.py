@@ -26,9 +26,10 @@ from __future__ import annotations
 import logging
 from collections import deque
 from dataclasses import dataclass, field
-from typing import Deque, Dict, List, Optional
 
 import numpy as np
+
+from execution.limit_order_engine import LimitOrderConfig, LimitOrderEngine
 
 
 @dataclass
@@ -78,6 +79,10 @@ class ExecutionConfig:
     enable_take_profit: bool = False  # Enable automatic take-profit exits
     take_profit_pct: float = 0.04  # Take profit as % of entry price (4% default)
     max_drawdown_pct: float = 0.20  # Maximum portfolio drawdown before episode termination (20%)
+
+    # Week 2: Intelligent limit order execution
+    use_limit_order_engine: bool = False  # Enable intelligent limit order pricing
+    limit_order_config: LimitOrderConfig | None = None  # Limit order engine configuration
     enable_drawdown_limit: bool = False  # Enable drawdown-based episode termination
 
     # Phase 4: Reward engineering
@@ -115,9 +120,10 @@ class OrderAction:
     action_type: str  # "market", "limit", or "hold"
     side: str  # "buy" or "sell"
     size: float
-    limit_price: Optional[float] = None
+    limit_price: float | None = None
+    aggressiveness: float | None = None  # For limit order engine (0=passive, 1=aggressive)
 
-    def normalized(self, config: ExecutionConfig) -> "OrderAction":
+    def normalized(self, config: ExecutionConfig) -> OrderAction:
         size = max(self.size, 0.0)
         size = round(size / config.lot_size) * config.lot_size
         limit_price = self.limit_price
@@ -165,8 +171,8 @@ class ObservationSpace:
         "portfolio_value",
     )
 
-    def sample(self) -> Dict[str, float]:
-        return {key: 0.0 for key in self.keys}
+    def sample(self) -> dict[str, float]:
+        return dict.fromkeys(self.keys, 0.0)
 
 
 class SimulatedRetailExecutionEnv:
@@ -182,9 +188,9 @@ class SimulatedRetailExecutionEnv:
 
     def __init__(
         self,
-        config: Optional[ExecutionConfig] = None,
-        seed: Optional[int] = None,
-        logger: Optional[logging.Logger] = None,
+            config: ExecutionConfig | None = None,
+            seed: int | None = None,
+            logger: logging.Logger | None = None,
     ) -> None:
         self.config = config or ExecutionConfig()
         self.config.validate()
@@ -193,9 +199,9 @@ class SimulatedRetailExecutionEnv:
         self.action_space = ActionSpace(self.config.lot_size, self.rng)
         self.observation_space = ObservationSpace()
 
-        self._action_buffer: Deque[OrderAction] = deque()
-        self._pending_limits: List[OrderAction] = []
-        self.positions: Deque[Position] = deque()
+        self._action_buffer: deque[OrderAction] = deque()
+        self._pending_limits: list[OrderAction] = []
+        self.positions: deque[Position] = deque()
 
         self.step_count = 0
         self.mid_price = self.config.initial_mid_price
@@ -205,7 +211,7 @@ class SimulatedRetailExecutionEnv:
         self._slippage_paid = 0.0
         self._spread_paid = 0.0
         self._commission_paid = 0.0  # Phase 3: Track commission costs
-        self._fill_events: List[Dict[str, float]] = []
+        self._fill_events: list[dict[str, float]] = []
         self._recent_volatility = self.config.price_volatility  # Track for variable spreads
 
         # Phase 3.3: Risk management tracking
@@ -215,10 +221,19 @@ class SimulatedRetailExecutionEnv:
 
         # Phase 4: Reward engineering tracking
         self._previous_portfolio_value = self.config.initial_cash  # For incremental rewards
-        self._portfolio_value_history: List[float] = []  # For Sharpe ratio calculation
+        self._portfolio_value_history: list[float] = []  # For Sharpe ratio calculation
         self._costs_at_last_step = 0.0  # Track total costs for cost-aware rewards
 
-    def reset(self) -> Dict[str, float]:
+        # Week 2: Intelligent limit order engine
+        if self.config.use_limit_order_engine:
+            limit_config = self.config.limit_order_config or LimitOrderConfig()
+            self.limit_order_engine = LimitOrderEngine(limit_config)
+            self._limit_order_savings = 0.0  # Track cost savings from limit orders
+        else:
+            self.limit_order_engine = None
+            self._limit_order_savings = 0.0
+
+    def reset(self) -> dict[str, float]:
         """Reset the environment and return the initial observation."""
 
         self._action_buffer.clear()
@@ -240,9 +255,10 @@ class SimulatedRetailExecutionEnv:
         self._previous_portfolio_value = self.config.initial_cash
         self._portfolio_value_history.clear()
         self._costs_at_last_step = 0.0
+        self._limit_order_savings = 0.0
         return self._observation()
 
-    def step(self, action: Optional[OrderAction]):
+    def step(self, action: OrderAction | None):
         """Advance the simulation.
 
         Parameters
@@ -294,11 +310,11 @@ class SimulatedRetailExecutionEnv:
 
     # Internal mechanics
 
-    def _enqueue_action(self, action: Optional[OrderAction]) -> None:
+    def _enqueue_action(self, action: OrderAction | None) -> None:
         if action is not None:
             self._action_buffer.append(action)
 
-    def _dequeue_action(self) -> Optional[OrderAction]:
+    def _dequeue_action(self) -> OrderAction | None:
         if self.config.decision_lag == 0:
             return self._action_buffer.pop() if self._action_buffer else None
         if len(self._action_buffer) > self.config.decision_lag - 1:
@@ -320,24 +336,52 @@ class SimulatedRetailExecutionEnv:
     def _apply_action(self, action: OrderAction) -> None:
         if action.action_type == "hold":
             return
-        if action.action_type == "market":
+
+        # Week 2.3: Use limit order engine with learned aggressiveness
+        if (
+                action.action_type == "market"
+                and self.limit_order_engine is not None
+                and action.aggressiveness is not None
+        ):
+            # Use limit order engine to compute optimal limit price
+            half_spread = self._get_current_spread() / 2.0
+            limit_price, fill_prob, expected_savings = self.limit_order_engine.place_limit_order(
+                side=action.side,
+                mid_price=self.mid_price,
+                spread=self._get_current_spread(),
+                volatility=self._recent_volatility,
+                inventory=self.inventory,
+                order_size=action.size,
+                cash=self.cash,
+                aggressiveness_override=action.aggressiveness,
+            )
+
+            # Submit as limit order with computed price
+            limit_action = OrderAction("limit", action.side, action.size, limit_price)
+            self._submit_limit(limit_action)
+            self._limit_order_savings += expected_savings * action.size
+        elif action.action_type == "market":
             self._execute_market(action)
         elif action.action_type == "limit":
             self._submit_limit(action)
         else:
             self.logger.warning("Unsupported action_type '%s'", action.action_type)
 
-    def _execution_price(self, side: str, size: float) -> float:
-        direction = 1.0 if side == "buy" else -1.0
-
-        # Phase 3: Variable spread based on volatility
+    def _get_current_spread(self) -> float:
+        """Get current bid-ask spread (may be wider during high volatility)."""
         base_spread = self.config.spread
         if self.config.variable_spread:
             # Widen spread during high volatility
             volatility_ratio = self._recent_volatility / max(self.config.price_volatility, 1e-9)
             if volatility_ratio > 1.5:  # High volatility threshold
                 base_spread *= self.config.spread_volatility_multiplier
+        return base_spread
 
+    def _execution_price(self, side: str, size: float) -> float:
+        direction = 1.0 if side == "buy" else -1.0
+
+        # Phase 3: Variable spread based on volatility
+        base_spread = self._get_current_spread()
         half_spread = base_spread / 2.0
         slippage = self.config.slippage_model.sample(self.rng) * self.mid_price
         exec_price = self.mid_price + direction * (half_spread + slippage)
@@ -362,7 +406,7 @@ class SimulatedRetailExecutionEnv:
         if not self._pending_limits:
             return
 
-        remaining_limits: List[OrderAction] = []
+        remaining_limits: list[OrderAction] = []
         for limit_order in self._pending_limits:
             should_fill = self._should_fill_limit(limit_order)
             if should_fill:
@@ -384,7 +428,29 @@ class SimulatedRetailExecutionEnv:
             crossed = True
         if not crossed:
             return False
-        return bool(self.rng.random() <= self.config.limit_fill_probability)
+
+        # Week 2: Use intelligent fill probability if engine is enabled
+        if self.limit_order_engine is not None:
+            # Compute market price (what we'd pay with market order)
+            half_spread = self._get_current_spread() / 2.0
+            if limit_order.side == "buy":
+                market_price = self.mid_price + half_spread
+            else:
+                market_price = self.mid_price - half_spread
+
+            # Use limit order engine to estimate fill probability
+            fill_prob = self.limit_order_engine._estimate_fill_probability(
+                limit_price=limit_order.limit_price,
+                market_price=market_price,
+                mid_price=self.mid_price,
+                volatility=self._recent_volatility,
+                side=limit_order.side,
+            )
+        else:
+            # Fall back to simple fixed probability
+            fill_prob = self.config.limit_fill_probability
+
+        return bool(self.rng.random() <= fill_prob)
 
     def _check_stop_loss_take_profit(self) -> None:
         """
@@ -621,7 +687,7 @@ class SimulatedRetailExecutionEnv:
         reward = pnl_change - cost_penalty - drawdown_penalty
         return reward * self.config.reward_scaling
 
-    def _observation(self) -> Dict[str, float]:
+    def _observation(self) -> dict[str, float]:
         unrealized = sum(
             (
                 (self.mid_price - pos.entry_price) * pos.quantity

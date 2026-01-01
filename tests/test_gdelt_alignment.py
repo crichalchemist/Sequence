@@ -1,7 +1,7 @@
 import importlib.util
 import sys
 import types
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 from pathlib import Path
 
 
@@ -22,7 +22,7 @@ gdelt_pkg.__path__ = [str(ROOT / "gdelt")]
 sys.modules.setdefault("gdelt", gdelt_pkg)
 
 config = _load_module("gdelt.config", ROOT / "gdelt" / "config.py")
-setattr(sys.modules["gdelt"], "config", config)
+sys.modules["gdelt"].config = config
 alignment = _load_module("gdelt.alignment", ROOT / "gdelt" / "alignment.py")
 
 align_candle_to_regime = alignment.align_candle_to_regime
@@ -57,11 +57,12 @@ def test_iter_gdelt_buckets_matches_alignment():
     )
     assert bucket == GDELT_TIME_DELTA_MINUTES
 """Tests for GDELT alignment utilities."""
+import sys
+import types
 from datetime import datetime, timezone
 from importlib import util
 from pathlib import Path
-import sys
-import types
+
 
 def _load_config_module():
     config_path = Path(__file__).resolve().parents[1] / "gdelt" / "config.py"

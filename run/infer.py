@@ -12,7 +12,7 @@ import logging
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Protocol
+from typing import Protocol
 
 import pandas as pd
 import requests
@@ -27,7 +27,6 @@ from config.config import ModelConfig  # noqa: E402
 from features.agent_features import build_feature_frame  # noqa: E402
 from models.agent_hybrid import DignityModel, build_model  # noqa: E402
 
-
 ACTION_NAMES = ["sell", "hold", "buy"]
 
 
@@ -35,7 +34,7 @@ ACTION_NAMES = ["sell", "hold", "buy"]
 class InferenceConfig:
     candles_path: Path
     checkpoint_path: Path
-    intrinsic_bars_path: Optional[Path] = None
+    intrinsic_bars_path: Path | None = None
     t_in: int = 120
     device: str = "cpu"
     task_type: str = "classification"
@@ -44,7 +43,7 @@ class InferenceConfig:
 class ExecutionBackend(Protocol):
     """Backend interface so simulation and live calls share the same pipeline."""
 
-    def execute_action(self, action: str, price: float, metadata: Dict[str, float]) -> float:
+    def execute_action(self, action: str, price: float, metadata: dict[str, float]) -> float:
         """Dispatch an action and return a reward-like scalar."""
 
 
@@ -55,9 +54,9 @@ class SimulatorBackend:
         self.spread = spread
         self.volume = volume
         self.position: int = 0
-        self.entry_price: Optional[float] = None
+        self.entry_price: float | None = None
 
-    def execute_action(self, action: str, price: float, metadata: Dict[str, float]) -> float:
+    def execute_action(self, action: str, price: float, metadata: dict[str, float]) -> float:
         reward = 0.0
         if action == "buy":
             if self.position <= 0:
@@ -85,7 +84,7 @@ class MetaApiBackend:
         token: str,
         account_id: str,
         timeout: int = 10,
-        session: Optional[requests.Session] = None,
+            session: requests.Session | None = None,
     ):
         self.endpoint = endpoint.rstrip("/")
         self.token = token
@@ -93,7 +92,7 @@ class MetaApiBackend:
         self.timeout = timeout
         self.session = session or requests.Session()
 
-    def execute_action(self, action: str, price: float, metadata: Dict[str, float]) -> float:
+    def execute_action(self, action: str, price: float, metadata: dict[str, float]) -> float:
         url = f"{self.endpoint}/trade"
         headers = {"Authorization": f"Bearer {self.token}"}
         payload = {"accountId": self.account_id, "action": action, "price": price, "meta": metadata}
@@ -131,7 +130,7 @@ def _merge_intrinsic(feature_df: pd.DataFrame, intrinsic_path: Path) -> pd.DataF
     return merged
 
 
-def build_state(cfg: InferenceConfig) -> tuple[torch.Tensor, float, List[str]]:
+def build_state(cfg: InferenceConfig) -> tuple[torch.Tensor, float, list[str]]:
     candles = _load_candles(cfg.candles_path)
     feature_df = build_feature_frame(candles)
     if cfg.intrinsic_bars_path:
@@ -160,7 +159,7 @@ def load_policy(cfg: InferenceConfig, num_features: int) -> DignityModel:
     return model
 
 
-def telemetry_log(logger: logging.Logger, message: str, payload: Dict[str, object]) -> None:
+def telemetry_log(logger: logging.Logger, message: str, payload: dict[str, object]) -> None:
     logger.info("%s | %s", message, json.dumps(payload, default=str))
 
 
@@ -170,7 +169,7 @@ class InferenceRunner:
         self.backend = backend
         self.device = device
 
-    def predict(self, state: torch.Tensor) -> Dict[str, object]:
+    def predict(self, state: torch.Tensor) -> dict[str, object]:
         with torch.no_grad():
             logits, attn = self.model(state.unsqueeze(0).to(self.device))
             probs = F.softmax(logits, dim=-1).squeeze(0)
@@ -182,7 +181,7 @@ class InferenceRunner:
                 "attention": attn.cpu().tolist(),
             }
 
-    def run_once(self, state: torch.Tensor, price: float) -> Dict[str, object]:
+    def run_once(self, state: torch.Tensor, price: float) -> dict[str, object]:
         decision = self.predict(state)
         reward = self.backend.execute_action(decision["action"], price, {"prob_buy": decision["probs"][2]})
         decision["reward"] = reward

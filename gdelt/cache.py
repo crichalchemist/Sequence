@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 
@@ -19,7 +18,7 @@ class RegimeCache:
         ts = bucket_start.astimezone(timezone.utc).strftime("%Y%m%d%H%M%S")
         return self.cache_dir / f"{ts}.npz"
 
-    def get(self, bucket_start: datetime) -> Optional[np.ndarray]:
+    def get(self, bucket_start: datetime) -> np.ndarray | None:
         path = self._path_for(bucket_start)
         if not path.exists():
             return None

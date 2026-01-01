@@ -9,20 +9,19 @@ Comprehensive test suite for Phase 3 features:
 Run with: pytest tests/test_phase3_validation.py -v
 """
 
-import pytest
-import numpy as np
-import pandas as pd
-import torch
-from pathlib import Path
-
 # Import directly from module to avoid __init__.py dependency issues
 import sys
+from pathlib import Path
+
+import numpy as np
+import pytest
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from execution.simulated_retail_env import (
     ExecutionConfig,
-    SimulatedRetailExecutionEnv,
     OrderAction,
+    SimulatedRetailExecutionEnv,
 )
 from train.core.env_based_rl_training import ActionConverter
 

@@ -19,7 +19,6 @@ Usage example:
 import argparse
 import sys
 from pathlib import Path
-from typing import Dict, List, Tuple
 
 import numpy as np
 import torch
@@ -28,12 +27,13 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from timesfm.timesfm_2p5 import timesfm_2p5_torch
+
 from config.config import DataConfig, FeatureConfig, ModelConfig
 from data.agents.single_task_agent import SingleTaskDataAgent as DataAgent
 from data.prepare_dataset import _compute_time_ranges, _load_pair_data
 from features.agent_features import build_feature_frame
 from models.agent_hybrid import build_model
-from timesfm.timesfm_2p5 import timesfm_2p5_torch
 
 
 def parse_args():
@@ -66,8 +66,8 @@ def parse_args():
 def build_test_windows(
     df,
     agent: DataAgent,
-    feature_cols: List[str],
-) -> Tuple[np.ndarray, np.ndarray, List[np.ndarray]]:
+        feature_cols: list[str],
+) -> tuple[np.ndarray, np.ndarray, list[np.ndarray]]:
     t_in, t_out = agent.cfg.t_in, agent.cfg.t_out
     norm_stats = agent.norm_stats
     assert norm_stats is not None
@@ -78,9 +78,9 @@ def build_test_windows(
     # Align future_log_ret with index t_in-1 ... len(df)-t_out-1
     future_log_ret = np.concatenate([future_log_ret, np.full(t_out, np.nan)])
 
-    sequences: List[np.ndarray] = []
-    targets: List[float] = []
-    close_windows: List[np.ndarray] = []
+    sequences: list[np.ndarray] = []
+    targets: list[float] = []
+    close_windows: list[np.ndarray] = []
 
     last_idx = len(df) - t_out
     for idx in range(t_in - 1, last_idx):
@@ -99,7 +99,7 @@ def build_test_windows(
     return np.stack(sequences), np.array(targets), close_windows
 
 
-def regression_metrics(preds: np.ndarray, targets: np.ndarray) -> Dict[str, float]:
+def regression_metrics(preds: np.ndarray, targets: np.ndarray) -> dict[str, float]:
     preds_flat = preds.squeeze()
     targets_flat = targets.squeeze()
     mse = np.mean((preds_flat - targets_flat) ** 2)

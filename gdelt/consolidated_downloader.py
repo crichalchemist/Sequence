@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import logging
-import requests
-import gzip
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import List, Optional, Iterator
+
 import pandas as pd
+import requests
 
 from gdelt.config import GDELT_TIME_DELTA_MINUTES
 
@@ -30,7 +29,7 @@ class GDELTDownloader:
     def __init__(
         self,
         output_dir: Path | str = Path("data/gdelt_raw"),
-        session: Optional[requests.Session] = None,
+            session: requests.Session | None = None,
         timeout: int = 30,
         use_mirrors: bool = True,
     ) -> None:
@@ -46,7 +45,7 @@ class GDELTDownloader:
         self,
         start_date: datetime,
         end_date: datetime,
-        countries: Optional[List[str]] = None,
+            countries: list[str] | None = None,
         resolution: str = "daily",
     ) -> pd.DataFrame:
         """Download and process GDELT data for a date range."""
@@ -73,7 +72,7 @@ class GDELTDownloader:
             return combined
         return pd.DataFrame()
 
-    def fetch_gkg_files(self, start_dt: datetime, end_dt: datetime) -> List[Path]:
+    def fetch_gkg_files(self, start_dt: datetime, end_dt: datetime) -> list[Path]:
         """Download GDELT GKG files between start_dt and end_dt (15-minute resolution)."""
         if not isinstance(start_dt, datetime) or not isinstance(end_dt, datetime):
             raise TypeError("start_dt and end_dt must be datetime objects")
@@ -88,7 +87,7 @@ class GDELTDownloader:
         start = self._floor_to_bucket(start_dt)
         end = self._floor_to_bucket(end_dt)
         current = start
-        downloaded: List[Path] = []
+        downloaded: list[Path] = []
 
         while current <= end:
             path = self._download_single(current)
@@ -98,9 +97,9 @@ class GDELTDownloader:
 
         return downloaded
 
-    def fetch_gkg_files_daily(self, start_dt: datetime, end_dt: datetime) -> List[Path]:
+    def fetch_gkg_files_daily(self, start_dt: datetime, end_dt: datetime) -> list[Path]:
         """Download GDELT GKG files with daily resolution."""
-        downloaded: List[Path] = []
+        downloaded: list[Path] = []
         current = start_dt.replace(hour=0, minute=0, second=0)
 
         while current.date() <= end_dt.date():
@@ -114,7 +113,7 @@ class GDELTDownloader:
 
         return downloaded
 
-    def _download_single(self, ts: datetime) -> Optional[Path]:
+    def _download_single(self, ts: datetime) -> Path | None:
         """Download a single GDELT file with mirror fallback."""
         ts = ts.astimezone(timezone.utc)
         timestamp = ts.strftime("%Y%m%d%H%M%S")
@@ -152,7 +151,7 @@ class GDELTDownloader:
         return None
 
     def _process_gkg_file(
-        self, file_path: Path, countries: Optional[List[str]] = None
+            self, file_path: Path, countries: list[str] | None = None
     ) -> pd.DataFrame:
         """Process a single GKG file and extract relevant data."""
         try:

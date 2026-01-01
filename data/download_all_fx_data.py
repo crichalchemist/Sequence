@@ -2,9 +2,8 @@ import argparse
 import csv
 import os
 from datetime import datetime
-from typing import Tuple
-from histdata.api import download_hist_data
 
+from histdata.api import download_hist_data
 
 
 def mkdir_p(path: str) -> None:
@@ -69,27 +68,27 @@ def _download_pair(currency_pair_name: str, pair: str, history_first_trading_mon
     """Download all data for a single currency pair."""
     start_year = int(history_first_trading_month[0:4])
     end_year = min(args.end_year, datetime.now().year)
-    
+
     print(f"Downloading {currency_pair_name} ({pair}) from {start_year} to {end_year}")
     output_folder = os.path.join(args.output, pair)
     mkdir_p(output_folder)
-    
+
     downloads = 0
     try:
         for year in range(start_year, end_year + 1):
             if current_downloads + downloads >= max_downloads:
                 print(f"Reached max downloads limit ({max_downloads}). Stopping.")
                 break
-            
+
             year_downloads = _download_year(year, pair, output_folder)
             downloads += year_downloads
-            
+
             if current_downloads + downloads >= max_downloads:
                 break
-                
+
     except Exception as e:
         print(f'[DONE] for currency {currency_pair_name} - error: {e}')
-    
+
     return downloads
 
 
@@ -98,24 +97,24 @@ def download_all(args):
     pairs_file = _find_pairs_file()
     total_downloads = 0
     max_downloads = args.max_downloads
-    
-    with open(pairs_file, 'r') as f:
+
+    with open(pairs_file) as f:
         reader = csv.reader(f, delimiter=',')
         next(reader, None)  # skip the headers
         for row in reader:
             if total_downloads >= max_downloads:
                 print(f"Reached max downloads limit ({max_downloads}). Stopping.")
                 break
-            
+
             currency_pair_name, pair, history_first_trading_month = row
             pair_downloads = _download_pair(
                 currency_pair_name, pair, history_first_trading_month,
                 args, max_downloads, total_downloads
             )
             total_downloads += pair_downloads
-            
+
             print(f"Completed {currency_pair_name}. Total downloads so far: {total_downloads}")
-    
+
     print(f"Download complete. Total downloads: {total_downloads}")
 
 

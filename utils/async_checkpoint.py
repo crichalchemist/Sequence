@@ -6,18 +6,17 @@ import logging
 import queue
 import threading
 import time
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, Optional, Tuple
 
 import torch
-
 
 logger = logging.getLogger(__name__)
 
 
 class AsyncCheckpointManager:
     """Asynchronous checkpoint manager with thread pool and queue-based processing."""
-    
+
     def __init__(
         self,
         save_dir: Path,
@@ -43,28 +42,28 @@ class AsyncCheckpointManager:
         self.max_workers = max_workers
         self.queue_size = queue_size
         self.top_n_checkpoints = top_n_checkpoints
-        
+
         # Queue for checkpoint requests
         self.checkpoint_queue = queue.Queue(maxsize=queue_size)
-        
+
         # Worker threads
         self.workers = []
         self.shutdown_event = threading.Event()
-        
+
         # Statistics
         self.saved_checkpoints = 0
         self.failed_checkpoints = 0
         self.queue_size_stats = []
-        
+
         # Start worker threads
         self._start_workers()
-        
+
         # Checkpoint tracking
         self.checkpoint_history = []
         self.lock = threading.Lock()
-        
+
         logger.info(f"Started async checkpoint manager with {max_workers} workers")
-    
+
     def _start_workers(self):
         """Start worker threads for checkpoint saving."""
         for i in range(self.max_workers):
@@ -76,7 +75,7 @@ class AsyncCheckpointManager:
             worker.start()
             self.workers.append(worker)
             logger.debug(f"Started checkpoint worker {i}")
-    
+
     def _worker_loop(self):
         """Main loop for worker threads."""
         while not self.shutdown_event.is_set():
@@ -85,17 +84,17 @@ class AsyncCheckpointManager:
                 checkpoint_data = self.checkpoint_queue.get(timeout=1.0)
                 if checkpoint_data is None:  # Shutdown signal
                     break
-                
+
                 # Process checkpoint
                 self._process_checkpoint(checkpoint_data)
                 self.checkpoint_queue.task_done()
-                
+
             except queue.Empty:
                 continue
             except Exception as e:
                 logger.error(f"Error in checkpoint worker: {e}")
                 self.failed_checkpoints += 1
-    
+
     def _process_checkpoint(self, checkpoint_data: dict):
         """Process a single checkpoint save request."""
         try:
@@ -104,7 +103,7 @@ class AsyncCheckpointManager:
             epoch = checkpoint_data['epoch']
             model_name = checkpoint_data['model_name']
             callback = checkpoint_data.get('callback')
-            
+
             # Convert tensors to CPU to save memory
             cpu_state = {}
             for k, v in state_dict.items():
@@ -112,18 +111,18 @@ class AsyncCheckpointManager:
                     cpu_state[k] = v.cpu()
                 else:
                     cpu_state[k] = v
-            
+
             # Generate checkpoint filename
             timestamp = int(time.time())
             checkpoint_path = self.save_dir / f"{model_name}_epoch{epoch}_score{score:.4f}_{timestamp}.pt"
-            
+
             # Save checkpoint
             torch.save(cpu_state, checkpoint_path)
-            
+
             # Call callback if provided
             if callback:
                 callback(checkpoint_path, score, epoch)
-            
+
             # Track checkpoint
             with self.lock:
                 self.checkpoint_history.append({
@@ -132,25 +131,25 @@ class AsyncCheckpointManager:
                     'epoch': epoch,
                     'timestamp': timestamp
                 })
-                
+
                 # Clean up old checkpoints to maintain top_n
                 self._cleanup_old_checkpoints()
-            
+
             self.saved_checkpoints += 1
             logger.info(f"Saved checkpoint: {checkpoint_path.name} (score: {score:.4f})")
-            
+
         except Exception as e:
             logger.error(f"Failed to save checkpoint: {e}")
             self.failed_checkpoints += 1
-    
+
     def _cleanup_old_checkpoints(self):
         """Clean up old checkpoints beyond top_n retention."""
         if len(self.checkpoint_history) <= self.top_n_checkpoints:
             return
-        
+
         # Sort by score (descending for accuracy, ascending for loss)
         self.checkpoint_history.sort(key=lambda x: x['score'], reverse=True)
-        
+
         # Remove excess checkpoints
         checkpoints_to_remove = self.checkpoint_history[self.top_n_checkpoints:]
         for checkpoint_info in checkpoints_to_remove:
@@ -160,17 +159,17 @@ class AsyncCheckpointManager:
                     logger.debug(f"Removed old checkpoint: {checkpoint_info['path'].name}")
             except Exception as e:
                 logger.warning(f"Failed to remove old checkpoint: {e}")
-        
+
         # Keep only top_n in history
         self.checkpoint_history = self.checkpoint_history[:self.top_n_checkpoints]
-    
+
     def save_checkpoint(
         self,
         state_dict: dict,
         score: float,
         epoch: int,
         model_name: str = "model",
-        callback: Optional[Callable] = None,
+            callback: Callable | None = None,
         blocking: bool = False
     ) -> bool:
         """Queue a checkpoint for asynchronous saving.
@@ -202,7 +201,7 @@ class AsyncCheckpointManager:
             'model_name': model_name,
             'callback': callback
         }
-        
+
         try:
             if blocking:
                 # For blocking saves, use a separate queue and wait
@@ -215,22 +214,22 @@ class AsyncCheckpointManager:
                 # Non-blocking: add to queue
                 if not self.checkpoint_queue.full():
                     self.checkpoint_queue.put(checkpoint_data)
-                    
+
                     # Update queue size stats
                     with self.lock:
                         current_size = self.checkpoint_queue.qsize()
                         self.queue_size_stats.append(current_size)
-                    
+
                     return True
                 else:
                     logger.warning("Checkpoint queue is full, skipping checkpoint")
                     return False
-                    
+
         except Exception as e:
             logger.error(f"Failed to queue checkpoint: {e}")
             return False
-    
-    def get_best_checkpoint(self) -> Optional[Path]:
+
+    def get_best_checkpoint(self) -> Path | None:
         """Get the path to the best checkpoint.
         
         Returns
@@ -244,7 +243,7 @@ class AsyncCheckpointManager:
             # Return the highest scored checkpoint
             best_checkpoint = max(self.checkpoint_history, key=lambda x: x['score'])
             return best_checkpoint['path']
-    
+
     def get_statistics(self) -> dict:
         """Get checkpoint manager statistics.
         
@@ -255,7 +254,7 @@ class AsyncCheckpointManager:
         """
         with self.lock:
             avg_queue_size = sum(self.queue_size_stats) / max(len(self.queue_size_stats), 1)
-            
+
             return {
                 'saved_checkpoints': self.saved_checkpoints,
                 'failed_checkpoints': self.failed_checkpoints,
@@ -266,8 +265,8 @@ class AsyncCheckpointManager:
                     self.saved_checkpoints + self.failed_checkpoints, 1
                 ) * 100
             }
-    
-    def wait_for_completion(self, timeout: Optional[float] = None) -> bool:
+
+    def wait_for_completion(self, timeout: float | None = None) -> bool:
         """Wait for all queued checkpoints to be processed.
         
         Parameters
@@ -285,7 +284,7 @@ class AsyncCheckpointManager:
             return True
         except Exception:
             return False
-    
+
     def shutdown(self, timeout: float = 30.0):
         """Shutdown the checkpoint manager and clean up resources.
         
@@ -295,17 +294,17 @@ class AsyncCheckpointManager:
             Maximum time to wait for workers to finish.
         """
         logger.info("Shutting down async checkpoint manager...")
-        
+
         # Signal workers to stop
         self.shutdown_event.set()
-        
+
         # Add shutdown signals to queue
         for _ in range(self.max_workers):
             try:
                 self.checkpoint_queue.put(None)
             except queue.Full:
                 break
-        
+
         # Wait for workers to finish
         start_time = time.time()
         for worker in self.workers:
@@ -314,15 +313,15 @@ class AsyncCheckpointManager:
                 worker.join(timeout=remaining_time)
             else:
                 break
-        
+
         # Force shutdown if needed
         for worker in self.workers:
             if worker.is_alive():
                 logger.warning(f"Force terminating worker {worker.name}")
                 worker.join(timeout=0.1)
-        
+
         logger.info("Async checkpoint manager shutdown complete")
-    
+
     def __del__(self):
         """Destructor to ensure proper shutdown."""
         try:
@@ -359,8 +358,8 @@ def create_async_checkpoint_manager(
 
 class CheckpointCallback:
     """Callback handler for checkpoint events."""
-    
-    def __init__(self, callback_fn: Optional[Callable] = None):
+
+    def __init__(self, callback_fn: Callable | None = None):
         """Initialize callback handler.
         
         Parameters
@@ -370,7 +369,7 @@ class CheckpointCallback:
         """
         self.callback_fn = callback_fn
         self.checkpoint_count = 0
-    
+
     def __call__(self, checkpoint_path: Path, score: float, epoch: int):
         """Handle checkpoint event.
         
@@ -384,11 +383,11 @@ class CheckpointCallback:
             Training epoch.
         """
         self.checkpoint_count += 1
-        
+
         if self.callback_fn:
             try:
                 self.callback_fn(checkpoint_path, score, epoch)
             except Exception as e:
                 logger.error(f"Checkpoint callback failed: {e}")
-        
+
         logger.info(f"Checkpoint #{self.checkpoint_count} saved: {checkpoint_path.name}")

@@ -1,22 +1,19 @@
 """Matrix-themed Sequence FX Intelligence Platform Dashboard."""
-import streamlit as st
-import pandas as pd
-import numpy as np
-import plotly.express as px
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
+import sys
 from datetime import datetime, timedelta
 from pathlib import Path
-import sys
-import json
-import torch
+
+import numpy as np
+import pandas as pd
+import plotly.graph_objects as go
+import streamlit as st
 
 # Add project root to path
 project_root = Path(__file__).parent
 sys.path.append(str(project_root))
 
-from gdelt.feature_builder import GDELTTimeSeriesBuilder
 from gdelt.consolidated_downloader import GDELTDownloader
+from gdelt.feature_builder import GDELTTimeSeriesBuilder
 
 # Matrix Theme Colors
 MATRIX_GREEN = "#00FF00"
@@ -158,7 +155,7 @@ def main():
 
     # Sidebar with Matrix theme
     with st.sidebar:
-        st.markdown(f"""
+        st.markdown("""
         <div class='matrix-card'>
             <h2 class='matrix-header' style='text-align: center;'>⚡ NEURAL CONTROL PANEL</h2>
         </div>
@@ -185,7 +182,7 @@ def main():
                 """, unsafe_allow_html=True)
 
         # Data configuration with Matrix styling
-        st.markdown(f"""
+        st.markdown("""
         <div class='matrix-header' style='font-size: 1.2em; margin: 1rem 0;'>
         📡 DATA_STREAM_CONFIG
         </div>
@@ -240,7 +237,7 @@ def main():
         )
 
         # AI Model configuration
-        st.markdown(f"""
+        st.markdown("""
         <div class='matrix-header' style='font-size: 1.2em; margin: 1rem 0;'>
         🤖 NEURAL_NET_CONFIG
         </div>
@@ -259,7 +256,7 @@ def main():
         )
 
         # Processing controls
-        st.markdown(f"""
+        st.markdown("""
         <div class='matrix-header' style='font-size: 1.2em; margin: 1rem 0;'>
         ⚙️ PROCESSING_MATRIX
         </div>
@@ -332,7 +329,7 @@ def render_main_dashboard():
 
 def render_system_overview():
     """Render comprehensive FX system overview."""
-    st.markdown(f"""
+    st.markdown("""
     <div class='matrix-card'>
         <h2 class='matrix-header'>🔲 SEQUENCE MATRIX COMMAND CENTER</h2>
     </div>
@@ -359,7 +356,7 @@ def render_system_overview():
             """, unsafe_allow_html=True)
 
     # System architecture visualization with Matrix styling
-    st.markdown(f"""
+    st.markdown("""
     <div class='matrix-card'>
         <h3 class='matrix-header'>🔗 NEURAL ARCHITECTURE MATRIX</h3>
     </div>
@@ -373,7 +370,7 @@ def render_system_overview():
     col1, col2 = st.columns(2)
 
     with col1:
-        st.markdown(f"""
+        st.markdown("""
         <div class='matrix-card'>
             <h3 class='matrix-header'>📈 NEURAL MODEL STATUS</h3>
         </div>
@@ -397,7 +394,7 @@ def render_system_overview():
             """, unsafe_allow_html=True)
 
     with col2:
-        st.markdown(f"""
+        st.markdown("""
         <div class='matrix-card'>
             <h3 class='matrix-header'>📊 SYSTEM DIAGNOSTICS</h3>
         </div>
@@ -423,7 +420,7 @@ def render_system_overview():
 
 def render_market_intelligence():
     """Render market intelligence dashboard."""
-    st.markdown(f"""
+    st.markdown("""
     <div class='matrix-card'>
         <h2 class='matrix-header'>📡 MARKET INTELLIGENCE MATRIX</h2>
     </div>
@@ -437,7 +434,7 @@ def render_market_intelligence():
         col1, col2, col3 = st.columns(3)
 
         with col1:
-            st.markdown(f"""
+            st.markdown("""
             <div class='matrix-card'>
                 <h4 class='matrix-header'>🌍 GDELT_COVERAGE</h4>
             </div>
@@ -451,7 +448,7 @@ def render_market_intelligence():
                 """, unsafe_allow_html=True)
 
         with col2:
-            st.markdown(f"""
+            st.markdown("""
             <div class='matrix-card'>
                 <h4 class='matrix-header'>💱 MARKET_DATA</h4>
             </div>
@@ -465,7 +462,7 @@ def render_market_intelligence():
                 """, unsafe_allow_html=True)
 
         with col3:
-            st.markdown(f"""
+            st.markdown("""
             <div class='matrix-card'>
                 <h4 class='matrix-header'>🔗 DATA_CORRELATION</h4>
             </div>
@@ -474,7 +471,7 @@ def render_market_intelligence():
             st.plotly_chart(correlation_matrix, use_container_width=True)
     else:
         # Show data source status
-        st.markdown(f"""
+        st.markdown("""
         <div class='matrix-card'>
             <h3 class='matrix-header'>🔌 DATA_SOURCE_STATUS</h3>
         </div>
@@ -500,7 +497,7 @@ def render_market_intelligence():
 
 def render_ml_pipeline():
     """Render ML pipeline dashboard."""
-    st.markdown(f"""
+    st.markdown("""
     <div class='matrix-card'>
         <h2 class='matrix-header'>🤖 NEURAL NETWORK MATRIX</h2>
     </div>
@@ -510,7 +507,7 @@ def render_ml_pipeline():
     col1, col2 = st.columns(2)
 
     with col1:
-        st.markdown(f"""
+        st.markdown("""
         <div class='matrix-card'>
             <h4 class='matrix-header'>🎯 PRODUCTION_MODELS</h4>
         </div>
@@ -542,7 +539,7 @@ def render_ml_pipeline():
             """, unsafe_allow_html=True)
 
     with col2:
-        st.markdown(f"""
+        st.markdown("""
         <div class='matrix-card'>
             <h4 class='matrix-header'>📊 TRAINING_PROGRESS</h4>
         </div>
@@ -555,7 +552,7 @@ def render_ml_pipeline():
 
 def render_fx_analytics():
     """Render FX analytics dashboard."""
-    st.markdown(f"""
+    st.markdown("""
     <div class='matrix-card'>
         <h2 class='matrix-header'>💱 FX_TRADING_MATRIX</h2>
     </div>
@@ -585,7 +582,7 @@ def render_fx_analytics():
 
 def render_research_lab():
     """Render research lab dashboard."""
-    st.markdown(f"""
+    st.markdown("""
     <div class='matrix-card'>
         <h2 class='matrix-header'>🔬 RESEARCH_MATRIX</h2>
     </div>
@@ -594,7 +591,7 @@ def render_research_lab():
     col1, col2 = st.columns(2)
 
     with col1:
-        st.markdown(f"""
+        st.markdown("""
         <div class='matrix-card'>
             <h4 class='matrix-header'>🧪 ACTIVE_EXPERIMENTS</h4>
         </div>
@@ -619,7 +616,7 @@ def render_research_lab():
 
 def render_infrastructure():
     """Render infrastructure dashboard."""
-    st.markdown(f"""
+    st.markdown("""
     <div class='matrix-card'>
         <h2 class='matrix-header'>⚙️ INFRASTRUCTURE_MATRIX</h2>
     </div>
@@ -628,7 +625,7 @@ def render_infrastructure():
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        st.markdown(f"""
+        st.markdown("""
         <div class='matrix-card'>
             <h4 class='matrix-header'>🖥️ COMPUTE_RESOURCES</h4>
         </div>
@@ -649,7 +646,7 @@ def render_infrastructure():
             """, unsafe_allow_html=True)
 
     with col2:
-        st.markdown(f"""
+        st.markdown("""
         <div class='matrix-card'>
             <h4 class='matrix-header'>🔄 SERVICES_STATUS</h4>
         </div>
@@ -677,7 +674,7 @@ def execute_comprehensive_analysis(start_date, end_date, markets, countries, fx_
     progress_container = st.container()
 
     with progress_container:
-        st.markdown(f"""
+        st.markdown("""
         <div class='matrix-card'>
             <h3 class='matrix-header'>🔋 INITIALIZING NEURAL ANALYSIS PROTOCOL</h3>
         </div>
@@ -749,7 +746,7 @@ def execute_comprehensive_analysis(start_date, end_date, markets, countries, fx_
             progress_bar.progress(0.3)
 
             # Phase 2: Feature Engineering
-            status_text.markdown(f"""
+            status_text.markdown("""
             <div class='terminal-log'>
             > PHASE_2: FEATURE_EXTRACTION_INITIATED<br>
             > APPLYING_MATHEMATICAL_TRANSFORMS...<br>

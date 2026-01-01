@@ -12,8 +12,9 @@ input.
 
 from __future__ import annotations
 
-import pandas as pd
 from zoneinfo import ZoneInfo
+
+import pandas as pd
 
 __all__ = ["convert_to_utc_and_dedup"]
 

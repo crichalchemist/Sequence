@@ -22,7 +22,6 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
 
@@ -48,7 +47,7 @@ class BacktestingObservation:
     portfolio_value: float
     step: int
 
-    def as_dict(self) -> Dict[str, float]:
+    def as_dict(self) -> dict[str, float]:
         return {
             "mid_price": self.mid_price,
             "inventory": self.inventory,
@@ -65,8 +64,8 @@ class BacktestingRetailExecutionEnv:
     def __init__(
         self,
         price_df: pd.DataFrame,
-        config: Optional[ExecutionConfig] = None,
-        logger: Optional[logging.Logger] = None,
+            config: ExecutionConfig | None = None,
+            logger: logging.Logger | None = None,
     ) -> None:
         """
         Parameters
@@ -85,7 +84,7 @@ class BacktestingRetailExecutionEnv:
         if len(self.price_df) < 2:
             raise ValueError("price_df must contain at least two rows.")
 
-        self._actions: List[OrderAction] = []
+        self._actions: list[OrderAction] = []
         self._step_index = 0
         self._prev_equity = self.config.initial_cash
         self._latest_inventory = 0.0
@@ -93,7 +92,7 @@ class BacktestingRetailExecutionEnv:
         self._latest_realized = 0.0
 
     # Public API -----------------------------------------------------
-    def reset(self) -> Dict[str, float]:
+    def reset(self) -> dict[str, float]:
         self._actions.clear()
         self._step_index = 0
         self._prev_equity = self.config.initial_cash
@@ -102,7 +101,7 @@ class BacktestingRetailExecutionEnv:
         self._latest_realized = 0.0
         return self._current_observation().as_dict()
 
-    def step(self, action: Optional[OrderAction]) -> Tuple[Dict[str, float], float, bool, Dict]:
+    def step(self, action: OrderAction | None) -> tuple[dict[str, float], float, bool, dict]:
         """Advance one bar using the provided order action."""
         normalized = action.normalized(self.config) if action is not None else OrderAction("hold", "buy", 0.0)
         self._actions.append(normalized)
@@ -166,7 +165,7 @@ class BacktestingRetailExecutionEnv:
 
         return ActionStrategy
 
-    def _run_prefix(self) -> Tuple[BacktestingObservation, float]:
+    def _run_prefix(self) -> tuple[BacktestingObservation, float]:
         """Replay the episode so far and return latest observation and equity."""
         end_idx = min(self._step_index + 1, len(self.price_df))
         window = self.price_df.iloc[: end_idx + 1]
@@ -192,7 +191,7 @@ class BacktestingRetailExecutionEnv:
         obs = self._current_observation(current_price=float(window["Close"].iloc[-1]))
         return obs, equity
 
-    def _current_observation(self, current_price: Optional[float] = None) -> BacktestingObservation:
+    def _current_observation(self, current_price: float | None = None) -> BacktestingObservation:
         price = current_price if current_price is not None else float(self.price_df["Close"].iloc[self._step_index])
         portfolio_value = self._latest_cash + self._latest_inventory * price
         return BacktestingObservation(

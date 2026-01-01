@@ -1,13 +1,13 @@
 """REST API bridge for MQL5 integration - live data and backtesting."""
 import json
 import logging
+import sqlite3
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Any
-import sqlite3
-from dataclasses import dataclass, asdict
+from typing import Any
+
 import pandas as pd
-import numpy as np
 
 logger = logging.getLogger("MQL5Bridge")
 
@@ -107,7 +107,7 @@ class MQL5Bridge:
         conn.close()
         logger.info(f"MQL5 database initialized at {DB_PATH}")
 
-    def import_backtest_result(self, data: Dict[str, Any]) -> bool:
+    def import_backtest_result(self, data: dict[str, Any]) -> bool:
         """Import backtest result from MQL5."""
         try:
             result = BacktestResult(
@@ -151,7 +151,7 @@ class MQL5Bridge:
             logger.error(f"Failed to import backtest: {e}")
             return False
 
-    def store_live_tick(self, tick: Dict[str, Any]) -> bool:
+    def store_live_tick(self, tick: dict[str, Any]) -> bool:
         """Store live price tick from MT5."""
         try:
             conn = sqlite3.connect(DB_PATH)
@@ -187,7 +187,7 @@ class MQL5Bridge:
             logger.error(f"Failed to store tick: {e}")
             return False
 
-    def get_live_data(self, symbol: str, limit: int = 100) -> List[Dict]:
+    def get_live_data(self, symbol: str, limit: int = 100) -> list[dict]:
         """Retrieve recent live data for symbol."""
         try:
             conn = sqlite3.connect(DB_PATH)
@@ -220,7 +220,7 @@ class MQL5Bridge:
             logger.error(f"Failed to get live data: {e}")
             return []
 
-    def create_signal(self, signal_data: Dict[str, Any]) -> bool:
+    def create_signal(self, signal_data: dict[str, Any]) -> bool:
         """Create trading signal to send to MT5."""
         try:
             conn = sqlite3.connect(DB_PATH)
@@ -249,7 +249,7 @@ class MQL5Bridge:
             logger.error(f"Failed to create signal: {e}")
             return False
 
-    def get_pending_signals(self, sent: bool = False) -> List[Dict]:
+    def get_pending_signals(self, sent: bool = False) -> list[dict]:
         """Get pending signals for MT5."""
         try:
             conn = sqlite3.connect(DB_PATH)
@@ -349,7 +349,7 @@ class MQL5Bridge:
             logger.error(f"Failed to export CSV: {e}")
             return False
 
-    def health_check(self) -> Dict[str, Any]:
+    def health_check(self) -> dict[str, Any]:
         """Check bridge health and statistics."""
         try:
             conn = sqlite3.connect(DB_PATH)

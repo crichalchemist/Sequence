@@ -15,8 +15,6 @@ Plus the standard auxiliary targets from BaseDataAgent:
 
 from __future__ import annotations
 
-from typing import Dict, List, Tuple
-
 import numpy as np
 import pandas as pd
 
@@ -60,9 +58,9 @@ class MultiTaskDataAgent(BaseDataAgent):
     def _build_windows(
         self,
         df: pd.DataFrame,
-        feature_cols: List[str],
+            feature_cols: list[str],
         norm_stats,
-    ) -> Tuple[np.ndarray, Dict[str, np.ndarray]]:
+    ) -> tuple[np.ndarray, dict[str, np.ndarray]]:
         """Build sliding windows with multitask targets.
 
         Extends BaseDataAgent._build_windows to compute additional multitask targets:
@@ -99,18 +97,18 @@ class MultiTaskDataAgent(BaseDataAgent):
         log_returns = np.diff(log_close, prepend=np.nan)
 
         # Storage for sequences and all targets
-        sequences: List[np.ndarray] = []
-        targets_dir_cls: List[int] = []
-        targets_ret_reg: List[float] = []
-        targets_next_close: List[float] = []
-        targets_vol_cls: List[int] = []
-        targets_max_return: List[float] = []
-        targets_topk_returns: List[np.ndarray] = []
-        targets_topk_prices: List[np.ndarray] = []
-        targets_sell_now: List[int] = []
-        targets_trend_cls: List[int] = []
-        targets_vol_regime_cls: List[int] = []
-        targets_candle_cls: List[int] = []
+        sequences: list[np.ndarray] = []
+        targets_dir_cls: list[int] = []
+        targets_ret_reg: list[float] = []
+        targets_next_close: list[float] = []
+        targets_vol_cls: list[int] = []
+        targets_max_return: list[float] = []
+        targets_topk_returns: list[np.ndarray] = []
+        targets_topk_prices: list[np.ndarray] = []
+        targets_sell_now: list[int] = []
+        targets_trend_cls: list[int] = []
+        targets_vol_regime_cls: list[int] = []
+        targets_candle_cls: list[int] = []
 
         last_idx = len(df) - max(t_out, lookahead)
 
@@ -214,7 +212,7 @@ class MultiTaskDataAgent(BaseDataAgent):
             raise ValueError("No sequences created; check t_in/t_out and data length.")
 
         # Build targets dictionary
-        targets: Dict[str, np.ndarray] = {
+        targets: dict[str, np.ndarray] = {
             "primary": np.array(targets_dir_cls),  # Alias for direction_class
             "direction_class": np.array(targets_dir_cls),
             "return_reg": np.array(targets_ret_reg),

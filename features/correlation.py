@@ -15,11 +15,9 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
-
 
 # Asset class categorization
 ASSET_CLASSES = {
@@ -37,7 +35,7 @@ ASSET_CLASSES = {
 ALL_PAIRS = {pair: cls for cls, pairs in ASSET_CLASSES.items() for pair in pairs}
 
 
-def load_pair_data(data_dir: Path, pair: str, interval: str) -> Optional[pd.DataFrame]:
+def load_pair_data(data_dir: Path, pair: str, interval: str) -> pd.DataFrame | None:
     """Load OHLCV data for a single pair."""
     pair_dir = data_dir / pair
     csv_path = pair_dir / f"{pair}_{interval}.csv"
@@ -63,7 +61,7 @@ def load_pair_data(data_dir: Path, pair: str, interval: str) -> Optional[pd.Data
     return df
 
 
-def compute_returns(df: pd.DataFrame, periods: List[int] = [1, 5, 20]) -> pd.DataFrame:
+def compute_returns(df: pd.DataFrame, periods: list[int] = [1, 5, 20]) -> pd.DataFrame:
     """Compute log returns over multiple periods.
 
     Parameters
@@ -89,7 +87,7 @@ def compute_returns(df: pd.DataFrame, periods: List[int] = [1, 5, 20]) -> pd.Dat
 
 def build_returns_matrix(
     data_dir: Path,
-    pairs: List[str],
+        pairs: list[str],
     interval: str,
     return_period: int = 1
 ) -> pd.DataFrame:
@@ -136,7 +134,7 @@ def compute_rolling_correlation(
     returns_df: pd.DataFrame,
     window: int = 20,
     min_periods: int = 10
-) -> Dict[Tuple[str, str], pd.Series]:
+) -> dict[tuple[str, str], pd.Series]:
     """Compute rolling pairwise correlations.
 
     Parameters
@@ -187,7 +185,7 @@ def compute_correlation_matrix(
 
 def compute_cross_asset_correlations(
     returns_df: pd.DataFrame,
-    reference_pairs: Optional[List[str]] = None
+        reference_pairs: list[str] | None = None
 ) -> pd.DataFrame:
     """Compute correlations of each pair against reference pairs (e.g., BTC, Gold).
 
@@ -229,7 +227,7 @@ def compute_cross_asset_correlations(
 def find_highly_correlated_pairs(
     corr_matrix: pd.DataFrame,
     threshold: float = 0.7
-) -> List[Tuple[str, str, float]]:
+) -> list[tuple[str, str, float]]:
     """Find pairs with absolute correlation above threshold.
 
     Parameters
@@ -261,7 +259,7 @@ def find_highly_correlated_pairs(
 def compute_regime_correlations(
     returns_df: pd.DataFrame,
     regime_series: pd.Series,
-) -> Dict[int, pd.DataFrame]:
+) -> dict[int, pd.DataFrame]:
     """Compute correlation matrices for each market regime.
 
     Useful for understanding how correlations change in risk-on vs risk-off environments.
@@ -296,7 +294,7 @@ def compute_regime_correlations(
 def generate_correlation_features(
     returns_df: pd.DataFrame,
     target_pair: str,
-    reference_pairs: Optional[List[str]] = None,
+        reference_pairs: list[str] | None = None,
     window: int = 20
 ) -> pd.DataFrame:
     """Generate rolling correlation features for a target pair.
@@ -384,7 +382,7 @@ def main():
         cross_corr.to_csv(output_dir / "cross_asset_correlations.csv")
 
         # Show by asset class
-        for asset_class in ASSET_CLASSES.keys():
+        for asset_class in ASSET_CLASSES:
             class_pairs = cross_corr[cross_corr["asset_class"] == asset_class]
             if not class_pairs.empty:
                 print(f"\n  {asset_class}:")

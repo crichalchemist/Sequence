@@ -6,12 +6,12 @@ intrinsic-time bars that can replace fixed clock-time bars during dataset
 preparation.
 """
 
-from typing import Optional, Sequence
+from collections.abc import Sequence
 
 import numpy as np
 import pandas as pd
 
-from features.constants import MAX_THRESHOLD_VALUE, DEFAULT_DC_THRESHOLD
+from features.constants import DEFAULT_DC_THRESHOLD, MAX_THRESHOLD_VALUE
 
 
 def _validate_thresholds(up_threshold: float, down_threshold: float) -> None:
@@ -27,8 +27,8 @@ def _validate_thresholds(up_threshold: float, down_threshold: float) -> None:
 def detect_directional_changes(
     prices: pd.Series,
     up_threshold: float,
-    down_threshold: Optional[float] = None,
-    timestamps: Optional[Sequence] = None,
+        down_threshold: float | None = None,
+        timestamps: Sequence | None = None,
 ) -> pd.DataFrame:
     """
     Detect directional-change events and overshoots using relative price moves.
@@ -62,7 +62,7 @@ def detect_directional_changes(
     ts = pd.Series(timestamps) if timestamps is not None else prices.index
 
     extreme_price = float(prices.iloc[0])
-    current_direction: Optional[str] = None
+    current_direction: str | None = None
     event_price = extreme_price
 
     events = []
@@ -126,7 +126,7 @@ def build_intrinsic_time_bars(
     price_col: str = "close",
     datetime_col: str = "datetime",
     up_threshold: float = DEFAULT_DC_THRESHOLD,
-    down_threshold: Optional[float] = None,
+        down_threshold: float | None = None,
 ) -> pd.DataFrame:
     """
     Convert a clock-time price frame into intrinsic-time bars using DC events.
@@ -165,7 +165,7 @@ def add_intrinsic_time_features(
         df: pd.DataFrame,
         price_col: str = "close",
         up_threshold: float = DEFAULT_DC_THRESHOLD,
-        down_threshold: Optional[float] = None,
+        down_threshold: float | None = None,
         timestamp_col: str = "datetime",
 ) -> pd.DataFrame:
     """

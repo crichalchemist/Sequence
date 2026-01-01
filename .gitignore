@@ -43,3 +43,4 @@ models/*.pth
 *.tar.gz
 *.log
 !/tests/__init__.py
+!/.editorconfig

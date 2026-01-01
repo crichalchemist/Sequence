@@ -15,7 +15,6 @@ Options:
 
 import argparse
 from pathlib import Path
-from typing import List, Optional, Tuple
 
 import pandas as pd
 import yfinance as yf
@@ -31,7 +30,7 @@ def resolve_pairs_file(pairs_csv_arg: str) -> Path:
     return (repo_root / "data" / "pairs.csv")
 
 
-def load_pairs(pairs_csv: Path) -> List[str]:
+def load_pairs(pairs_csv: Path) -> list[str]:
     rows = pd.read_csv(pairs_csv)
     if "pair" not in rows.columns:
         raise ValueError(f"'pair' column not found in {pairs_csv}")
@@ -76,7 +75,7 @@ def pair_to_ticker(pair: str) -> str:
     return pair_upper + "=X"
 
 
-def _cap_intraday_range(start: Optional[str], end: Optional[str], interval: str) -> Tuple[str, str]:
+def _cap_intraday_range(start: str | None, end: str | None, interval: str) -> tuple[str, str]:
     start_dt = pd.Timestamp(start) if start else None
     end_dt = pd.Timestamp(end) if end else pd.Timestamp.utcnow()
     if start_dt is not None and start_dt.tzinfo:
@@ -107,8 +106,8 @@ def _atomic_write_csv(df: pd.DataFrame, out_path: Path) -> None:
 
 
 def download_pair(
-    pair: str, start: Optional[str], end: Optional[str], interval: str, output_root: Path, skip_existing: bool
-) -> Tuple[str, Optional[Path], bool]:
+        pair: str, start: str | None, end: str | None, interval: str, output_root: Path, skip_existing: bool
+) -> tuple[str, Path | None, bool]:
     ticker = pair_to_ticker(pair)
     adj_start, adj_end = _cap_intraday_range(start, end, interval)
     out_dir = output_root / pair

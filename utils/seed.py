@@ -34,19 +34,19 @@ def set_seed(seed: int | None = None) -> int:
     """
     if seed is None:
         seed = int(os.getenv("SEQ_GLOBAL_SEED", DEFAULT_SEED))
-    
+
     # Set seeds for all stochastic libraries
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
-    
+
     # Set Python's hash seed for reproducible dict iteration
     os.environ["PYTHONHASHSEED"] = str(seed)
-    
+
     # Ensure deterministic GPU kernels when using CUDA
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
-    
+
     return seed

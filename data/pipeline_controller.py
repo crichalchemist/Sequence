@@ -1,13 +1,14 @@
 """Unified data pipeline controller for collection, preprocessing, and validation."""
+import json
 import logging
 import sqlite3
-import json
-from datetime import datetime, timedelta
-from pathlib import Path
-from typing import Dict, List, Optional, Any, Tuple
-import pandas as pd
-import numpy as np
 from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+import pandas as pd
 
 logger = logging.getLogger("DataPipeline")
 
@@ -18,13 +19,13 @@ DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 @dataclass
 class DataConfig:
     """Data collection configuration."""
-    data_sources: List[str]  # GDELT, YFinance, HistData
-    symbols: List[str]
-    countries: List[str]
+    data_sources: list[str]  # GDELT, YFinance, HistData
+    symbols: list[str]
+    countries: list[str]
     start_date: str
     end_date: str
     resolution: str  # daily, 1hour, 5min, 1min
-    preprocessing: Dict[str, Any]
+    preprocessing: dict[str, Any]
 
 
 class DataPipelineController:
@@ -121,7 +122,7 @@ class DataPipelineController:
         self,
         config: DataConfig,
         data_source: str = None
-    ) -> Tuple[Optional[pd.DataFrame], str]:
+    ) -> tuple[pd.DataFrame | None, str]:
         """Collect data from specified source."""
         try:
             collection_id = f"{datetime.now().isoformat()}_{config.symbols[0]}"
@@ -168,11 +169,12 @@ class DataPipelineController:
             logger.error(f"Collection failed: {e}")
             return None, None
 
-    def _collect_gdelt(self, config: DataConfig, collection_id: str) -> Optional[pd.DataFrame]:
+    def _collect_gdelt(self, config: DataConfig, collection_id: str) -> pd.DataFrame | None:
         """Collect GDELT data."""
         try:
-            from gdelt.consolidated_downloader import GDELTDownloader
             from datetime import datetime as dt
+
+            from gdelt.consolidated_downloader import GDELTDownloader
 
             downloader = GDELTDownloader()
             start_dt = dt.strptime(config.start_date, '%Y-%m-%d')
@@ -188,11 +190,11 @@ class DataPipelineController:
             logger.error(f"GDELT collection failed: {e}")
             return None
 
-    def _collect_yfinance(self, config: DataConfig, collection_id: str) -> Optional[pd.DataFrame]:
+    def _collect_yfinance(self, config: DataConfig, collection_id: str) -> pd.DataFrame | None:
         """Collect YFinance FX data."""
         try:
+
             import yfinance as yf
-            from datetime import datetime as dt
 
             all_data = []
 
@@ -216,7 +218,7 @@ class DataPipelineController:
             logger.error(f"YFinance collection failed: {e}")
             return None
 
-    def _collect_histdata(self, config: DataConfig, collection_id: str) -> Optional[pd.DataFrame]:
+    def _collect_histdata(self, config: DataConfig, collection_id: str) -> pd.DataFrame | None:
         """Collect HistData FX data."""
         try:
             # Implementation would connect to HistData API
@@ -231,8 +233,8 @@ class DataPipelineController:
         self,
         data: pd.DataFrame,
         collection_id: str,
-        config: Dict[str, Any]
-    ) -> Tuple[Optional[pd.DataFrame], str]:
+            config: dict[str, Any]
+    ) -> tuple[pd.DataFrame | None, str]:
         """Preprocess collected data."""
         try:
             preprocessing_id = f"prep_{datetime.now().isoformat()}"
@@ -288,7 +290,7 @@ class DataPipelineController:
         self,
         data: pd.DataFrame,
         collection_id: str
-    ) -> Tuple[Dict[str, Any], str]:
+    ) -> tuple[dict[str, Any], str]:
         """Validate data quality."""
         try:
             validation_id = f"val_{datetime.now().isoformat()}"
@@ -431,7 +433,7 @@ class DataPipelineController:
         except Exception as e:
             logger.error(f"Failed to update collection status: {e}")
 
-    def get_pipeline_status(self) -> Dict[str, Any]:
+    def get_pipeline_status(self) -> dict[str, Any]:
         """Get overall pipeline status."""
         try:
             conn = sqlite3.connect(DB_PATH)

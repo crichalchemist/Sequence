@@ -1,9 +1,10 @@
 import argparse
 import sys
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional, Tuple
+from typing import Any
 
 import torch
 import torch.multiprocessing as mp
@@ -29,9 +30,9 @@ class A3CConfig:
     gamma: float = 0.99
     entropy_coef: float = 0.01
     value_loss_coef: float = 0.5
-    max_grad_norm: Optional[float] = 0.5
+    max_grad_norm: float | None = 0.5
     learning_rate: float = 1e-4
-    betas: Tuple[float, float] = (0.9, 0.999)
+    betas: tuple[float, float] = (0.9, 0.999)
     weight_decay: float = 0.0
     total_steps: int = 100_000
     log_interval: int = 1000
@@ -62,7 +63,7 @@ class HybridFeatureExtractor(nn.Module):
         self.dropout = nn.Dropout(cfg.dropout)
         self.output_dim = attn_input_dim
 
-    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """Return context vector and attention weights."""
 
         lstm_out, _ = self.lstm(x)
@@ -83,13 +84,13 @@ class ActorCriticNetwork(nn.Module):
         self.policy_head = nn.Linear(self.encoder.output_dim, action_dim)
         self.value_head = nn.Linear(self.encoder.output_dim, 1)
 
-    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         features, attn_weights = self.encoder(x)
         logits = self.policy_head(features)
         value = self.value_head(features).squeeze(-1)
         return logits, value, attn_weights
 
-    def act(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def act(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         logits, value, attn_weights = self.forward(x)
         dist = Categorical(logits=logits)
         action = dist.sample()
@@ -105,7 +106,7 @@ class SharedAdam(optim.Adam):
         self,
         params,
         lr: float,
-        betas: Tuple[float, float],
+            betas: tuple[float, float],
         weight_decay: float = 0.0,
     ):
         super().__init__(params, lr=lr, betas=betas, weight_decay=weight_decay)
@@ -270,7 +271,7 @@ class A3CAgent:
 
     def _compute_losses(
         self, rollout: list, next_value: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         returns = []
         R = next_value
         for step in reversed(rollout):
@@ -296,14 +297,14 @@ class A3CAgent:
         return tensor
 
     @staticmethod
-    def _reset_env(env: Any) -> Tuple[Any, Optional[Dict[str, Any]]]:
+    def _reset_env(env: Any) -> tuple[Any, dict[str, Any] | None]:
         result = env.reset()
         if isinstance(result, tuple):
             return result[0], result[1] if len(result) > 1 else None
         return result, None
 
     @staticmethod
-    def _step_env(env: Any, action: int) -> Tuple[Any, float, bool, bool, Optional[Dict[str, Any]]]:
+    def _step_env(env: Any, action: int) -> tuple[Any, float, bool, bool, dict[str, Any] | None]:
         result = env.step(action)
         if len(result) == 5:
             next_state, reward, terminated, truncated, info = result

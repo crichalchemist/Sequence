@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -20,7 +19,7 @@ class MultiTaskNormalizationStats:
 
 
 class MultiTaskSequenceDataset(Dataset):
-    def __init__(self, sequences: np.ndarray, targets: Dict[str, np.ndarray]):
+    def __init__(self, sequences: np.ndarray, targets: dict[str, np.ndarray]):
         self.sequences = torch.as_tensor(sequences, dtype=torch.float32)
         self.targets = {
             k: torch.as_tensor(v, dtype=(torch.long if "class" in k else torch.float32)) for k, v in targets.items()
@@ -42,9 +41,9 @@ class MultiTaskDataAgent:
 
     def __init__(self, cfg: MultiTaskDataConfig):
         self.cfg = cfg
-        self.norm_stats: Optional[MultiTaskNormalizationStats] = None
+        self.norm_stats: MultiTaskNormalizationStats | None = None
 
-    def split_dataframe(self, df: pd.DataFrame) -> Dict[str, pd.DataFrame]:
+    def split_dataframe(self, df: pd.DataFrame) -> dict[str, pd.DataFrame]:
         time_col = self.cfg.datetime_column
         df = df.sort_values(time_col).reset_index(drop=True)
         return {
@@ -53,7 +52,7 @@ class MultiTaskDataAgent:
             "test": _select_range(df, time_col, self.cfg.test_range),
         }
 
-    def fit_normalization(self, train_df: pd.DataFrame, feature_cols: List[str]) -> MultiTaskNormalizationStats:
+    def fit_normalization(self, train_df: pd.DataFrame, feature_cols: list[str]) -> MultiTaskNormalizationStats:
         data = train_df[feature_cols].to_numpy(dtype=np.float32)
         mean = data.mean(axis=0)
         std = data.std(axis=0)
@@ -66,14 +65,14 @@ class MultiTaskDataAgent:
         future_returns = log_close[idx + 1 : idx + lookahead + 1] - log_close[idx]
         if len(future_returns) < lookahead or np.isnan(future_returns).any():
             return None
-        
+
         max_future_return = float(np.max(future_returns))
         sorted_returns = np.sort(future_returns)[::-1]
         topk_returns = sorted_returns[:top_k]
         if len(topk_returns) < top_k:
             topk_returns = np.pad(topk_returns, (0, top_k - len(topk_returns)), constant_values=sorted_returns[-1])
         topk_prices = np.exp(topk_returns) * df["close"].iloc[idx]
-        
+
         return {
             "max_return": max_future_return,
             "topk_returns": topk_returns,
@@ -84,19 +83,19 @@ class MultiTaskDataAgent:
         """Compute volatility-related targets."""
         past_ret_window = log_returns[idx - t_out + 1 : idx + 1]
         future_ret_window = log_returns[idx + 1 : idx + t_out + 1]
-        
+
         if len(past_ret_window) < t_out or len(future_ret_window) < t_out:
             return None
         if np.isnan(past_ret_window).any() or np.isnan(future_ret_window).any():
             return None
-        
+
         past_vol = float(np.std(past_ret_window))
         future_vol = float(np.std(future_ret_window))
         vol_label = 1 if (future_vol - past_vol) > self.cfg.vol_min_change else 0
-        
+
         trend_avg_return = float(np.mean(future_ret_window))
         trend_label = int(_label_from_return(trend_avg_return, self.cfg.flat_threshold))
-        
+
         vol_delta = future_vol - past_vol
         if vol_delta > self.cfg.vol_min_change:
             vol_regime_label = 2
@@ -104,7 +103,7 @@ class MultiTaskDataAgent:
             vol_regime_label = 0
         else:
             vol_regime_label = 1
-        
+
         return {
             "vol_label": vol_label,
             "trend_label": trend_label,
@@ -117,12 +116,12 @@ class MultiTaskDataAgent:
         high_price = float(candle_row["high"])
         low_price = float(candle_row["low"])
         close_price = float(candle_row["close"])
-        
+
         range_size = max(high_price - low_price, 1e-8)
         body = close_price - open_price
         body_ratio = abs(body) / range_size
         lower_wick = min(open_price, close_price) - low_price
-        
+
         if body_ratio < 0.1:
             return 0  # doji/indecision
         elif body > 0 and body_ratio > 0.55:
@@ -135,8 +134,8 @@ class MultiTaskDataAgent:
             return 3
 
     def _build_windows(
-        self, df: pd.DataFrame, feature_cols: List[str], norm_stats: MultiTaskNormalizationStats
-    ) -> Tuple[np.ndarray, Dict[str, np.ndarray]]:
+            self, df: pd.DataFrame, feature_cols: list[str], norm_stats: MultiTaskNormalizationStats
+    ) -> tuple[np.ndarray, dict[str, np.ndarray]]:
         t_in, t_out = self.cfg.t_in, self.cfg.t_out
         lookahead = self.cfg.lookahead_window or t_out
         top_k = max(1, self.cfg.top_k_predictions)
@@ -145,18 +144,18 @@ class MultiTaskDataAgent:
         log_close = np.log(df["close"].to_numpy())
         log_returns = np.diff(log_close, prepend=np.nan)
 
-        sequences: List[np.ndarray] = []
-        targets_dir_cls: List[int] = []
-        targets_ret_reg: List[float] = []
-        targets_next_close: List[float] = []
-        targets_vol_cls: List[int] = []
-        targets_max_return: List[float] = []
-        targets_topk_returns: List[np.ndarray] = []
-        targets_topk_prices: List[np.ndarray] = []
-        targets_sell_now: List[int] = []
-        targets_trend_cls: List[int] = []
-        targets_vol_regime_cls: List[int] = []
-        targets_candle_cls: List[int] = []
+        sequences: list[np.ndarray] = []
+        targets_dir_cls: list[int] = []
+        targets_ret_reg: list[float] = []
+        targets_next_close: list[float] = []
+        targets_vol_cls: list[int] = []
+        targets_max_return: list[float] = []
+        targets_topk_returns: list[np.ndarray] = []
+        targets_topk_prices: list[np.ndarray] = []
+        targets_sell_now: list[int] = []
+        targets_trend_cls: list[int] = []
+        targets_vol_regime_cls: list[int] = []
+        targets_candle_cls: list[int] = []
 
         last_idx = len(df) - max(t_out, lookahead)
         for idx in range(t_in - 1, last_idx):
@@ -221,7 +220,7 @@ class MultiTaskDataAgent:
             targets["sell_now"] = np.array(targets_sell_now)
         return np.stack(sequences), targets
 
-    def build_datasets(self, df: pd.DataFrame) -> Dict[str, MultiTaskSequenceDataset]:
+    def build_datasets(self, df: pd.DataFrame) -> dict[str, MultiTaskSequenceDataset]:
         feature_cols = self.cfg.feature_columns or [
             col for col in df.columns if col not in {self.cfg.datetime_column, "target", "label"}
         ]
@@ -231,7 +230,7 @@ class MultiTaskDataAgent:
         self.fit_normalization(train_df, feature_cols)
         assert self.norm_stats is not None
 
-        datasets: Dict[str, MultiTaskSequenceDataset] = {}
+        datasets: dict[str, MultiTaskSequenceDataset] = {}
         for split_name, split_df in splits.items():
             sequences, targets = self._build_windows(split_df, feature_cols, self.norm_stats)
             datasets[split_name] = MultiTaskSequenceDataset(sequences, targets)
@@ -239,8 +238,8 @@ class MultiTaskDataAgent:
 
     @staticmethod
     def build_dataloaders(
-        datasets: Dict[str, MultiTaskSequenceDataset], batch_size: int, num_workers: int = 0
-    ) -> Dict[str, torch.utils.data.DataLoader]:
+            datasets: dict[str, MultiTaskSequenceDataset], batch_size: int, num_workers: int = 0
+    ) -> dict[str, torch.utils.data.DataLoader]:
         loaders = {
             name: torch.utils.data.DataLoader(
                 ds,

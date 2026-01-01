@@ -1,4 +1,3 @@
-from typing import Dict, List, Tuple
 
 import numpy as np
 import torch
@@ -15,10 +14,10 @@ def _collect_outputs(
     device: torch.device,
     risk_manager: RiskManager | None = None,
     task_type: str = "classification",
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     model.eval()
-    preds: List[np.ndarray] = []
-    targets: List[np.ndarray] = []
+    preds: list[np.ndarray] = []
+    targets: list[np.ndarray] = []
     with torch.no_grad():
         for x, y in loader:
             x = x.to(device)
@@ -37,7 +36,7 @@ def _collect_outputs(
     return np.concatenate(preds), np.concatenate(targets)
 
 
-def classification_metrics(logits: np.ndarray, targets: np.ndarray) -> Dict[str, float]:
+def classification_metrics(logits: np.ndarray, targets: np.ndarray) -> dict[str, float]:
     pred_labels = logits.argmax(axis=1)
     accuracy = (pred_labels == targets).mean()
 
@@ -69,7 +68,7 @@ def classification_metrics(logits: np.ndarray, targets: np.ndarray) -> Dict[str,
     }
 
 
-def regression_metrics(preds: np.ndarray, targets: np.ndarray) -> Dict[str, float]:
+def regression_metrics(preds: np.ndarray, targets: np.ndarray) -> dict[str, float]:
     preds_flat = preds.squeeze()
     targets_flat = targets.squeeze()
     mse = np.mean((preds_flat - targets_flat) ** 2)
@@ -87,7 +86,7 @@ def evaluate_model(
     loader: DataLoader,
     task_type: str = "classification",
     risk_manager: RiskManager | None = None,
-) -> Dict[str, float]:
+) -> dict[str, float]:
     device = next(model.parameters()).device
     logits_or_preds, targets = _collect_outputs(
         model, loader, device, risk_manager=risk_manager, task_type=task_type
@@ -99,7 +98,7 @@ def evaluate_model(
 
 def evaluate_policy_agent(
     agent: SignalPolicyAgent, loader: DataLoader, task_type: str = "classification"
-) -> Dict[str, float]:
+) -> dict[str, float]:
     device = next(agent.parameters()).device
     agent.eval()
     total = 0
@@ -126,7 +125,7 @@ def evaluate_policy_agent(
 
 def evaluate_a3c_agent(
     agent, env_factory, num_episodes: int = 100, device: str = "cpu"
-) -> Dict[str, float]:
+) -> dict[str, float]:
     """Evaluate trained A3C agent on simulated execution environment.
     
     Parameters
@@ -149,7 +148,7 @@ def evaluate_a3c_agent(
     episode_rewards = []
     episode_lengths = []
     winning_episodes = 0
-    
+
     with torch.no_grad():
         for _ in range(num_episodes):
             env = env_factory()
@@ -157,27 +156,27 @@ def evaluate_a3c_agent(
             done = False
             episode_reward = 0.0
             steps = 0
-            
+
             while not done:
                 obs_tensor = agent._to_tensor(obs)
                 logits, value, _ = agent.global_model.forward(obs_tensor)
-                
+
                 # Take greedy action during evaluation
                 action = logits.argmax(dim=-1).item()
                 obs, reward, terminated, truncated, _ = agent._step_env(env, action)
                 done = terminated or truncated
-                
+
                 episode_reward += reward
                 steps += 1
-                
+
                 if steps > 1000:  # Prevent infinite episodes
                     break
-            
+
             episode_rewards.append(episode_reward)
             episode_lengths.append(steps)
             if episode_reward > 0:
                 winning_episodes += 1
-    
+
     # Compute metrics
     mean_reward = np.mean(episode_rewards)
     std_reward = np.std(episode_rewards)
@@ -185,11 +184,11 @@ def evaluate_a3c_agent(
     min_reward = np.min(episode_rewards)
     win_rate = winning_episodes / num_episodes if num_episodes > 0 else 0.0
     mean_episode_length = np.mean(episode_lengths)
-    
+
     # Simple Sharpe ratio (assuming 252 trading days and rewards as daily returns)
     returns_array = np.array(episode_rewards)
     sharpe_ratio = (returns_array.mean() / returns_array.std()) * np.sqrt(252) if returns_array.std() > 0 else 0.0
-    
+
     return {
         "mean_reward": float(mean_reward),
         "std_reward": float(std_reward),

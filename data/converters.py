@@ -8,17 +8,15 @@ or other target timezones.
 import csv
 import io
 import os
-import sys
 import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional, Union
 from zipfile import ZipFile
 
 
 def convert_csv_timezone(
-    input_path: Union[str, Path],
-    output_path: Union[str, Path],
+        input_path: str | Path,
+        output_path: str | Path,
     hour_offset: int,
     delimiter: str = ";"
 ) -> None:
@@ -42,17 +40,17 @@ def convert_csv_timezone(
     """
     input_path = Path(input_path)
     output_path = Path(output_path)
-    
+
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    
-    with open(input_path, 'r') as r, open(output_path, 'w', newline='') as w:
+
+    with open(input_path) as r, open(output_path, 'w', newline='') as w:
         reader = csv.reader(r, delimiter=delimiter)
         writer = csv.writer(w, delimiter=delimiter)
-        
+
         for row in reader:
             if not row:
                 continue
-            
+
             try:
                 # Parse timestamp (HistData format: YYYYMMDD HHMMSS)
                 ts = datetime.strptime(row[0], '%Y%m%d %H%M%S')
@@ -63,13 +61,13 @@ def convert_csv_timezone(
             except (ValueError, IndexError):
                 # Keep row unchanged if format doesn't match
                 pass
-            
+
             writer.writerow(row)
 
 
 def convert_zip_timezone(
-    zip_path: Union[str, Path],
-    dest_zip: Union[str, Path],
+        zip_path: str | Path,
+        dest_zip: str | Path,
     hour_offset: int,
     skip_existing: bool = True
 ) -> bool:
@@ -100,29 +98,29 @@ def convert_zip_timezone(
     """
     zip_path = Path(zip_path)
     dest_zip = Path(dest_zip)
-    
+
     if skip_existing and dest_zip.exists():
         print(f"[skip] {dest_zip} already exists")
         return False
-    
+
     with ZipFile(zip_path, "r") as zin:
         # Find CSV and TXT files
         csv_names = [n for n in zin.namelist() if n.lower().endswith(".csv")]
         txt_names = [n for n in zin.namelist() if n.lower().endswith(".txt")]
-        
+
         if not csv_names:
             print(f"[warn] No CSV found in {zip_path}")
             return False
-        
+
         csv_name = csv_names[0]
-        
+
         # Convert CSV in temporary file
         with zin.open(csv_name) as fin, tempfile.NamedTemporaryFile(
             "w+", delete=False, newline=""
         ) as tmp:
             reader = csv.reader(io.TextIOWrapper(fin, newline=""), delimiter=";")
             writer = csv.writer(tmp, delimiter=";")
-            
+
             for row in reader:
                 if not row:
                     continue
@@ -133,9 +131,9 @@ def convert_zip_timezone(
                 except (ValueError, IndexError):
                     pass
                 writer.writerow(row)
-            
+
             tmp_path = Path(tmp.name)
-        
+
         # Write new ZIP with converted CSV
         dest_zip.parent.mkdir(parents=True, exist_ok=True)
         with ZipFile(dest_zip, "w") as zout:
@@ -144,16 +142,16 @@ def convert_zip_timezone(
             for name in txt_names:
                 with zin.open(name) as fin, zout.open(name, "w") as fout:
                     fout.write(fin.read())
-        
+
         tmp_path.unlink(missing_ok=True)
-    
+
     print(f"[ok] {zip_path.name} -> {dest_zip}")
     return True
 
 
 def batch_convert_timezone(
-    input_root: Union[str, Path],
-    output_root: Union[str, Path],
+        input_root: str | Path,
+        output_root: str | Path,
     hour_offset: int,
     suffix: str = "_cst"
 ) -> int:
@@ -182,23 +180,23 @@ def batch_convert_timezone(
     """
     input_root = Path(input_root).resolve()
     output_root = Path(output_root).resolve()
-    
+
     if not input_root.exists():
         print(f"Input root {input_root} does not exist")
         return 0
-    
+
     zip_files = sorted(input_root.rglob("*.zip"))
     if not zip_files:
         print(f"No ZIP files found under {input_root}")
         return 0
-    
+
     converted = 0
     for zf in zip_files:
         rel = zf.relative_to(input_root)
         dest_zip = output_root / rel.parent / f"{zf.stem}{suffix}.zip"
         if convert_zip_timezone(zf, dest_zip, hour_offset):
             converted += 1
-    
+
     return converted
 
 
@@ -222,7 +220,7 @@ def main():
     input_root = os.environ.get("INPUT_ROOT", "output")
     output_root = os.environ.get("OUTPUT_ROOT", "output_central")
     hour_offset = int(os.environ.get("HOUR_OFFSET", "-1"))
-    
+
     print(f"Converting {input_root} -> {output_root} with offset {hour_offset}h")
     converted = batch_convert_timezone(input_root, output_root, hour_offset)
     print(f"\n✅ Converted {converted} files")

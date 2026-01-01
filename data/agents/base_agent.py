@@ -11,20 +11,19 @@ define how the *primary* target is constructed.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
 import torch
 from torch.utils.data import Dataset
 
-from config.config import DataConfig, FeatureConfig
+from config.config import DataConfig
 
 
 # ------------------------------------------------------------------
 # Helper functions (migrated from legacy agent_data.py)
 # ------------------------------------------------------------------
-def _select_range(df: pd.DataFrame, time_col: str, date_range: Optional[Tuple[str, str]]) -> pd.DataFrame:
+def _select_range(df: pd.DataFrame, time_col: str, date_range: tuple[str, str] | None) -> pd.DataFrame:
     """Select rows within a datetime range.
 
     Parameters
@@ -102,7 +101,7 @@ class NormalizationStats:
 class SequenceDataset(Dataset):
     """Dataset holding pre‑computed sequences and a dict of target arrays."""
 
-    def __init__(self, sequences: np.ndarray, targets: Dict[str, np.ndarray], target_type: str):
+    def __init__(self, sequences: np.ndarray, targets: dict[str, np.ndarray], target_type: str):
         self.sequences = torch.as_tensor(sequences, dtype=torch.float32)
         self.targets = {}
 
@@ -143,7 +142,7 @@ class BaseDataAgent:
     # ------------------------------------------------------------------
     # Splitting & normalisation helpers (identical to the previous DataAgent).
     # ------------------------------------------------------------------
-    def split_dataframe(self, df: pd.DataFrame) -> Dict[str, pd.DataFrame]:
+    def split_dataframe(self, df: pd.DataFrame) -> dict[str, pd.DataFrame]:
         time_col = self.cfg.datetime_column
         df = df.sort_values(time_col).reset_index(drop=True)
         return {
@@ -152,7 +151,7 @@ class BaseDataAgent:
             "test": _select_range(df, time_col, self.cfg.test_range),
         }
 
-    def fit_normalization(self, train_df: pd.DataFrame, feature_cols: List[str]) -> NormalizationStats:
+    def fit_normalization(self, train_df: pd.DataFrame, feature_cols: list[str]) -> NormalizationStats:
         data = train_df[feature_cols].to_numpy(dtype=np.float32)
         mean = data.mean(axis=0)
         std = data.std(axis=0)
@@ -176,9 +175,9 @@ class BaseDataAgent:
     def _build_windows(
         self,
         df: pd.DataFrame,
-        feature_cols: List[str],
+            feature_cols: list[str],
         norm_stats: NormalizationStats,
-    ) -> Tuple[np.ndarray, Dict[str, np.ndarray]]:
+    ) -> tuple[np.ndarray, dict[str, np.ndarray]]:
         t_in, t_out = self.cfg.t_in, self.cfg.t_out
         lookahead = self.cfg.lookahead_window or t_out
         top_k = max(1, self.cfg.top_k_predictions)
@@ -194,12 +193,12 @@ class BaseDataAgent:
 
         log_close = np.log(df["close"].to_numpy())
 
-        sequences: List[np.ndarray] = []
-        primary_targets: List[float | int] = []
-        max_return_targets: List[float] = []
-        topk_returns_targets: List[np.ndarray] = []
-        topk_prices_targets: List[np.ndarray] = []
-        sell_now_targets: List[int] = []
+        sequences: list[np.ndarray] = []
+        primary_targets: list[float | int] = []
+        max_return_targets: list[float] = []
+        topk_returns_targets: list[np.ndarray] = []
+        topk_prices_targets: list[np.ndarray] = []
+        sell_now_targets: list[int] = []
 
         last_idx = len(df) - max(t_out, lookahead)
         for idx in range(t_in - 1, last_idx):
@@ -225,7 +224,7 @@ class BaseDataAgent:
             if self.cfg.predict_sell_now:
                 sell_now_targets.append(int(max_future_return <= 0.0))
 
-        targets: Dict[str, np.ndarray] = {
+        targets: dict[str, np.ndarray] = {
             "primary": np.array(primary_targets),
             "max_return": np.array(max_return_targets),
             "topk_returns": np.stack(topk_returns_targets),
@@ -236,7 +235,7 @@ class BaseDataAgent:
 
         return np.stack(sequences), targets
 
-    def build_datasets(self, df: pd.DataFrame) -> Dict[str, SequenceDataset]:
+    def build_datasets(self, df: pd.DataFrame) -> dict[str, SequenceDataset]:
         # Determine feature columns (exclude datetime and source file).
         feature_cols = self.cfg.feature_columns or [c for c in df.columns if c not in {self.cfg.datetime_column, "source_file"}]
         # Split and fit normalisation on the training split.
@@ -244,7 +243,7 @@ class BaseDataAgent:
         train_df = splits["train"]
         self.fit_normalization(train_df, feature_cols)
         assert self.norm_stats is not None
-        datasets: Dict[str, SequenceDataset] = {}
+        datasets: dict[str, SequenceDataset] = {}
         # Use target_type if available, otherwise default to "classification" (for multitask)
         target_type = getattr(self.cfg, 'target_type', 'classification')
         for name, split_df in splits.items():
@@ -254,13 +253,13 @@ class BaseDataAgent:
 
     @staticmethod
     def build_dataloaders(
-        datasets: Dict[str, SequenceDataset],
+            datasets: dict[str, SequenceDataset],
         batch_size: int,
         num_workers: int = 0,
         pin_memory: bool = False,
         prefetch_factor: int | None = None,
         persistent_workers: bool = False,
-    ) -> Dict[str, torch.utils.data.DataLoader]:
+    ) -> dict[str, torch.utils.data.DataLoader]:
         """Build PyTorch DataLoaders from datasets with performance optimizations.
 
         Parameters
@@ -331,7 +330,7 @@ class BaseDataAgent:
 # Data quality helpers: timezone normalization and deduplication
 # ------------------------------------------------------------------
 
-def ensure_utc_timezone(df: pd.DataFrame, datetime_col: str = "datetime", 
+def ensure_utc_timezone(df: pd.DataFrame, datetime_col: str = "datetime",
                         assumed_tz: str = "America/Chicago") -> pd.DataFrame:
     """Ensure datetime column is timezone-aware UTC.
     
@@ -355,11 +354,11 @@ def ensure_utc_timezone(df: pd.DataFrame, datetime_col: str = "datetime",
     """
     df = df.copy()
     dt = df[datetime_col]
-    
+
     if dt.dt.tz is None:
         # Localize naive datetime to assumed timezone
         dt = dt.dt.tz_localize(assumed_tz, ambiguous='NaT', nonexistent='NaT')
-    
+
     # Convert to UTC
     df[datetime_col] = dt.dt.tz_convert('UTC')
     return df
@@ -388,8 +387,8 @@ def deduplicate_on_datetime(df: pd.DataFrame, datetime_col: str = "datetime",
     before = len(df)
     df = df.drop_duplicates(subset=[datetime_col], keep=keep).reset_index(drop=True)
     after = len(df)
-    
+
     if before > after and logger_func:
         logger_func(f"Removed {before - after} duplicate timestamps")
-    
+
     return df

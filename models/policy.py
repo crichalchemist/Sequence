@@ -1,9 +1,8 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 from config.config import PolicyConfig, SignalModelConfig
-from models.hybrid import SharedEncoder, TemporalAttention
+from models.hybrid import SharedEncoder
 
 
 class SignalBackbone(SharedEncoder):
@@ -63,7 +62,13 @@ class SignalModel(nn.Module):
 
 
 class ExecutionPolicy(nn.Module):
-    """PPO/A3C style execution head that consumes signal embeddings."""
+    """PPO/A3C style execution head that consumes signal embeddings.
+
+    Outputs:
+        - policy_logits: Discrete action probabilities (BUY/HOLD/SELL)
+        - value: State value estimate
+        - aggressiveness: Continuous [0,1] for limit order execution strategy
+    """
 
     def __init__(self, cfg: PolicyConfig):
         super().__init__()
@@ -80,13 +85,22 @@ class ExecutionPolicy(nn.Module):
             nn.Dropout(cfg.dropout),
             nn.Linear(value_hidden, 1),
         )
+        # Aggressiveness head for execution strategy (0=passive, 1=aggressive)
+        self.aggressiveness_net = nn.Sequential(
+            nn.Linear(cfg.input_dim, cfg.hidden_dim // 2),
+            nn.ReLU(),
+            nn.Dropout(cfg.dropout),
+            nn.Linear(cfg.hidden_dim // 2, 1),
+            nn.Sigmoid(),  # Output in [0, 1]
+        )
 
     def forward(self, signal_embedding: torch.Tensor, detach_signal: bool = False):
         if detach_signal:
             signal_embedding = signal_embedding.detach()
         policy_logits = self.policy_net(signal_embedding)
         value = self.value_net(signal_embedding).squeeze(-1)
-        return policy_logits, value
+        aggressiveness = self.aggressiveness_net(signal_embedding).squeeze(-1)
+        return policy_logits, value, aggressiveness
 
 
 class SignalPolicyAgent(nn.Module):
@@ -99,10 +113,13 @@ class SignalPolicyAgent(nn.Module):
 
     def forward(self, x: torch.Tensor, detach_signal: bool = False):
         signal_out = self.signal_model(x)
-        logits, value = self.policy(signal_out["embedding"], detach_signal=detach_signal)
+        logits, value, aggressiveness = self.policy(
+            signal_out["embedding"], detach_signal=detach_signal
+        )
         return {
             "policy_logits": logits,
             "value": value,
+            "aggressiveness": aggressiveness,
             "signal": signal_out,
         }
 

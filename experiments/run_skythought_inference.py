@@ -10,11 +10,9 @@ Example:
 
 import argparse
 from pathlib import Path
-from typing import Optional
 
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
-
 
 DEFAULT_MODEL = "NovaSky-AI/Sky-T1-32B-Flash"
 
@@ -91,7 +89,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def load_prompt(prompt: Optional[str], prompt_file: Optional[Path]) -> str:
+def load_prompt(prompt: str | None, prompt_file: Path | None) -> str:
     if prompt and prompt_file:
         raise ValueError("Provide exactly one of --prompt or --prompt-file.")
     if prompt_file:

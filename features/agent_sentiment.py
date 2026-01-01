@@ -1,5 +1,6 @@
+from collections.abc import Callable, Sequence
+
 import pandas as pd
-from typing import Callable, Sequence
 
 
 def score_news(
@@ -79,7 +80,11 @@ def build_finbert_tone_scorer(model_dir: str = "models/finBERT-tone", device: in
     Returns a callable that scores text with a local FinBERT-tone model.
     device: -1 for CPU, 0 for CUDA:0, etc.
     """
-    from transformers import AutoModelForSequenceClassification, AutoTokenizer, TextClassificationPipeline
+    from transformers import (
+        AutoModelForSequenceClassification,
+        AutoTokenizer,
+        TextClassificationPipeline,
+    )
 
     tokenizer = AutoTokenizer.from_pretrained(model_dir)
     model = AutoModelForSequenceClassification.from_pretrained(model_dir)

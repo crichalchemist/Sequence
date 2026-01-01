@@ -1,17 +1,17 @@
 """Training queue manager with GPU monitoring and resource management."""
-import os
 import json
 import logging
+import queue
 import sqlite3
 import threading
+from dataclasses import dataclass
+from datetime import datetime
+from enum import Enum
+from pathlib import Path
+from typing import Any
+
 import psutil
 import torch
-from datetime import datetime
-from pathlib import Path
-from typing import Dict, List, Optional, Any, Callable
-from dataclasses import dataclass
-from enum import Enum
-import queue
 
 logger = logging.getLogger("TrainingManager")
 
@@ -192,7 +192,7 @@ class TrainingManager:
         except Exception as e:
             self._fail_job(job.job_id, str(e))
 
-    def _complete_job(self, job_id: str, metrics: Dict[str, Any]):
+    def _complete_job(self, job_id: str, metrics: dict[str, Any]):
         """Mark job as completed."""
         try:
             conn = sqlite3.connect(DB_PATH)
@@ -248,7 +248,7 @@ class TrainingManager:
         except Exception as e:
             logger.error(f"Failed to mark job as failed: {e}")
 
-    def get_job_status(self, job_id: str) -> Optional[Dict[str, Any]]:
+    def get_job_status(self, job_id: str) -> dict[str, Any] | None:
         """Get status of a job."""
         try:
             conn = sqlite3.connect(DB_PATH)
@@ -283,7 +283,7 @@ class TrainingManager:
             logger.error(f"Failed to get job status: {e}")
             return None
 
-    def get_queue_status(self) -> Dict[str, Any]:
+    def get_queue_status(self) -> dict[str, Any]:
         """Get overall queue status."""
         return {
             "queued_jobs": self.job_queue.qsize(),
@@ -293,7 +293,7 @@ class TrainingManager:
             "can_accept_more": len(self.running_jobs) < self.max_concurrent_jobs
         }
 
-    def get_running_jobs(self) -> List[Dict[str, Any]]:
+    def get_running_jobs(self) -> list[dict[str, Any]]:
         """Get list of running jobs."""
         return [
             {
@@ -345,7 +345,7 @@ class GPUMonitor:
         except Exception as e:
             logger.warning(f"Failed to record GPU stats: {e}")
 
-    def get_status(self) -> Dict[str, Any]:
+    def get_status(self) -> dict[str, Any]:
         """Get current GPU status."""
         if not self.has_gpu:
             return {

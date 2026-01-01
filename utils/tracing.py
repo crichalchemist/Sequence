@@ -19,17 +19,16 @@ Usage:
         # Your training code here
 """
 
-import os
-from typing import Optional, Any
+from typing import Any
 
 # Optional OpenTelemetry imports - gracefully degrade if not installed
 try:
     from opentelemetry import trace
     from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+    from opentelemetry.instrumentation.logging import LoggingInstrumentor
+    from opentelemetry.instrumentation.torch import TorchInstrumentor
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import BatchSpanProcessor
-    from opentelemetry.instrumentation.torch import TorchInstrumentor
-    from opentelemetry.instrumentation.logging import LoggingInstrumentor
     OTEL_AVAILABLE = True
 except ImportError:
     # OpenTelemetry not installed - use no-op implementations
@@ -66,7 +65,7 @@ def setup_tracing(
     service_name: str = "sequence",
     otlp_endpoint: str = "http://localhost:4318",
     environment: str = "development",
-) -> Optional[TracerProvider]:
+) -> TracerProvider | None:
     """
     Initialize OpenTelemetry tracing for the application.
 
@@ -137,7 +136,7 @@ def get_tracer(module_name: str):
 class TracingContext:
     """Context manager for tracing named spans with attributes."""
 
-    def __init__(self, tracer: Optional[Any], span_name: str, attributes: Optional[dict] = None):
+    def __init__(self, tracer: Any | None, span_name: str, attributes: dict | None = None):
         """
         Initialize tracing context. Works gracefully with None tracer.
         
@@ -150,7 +149,7 @@ class TracingContext:
         self.span_name = span_name
         self.attributes = attributes or {}
         self.span = None
-    
+
     def __enter__(self):
         if self.tracer is None:
             return None
@@ -158,7 +157,7 @@ class TracingContext:
         for key, value in self.attributes.items():
             self.span.set_attribute(key, value)
         return self.span
-    
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self.span is None:
             return
@@ -168,7 +167,7 @@ class TracingContext:
         self.span.end()
 
 
-def trace_function(tracer: Optional[Any], func_name: str = None):
+def trace_function(tracer: Any | None, func_name: str = None):
     """
     Decorator to automatically trace a function's execution.
     

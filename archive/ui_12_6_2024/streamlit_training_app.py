@@ -1,22 +1,20 @@
 """Comprehensive Project Dashboard - GDELT ML Training & Analysis."""
-import streamlit as st
-import pandas as pd
-import numpy as np
-import plotly.express as px
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
+import sys
 from datetime import datetime, timedelta
 from pathlib import Path
-import sys
-import json
-import torch
+
+import numpy as np
+import pandas as pd
+import plotly.graph_objects as go
+import streamlit as st
+from plotly.subplots import make_subplots
 
 # Add project root to path
 project_root = Path(__file__).parent
 sys.path.append(str(project_root))
 
-from gdelt.feature_builder import GDELTTimeSeriesBuilder
 from gdelt.consolidated_downloader import GDELTDownloader
+from gdelt.feature_builder import GDELTTimeSeriesBuilder
 
 # Royal Blue, Black, Old Gold Theme
 ROYAL_BLUE = "#002F6C"
@@ -202,7 +200,7 @@ def render_sidebar():
     )
 
     # AI Model configuration
-    st.markdown(f"""
+    st.markdown("""
     <div class='matrix-header' style='font-size: 1.2em; margin: 1rem 0;'>
     🤖 NEURAL_NET_CONFIG
     </div>
@@ -221,7 +219,7 @@ def render_sidebar():
     )
 
     # Processing controls
-    st.markdown(f"""
+    st.markdown("""
     <div class='matrix-header' style='font-size: 1.2em; margin: 1rem 0;'>
     ⚙️ PROCESSING_MATRIX
     </div>
@@ -785,7 +783,7 @@ def create_performance_chart(data):
         line=dict(color=OLD_GOLD, width=3),
         marker=dict(size=8, color=OLD_GOLD),
         fill='tonexty',
-        fillcolor=f'rgba(207, 181, 59, 0.2)'
+        fillcolor='rgba(207, 181, 59, 0.2)'
     ))
 
     fig.update_layout(
@@ -1008,7 +1006,7 @@ def create_pnl_chart():
         line=dict(color=OLD_GOLD, width=3),
         marker=dict(size=8),
         fill='tonexty',
-        fillcolor=f'rgba(207, 181, 59, 0.2)'
+        fillcolor='rgba(207, 181, 59, 0.2)'
     ))
 
     fig.update_layout(

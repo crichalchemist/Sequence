@@ -1,13 +1,11 @@
-from typing import Optional
+import importlib.util
+import sys
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-from config.config import FeatureConfig
-import importlib.util
-import sys
-from pathlib import Path
-from config.config import ResearchConfig
+from config.config import FeatureConfig, ResearchConfig
 
 
 def _load_generated_features():
@@ -125,7 +123,7 @@ def candle_imbalance_features(df: pd.DataFrame, smoothing: int) -> pd.DataFrame:
     )
 
 
-def add_base_features(df: pd.DataFrame, spread_windows: Optional[list[int]] = None) -> pd.DataFrame:
+def add_base_features(df: pd.DataFrame, spread_windows: list[int] | None = None) -> pd.DataFrame:
     out = df.copy()
     pct_change = out["close"].pct_change()
     log_return = np.log1p(pct_change)
@@ -154,7 +152,7 @@ def _should_add(group: str, config: FeatureConfig) -> bool:
     return True
 
 
-def build_feature_frame(df: pd.DataFrame, config: Optional[FeatureConfig] = None) -> pd.DataFrame:
+def build_feature_frame(df: pd.DataFrame, config: FeatureConfig | None = None) -> pd.DataFrame:
     """
     Compute a configurable set of technical features.
     Keep this pure: the caller handles I/O and splitting.

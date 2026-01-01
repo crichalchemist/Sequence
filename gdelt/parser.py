@@ -5,10 +5,11 @@ import csv
 import gzip
 import io
 import zipfile
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, Iterable, Iterator, List, Optional, TextIO
+from typing import TextIO
 
 
 @dataclass
@@ -30,20 +31,20 @@ class Tone:
 class Location:
     name: str
     country_code: str
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
+    latitude: float | None = None
+    longitude: float | None = None
 
 
 @dataclass
 class GDELTRecord:
     datetime: datetime
-    themes: List[str]
-    counts: List[Count]
+    themes: list[str]
+    counts: list[Count]
     tone: Tone
-    persons: List[str]
-    orgs: List[str]
-    locations: List[Location]
-    gcam: Dict[str, float]
+    persons: list[str]
+    orgs: list[str]
+    locations: list[Location]
+    gcam: dict[str, float]
 
 
 class GDELTParser:
@@ -81,7 +82,7 @@ class GDELTParser:
                 with io.TextIOWrapper(raw_file, encoding="utf-8", errors="ignore") as text_file:
                     yield from self._parse_reader(text_file)
 
-    def _select_zip_member(self, archive: zipfile.ZipFile) -> Optional[str]:
+    def _select_zip_member(self, archive: zipfile.ZipFile) -> str | None:
         names = archive.namelist()
         for name in names:
             if name.lower().endswith(".gkgv2.csv"):
@@ -120,19 +121,19 @@ class GDELTParser:
         return datetime.strptime(value, "%Y%m%d%H%M%S").replace(tzinfo=timezone.utc)
 
     @staticmethod
-    def _parse_list(value: str) -> List[str]:
+    def _parse_list(value: str) -> list[str]:
         return [v for v in value.split(";") if v]
 
     @staticmethod
-    def _parse_themes(v1: str, v2: str) -> List[str]:
+    def _parse_themes(v1: str, v2: str) -> list[str]:
         combined = set()
         combined.update([v for v in v1.split(";") if v])
         combined.update([v.split("#", 1)[0] for v in v2.split(";") if v])
         return sorted(combined)
 
     @staticmethod
-    def _parse_counts(value: str) -> List[Count]:
-        counts: List[Count] = []
+    def _parse_counts(value: str) -> list[Count]:
+        counts: list[Count] = []
         for entry in value.split(";"):
             parts = entry.split("#")
             if len(parts) < 2:
@@ -153,8 +154,8 @@ class GDELTParser:
         return Tone(*floats[:5])
 
     @staticmethod
-    def _parse_locations(value: str) -> List[Location]:
-        locations: List[Location] = []
+    def _parse_locations(value: str) -> list[Location]:
+        locations: list[Location] = []
         for entry in value.split(";"):
             parts = entry.split("#")
             if len(parts) < 4:
@@ -174,8 +175,8 @@ class GDELTParser:
         return locations
 
     @staticmethod
-    def _parse_gcam(value: str) -> Dict[str, float]:
-        metrics: Dict[str, float] = {}
+    def _parse_gcam(value: str) -> dict[str, float]:
+        metrics: dict[str, float] = {}
         for item in value.split(","):
             if not item:
                 continue

@@ -12,10 +12,10 @@ import importlib
 import importlib.util
 import json
 import time
+from collections.abc import Iterator
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Optional, Tuple
-
+from typing import Any
 
 BASE_URL = "https://data.gdeltproject.org/gdeltv2"
 
@@ -84,7 +84,7 @@ def sha256_file(path: Path) -> str:
     return sha256_bytes(path.read_bytes())
 
 
-def _load_http_dependencies() -> Tuple[Any, Any, Any]:
+def _load_http_dependencies() -> tuple[Any, Any, Any]:
     """
     Import requests and its retry helpers only when available, with an explicit
     error guiding users to install the project's dependencies.
@@ -123,7 +123,7 @@ def download_file(
     timeout: int,
     max_retries: int,
     backoff: float,
-    expected_checksum: Optional[str],
+        expected_checksum: str | None,
 ) -> bool:
     if dest.exists() and not overwrite:
         if expected_checksum:
@@ -168,7 +168,7 @@ def download_file(
     return False
 
 
-def load_checksums(checksum_file: Optional[str]) -> Dict[str, str]:
+def load_checksums(checksum_file: str | None) -> dict[str, str]:
     if not checksum_file:
         return {}
     path = Path(checksum_file)
@@ -181,7 +181,7 @@ def load_checksums(checksum_file: Optional[str]) -> Dict[str, str]:
     return {str(key): str(value) for key, value in data.items()}
 
 
-def resolve_base_url(mirror: str, base_override: Optional[str]) -> str:
+def resolve_base_url(mirror: str, base_override: str | None) -> str:
     if base_override:
         if not base_override.startswith("https://"):
             raise ValueError("--base-url must start with https:// to enforce TLS verification")
@@ -266,7 +266,7 @@ def main():
 
     checksum_map = load_checksums(args.checksum_file)
 
-    base_urls: List[Tuple[str, str]] = []
+    base_urls: list[tuple[str, str]] = []
     if args.base_url and args.mirror_fallbacks:
         print("[warn] Ignoring --mirror-fallbacks because --base-url is set.")
 
@@ -282,7 +282,7 @@ def main():
 
     # Deduplicate any repeated base URLs while preserving order.
     seen_urls = set()
-    unique_base_urls: List[Tuple[str, str]] = []
+    unique_base_urls: list[tuple[str, str]] = []
     for mirror_name, base_url in base_urls:
         if base_url in seen_urls:
             continue

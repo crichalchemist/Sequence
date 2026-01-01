@@ -1,5 +1,4 @@
 from dataclasses import dataclass, field
-from typing import List, Optional, Tuple
 
 from risk.risk_manager import RiskConfig
 
@@ -8,37 +7,57 @@ from risk.risk_manager import RiskConfig
 class FeatureConfig:
     """Configuration for feature engineering windows and toggles."""
 
-    sma_windows: List[int] = field(default_factory=lambda: [10, 20, 50])
-    ema_windows: List[int] = field(default_factory=lambda: [10, 20, 50])
+    sma_windows: list[int] = field(default_factory=lambda: [10, 20, 50])
+    ema_windows: list[int] = field(default_factory=lambda: [10, 20, 50])
     rsi_window: int = 14
     bollinger_window: int = 20
     bollinger_num_std: float = 2.0
     atr_window: int = 14
     short_vol_window: int = 10
     long_vol_window: int = 50
-    spread_windows: List[int] = field(default_factory=lambda: [20])
+    spread_windows: list[int] = field(default_factory=lambda: [20])
     imbalance_smoothing: int = 5
-    microstructure_windows: List[int] = field(default_factory=lambda: [5, 10, 20])
+    microstructure_windows: list[int] = field(default_factory=lambda: [5, 10, 20])
     dc_threshold_up: float = 0.001  # Directional change threshold for upward moves (0.1%)
-    dc_threshold_down: Optional[float] = None  # Defaults to dc_threshold_up if not specified
-    include_groups: Optional[List[str]] = None
-    exclude_groups: Optional[List[str]] = None
+    dc_threshold_down: float | None = None  # Defaults to dc_threshold_up if not specified
+    include_groups: list[str] | None = None
+    exclude_groups: list[str] | None = None
+
+
+@dataclass
+class CogneeConfig:
+    """Configuration for Cognee Cloud knowledge graph features."""
+
+    enable_cognee: bool = False
+    api_key: str | None = None
+    dataset_name: str = "fx_trading"
+    rebuild_graph: bool = False
+    entity_mention_window_hours: int = 24
+    event_proximity_window_hours: int = 48
+    include_economic_indicators: bool = True
+    include_price_narratives: bool = True
+    feature_types: list[str] = field(default_factory=lambda: [
+        "entity_mentions",
+        "event_proximity",
+        "causal_chains",
+        "pattern_similarity"
+    ])
 
 
 @dataclass
 class DataConfig:
     csv_path: str
     datetime_column: str = "datetime"
-    feature_columns: Optional[List[str]] = None
+    feature_columns: list[str] | None = None
     target_type: str = "classification"  # "classification" or "regression"
     t_in: int = 120
     t_out: int = 10
-    lookahead_window: Optional[int] = None  # window for auxiliary targets (defaults to t_out)
+    lookahead_window: int | None = None  # window for auxiliary targets (defaults to t_out)
     top_k_predictions: int = 3
     predict_sell_now: bool = False
-    train_range: Optional[Tuple[str, str]] = None  # ISO date strings
-    val_range: Optional[Tuple[str, str]] = None
-    test_range: Optional[Tuple[str, str]] = None
+    train_range: tuple[str, str] | None = None  # ISO date strings
+    val_range: tuple[str, str] | None = None
+    test_range: tuple[str, str] | None = None
     flat_threshold: float = 0.0001  # abs(log return) below this -> flat
 
 
@@ -51,14 +70,14 @@ class ModelConfig:
     cnn_kernel_size: int = 3
     attention_dim: int = 64
     dropout: float = 0.1
-    num_classes: Optional[int] = 3  # set to None for regression
+    num_classes: int | None = 3  # set to None for regression
     output_dim: int = 1  # used for regression
-    lookahead_window: Optional[int] = None
+    lookahead_window: int | None = None
     top_k_predictions: int = 3
     predict_sell_now: bool = False
     bidirectional: bool = True
-    num_dir_classes: Optional[int] = None
-    return_dim: Optional[int] = None
+    num_dir_classes: int | None = None
+    return_dim: int | None = None
     num_volatility_classes: int = 2
 
     # Attention optimization flags
@@ -101,7 +120,7 @@ class TrainingConfig:
     learning_rate: float = 1e-3
     weight_decay: float = 0.0
     device: str = "cuda"
-    grad_clip: Optional[float] = 1.0
+    grad_clip: float | None = 1.0
     log_every: int = 50
     checkpoint_path: str = "models/best_model.pt"
     risk: RiskConfig = field(default_factory=RiskConfig)
@@ -112,17 +131,17 @@ class TrainingConfig:
     # Early‑stopping patience (epochs without improvement) and checkpoint retention.
     early_stop_patience: int = 3
     top_n_checkpoints: int = 3
-    
+
     # Advanced training optimizations
     use_amp: bool = False  # Enable Automatic Mixed Precision
     fp16: bool = False     # Use FP16 instead of FP32
-    grad_scaler: Optional[str] = None  # 'grad_scaler' or None for AMP
-    
+    grad_scaler: str | None = None  # 'grad_scaler' or None for AMP
+
     # Asynchronous checkpoint saving
     async_checkpoint: bool = False
     checkpoint_workers: int = 2
     checkpoint_queue_size: int = 10
-    
+
     # OpenTelemetry tracing configuration
     enable_tracing: bool = True  # Enable/disable tracing
     tracing_service_name: str = "sequence-training"
@@ -139,7 +158,7 @@ class PolicyConfig:
     input_dim: int
     hidden_dim: int = 128
     num_actions: int = 3
-    value_hidden_dim: Optional[int] = None
+    value_hidden_dim: int | None = None
     dropout: float = 0.1
 
 
@@ -154,9 +173,17 @@ class RLTrainingConfig:
     entropy_coef: float = 0.01
     value_coef: float = 0.5
     gamma: float = 0.99
-    grad_clip: Optional[float] = 1.0
+    gae_lambda: float = 0.95  # GAE lambda for advantage estimation
+    grad_clip: float | None = 1.0
     detach_signal: bool = True
     checkpoint_path: str = "models/best_policy.pt"
+
+    # PPO-specific parameters
+    use_ppo: bool = True  # Use PPO instead of vanilla policy gradient
+    clip_range: float = 0.2  # PPO clipping parameter epsilon
+    ppo_epochs: int = 4  # Number of optimization epochs per batch
+    max_grad_norm: float = 0.5  # Maximum gradient norm for clipping
+    target_kl: float | None = 0.01  # Early stopping if KL divergence exceeds this
 
 
 @dataclass
@@ -173,7 +200,7 @@ class MultiTaskModelConfig:
     dropout: float = 0.1
     num_dir_classes: int = 3
     num_vol_classes: int = 2
-    lookahead_window: Optional[int] = None
+    lookahead_window: int | None = None
     top_k_predictions: int = 3
     predict_sell_now: bool = False
     num_trend_classes: int = 3
@@ -188,15 +215,15 @@ class MultiTaskDataConfig:
     """
     csv_path: str
     datetime_column: str = "datetime"
-    feature_columns: Optional[List[str]] = None
+    feature_columns: list[str] | None = None
     t_in: int = 120
     t_out: int = 10
-    lookahead_window: Optional[int] = None
+    lookahead_window: int | None = None
     top_k_predictions: int = 3
     predict_sell_now: bool = False
-    train_range: Optional[Tuple[str, str]] = None
-    val_range: Optional[Tuple[str, str]] = None
-    test_range: Optional[Tuple[str, str]] = None
+    train_range: tuple[str, str] | None = None
+    val_range: tuple[str, str] | None = None
+    test_range: tuple[str, str] | None = None
     flat_threshold: float = 0.0001
     vol_min_change: float = 0.0     # minimal vol delta to call it "up"
 

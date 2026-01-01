@@ -4,12 +4,9 @@ import torch.nn.functional as F
 
 from config.config import ModelConfig
 from models.attention import (
-    OptimizedMultiHeadAttention,
-    SlidingWindowAttention,
-    AdaptiveAttention,
+    MultiHeadTemporalAttention,
     TemporalAttention,
     create_optimized_attention,
-    MultiHeadTemporalAttention
 )
 
 
@@ -51,7 +48,7 @@ class SharedEncoder(nn.Module):
     use_adaptive_attention : bool
         Whether attention is adaptive. Default: False.
     """
-    
+
     def __init__(
         self,
         num_features: int,
@@ -69,7 +66,7 @@ class SharedEncoder(nn.Module):
         use_adaptive_attention: bool = False,
     ):
         super().__init__()
-        
+
         # CNN for local temporal patterns
         padding = cnn_kernel_size // 2
         self.cnn = nn.Conv1d(
@@ -78,7 +75,7 @@ class SharedEncoder(nn.Module):
             kernel_size=cnn_kernel_size,
             padding=padding,
         )
-        
+
         # LSTM for sequential dependencies
         self.lstm = nn.LSTM(
             input_size=num_features,
@@ -87,12 +84,12 @@ class SharedEncoder(nn.Module):
             batch_first=True,
             bidirectional=bidirectional,
         )
-        
+
         # Compute combined dimension
         lstm_factor = 2 if bidirectional else 1
         lstm_out_dim = lstm_factor * hidden_size_lstm
         self.output_dim = lstm_out_dim + cnn_num_filters
-        
+
         # Attention for context aggregation
         if use_optimized_attention:
             self.attention = create_optimized_attention(
@@ -110,9 +107,9 @@ class SharedEncoder(nn.Module):
             )
         else:
             self.attention = TemporalAttention(self.output_dim, attention_dim)
-        
+
         self.dropout = nn.Dropout(dropout)
-    
+
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """Forward pass: CNN + LSTM fusion → Attention → Embedding.
         
@@ -129,17 +126,17 @@ class SharedEncoder(nn.Module):
         """
         # LSTM forward
         lstm_out, _ = self.lstm(x)  # [B, T, lstm_out_dim]
-        
+
         # CNN forward (permute for Conv1d: [B, F, T])
         cnn_in = x.permute(0, 2, 1)
         cnn_features = F.relu(self.cnn(cnn_in)).permute(0, 2, 1)  # [B, T, cnn_num_filters]
-        
+
         # Concatenate CNN and LSTM outputs
         combined = torch.cat([lstm_out, cnn_features], dim=-1)  # [B, T, output_dim]
-        
+
         # Apply attention
         context, attn_weights = self.attention(combined)
-        
+
         return self.dropout(context), attn_weights
 
 

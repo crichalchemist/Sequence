@@ -18,12 +18,13 @@ Usage:
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Literal, Optional
+from typing import Literal
 
 import pandas as pd
 
 from config.config import FeatureConfig
 from features.technical import (
+    _should_add,
     add_base_features,
     average_true_range,
     bollinger_bandwidth,
@@ -32,7 +33,6 @@ from features.technical import (
     rsi,
     sma,
     volatility_clustering,
-    _should_add,
 )
 
 # Threshold where "auto" mode enables parallel execution.
@@ -127,7 +127,7 @@ def _compute_group_features(df: pd.DataFrame, cfg: FeatureConfig, group: str) ->
 
 def build_feature_frame_parallel(
     df: pd.DataFrame,
-    config: Optional[FeatureConfig] = None,
+        config: FeatureConfig | None = None,
     parallel: bool | Literal["auto"] = "auto",
     min_rows_for_parallel: int = _DEFAULT_PARALLEL_ROW_THRESHOLD,
 ) -> pd.DataFrame:

@@ -4,17 +4,15 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 
 import torch
-
 
 logger = logging.getLogger(__name__)
 
 
 class EarlyStopping:
     """Early stopping to prevent overfitting during training."""
-    
+
     def __init__(self, patience: int, min_delta: float = 0.0):
         """Initialize early stopping.
         
@@ -28,9 +26,9 @@ class EarlyStopping:
         self.patience = patience
         self.min_delta = min_delta
         self.counter = 0
-        self.best_score: Optional[float] = None
+        self.best_score: float | None = None
         self.should_stop = False
-    
+
     def __call__(self, score: float) -> bool:
         """Check if training should stop based on the score.
         
@@ -59,7 +57,7 @@ class EarlyStopping:
                 self.should_stop = True
                 return True
             return False
-    
+
     def reset(self) -> None:
         """Reset the early stopping counter."""
         self.counter = 0
@@ -69,7 +67,7 @@ class EarlyStopping:
 
 class CheckpointManager:
     """Manage model checkpoints with top-N retention policy."""
-    
+
     def __init__(self, save_dir: Path, top_n: int = 3):
         """Initialize checkpoint manager.
         
@@ -83,9 +81,9 @@ class CheckpointManager:
         self.save_dir = Path(save_dir)
         self.save_dir.mkdir(parents=True, exist_ok=True)
         self.top_n = top_n
-        self.checkpoints: List[Tuple[float, Path]] = []
-    
-    def save(self, state_dict: Dict, score: float, epoch: int, model_name: str = "model") -> None:
+        self.checkpoints: list[tuple[float, Path]] = []
+
+    def save(self, state_dict: dict, score: float, epoch: int, model_name: str = "model") -> None:
         """Save checkpoint and manage retention policy.
         
         Parameters
@@ -100,7 +98,7 @@ class CheckpointManager:
             Base name for the checkpoint file.
         """
         checkpoint_path = self.save_dir / f"{model_name}_epoch{epoch}_score{score:.4f}.pt"
-        
+
         # Clone tensors to avoid references that might change, keep non-tensors as-is
         cpu_state = {}
         for k, v in state_dict.items():
@@ -109,21 +107,21 @@ class CheckpointManager:
             else:
                 cpu_state[k] = v
         torch.save(cpu_state, checkpoint_path)
-        
+
         # Add to checkpoint list and sort by score (descending for accuracy, ascending for loss)
         self.checkpoints.append((score, checkpoint_path))
         self.checkpoints.sort(key=lambda x: x[0], reverse=True)
-        
+
         # Remove old checkpoints beyond top_n
         while len(self.checkpoints) > self.top_n:
             _, old_path = self.checkpoints.pop()
             if old_path.exists():
                 old_path.unlink()
                 logger.info(f"Removed old checkpoint: {old_path}")
-        
+
         logger.info(f"Saved checkpoint: {checkpoint_path} (score: {score:.4f})")
-    
-    def get_best_checkpoint(self) -> Optional[Path]:
+
+    def get_best_checkpoint(self) -> Path | None:
         """Get the path to the best checkpoint.
         
         Returns
@@ -134,7 +132,7 @@ class CheckpointManager:
         if not self.checkpoints:
             return None
         return self.checkpoints[0][1]
-    
+
     def cleanup(self) -> None:
         """Remove all managed checkpoints."""
         for _, checkpoint_path in self.checkpoints:
@@ -146,7 +144,7 @@ class CheckpointManager:
 
 class MetricComparator:
     """Helper class for comparing metrics based on task type."""
-    
+
     def __init__(self, task_type: str = "classification"):
         """Initialize metric comparator.
         
@@ -156,7 +154,7 @@ class MetricComparator:
             Type of task: "classification" (higher is better) or "regression" (lower is better).
         """
         self.task_type = task_type
-    
+
     def is_better(self, current: float, best: float) -> bool:
         """Check if current metric is better than best.
         
@@ -176,7 +174,7 @@ class MetricComparator:
             return current > best
         else:
             return current < best
-    
+
     def initialize_best(self) -> float:
         """Initialize best metric value.
         

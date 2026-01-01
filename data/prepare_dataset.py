@@ -8,7 +8,6 @@ Example:
 import argparse
 import sys
 from pathlib import Path
-from typing import List, Optional
 from zipfile import ZipFile
 
 import pandas as pd
@@ -18,8 +17,8 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 # Local utilities – imported after ensuring the repository root is on ``sys.path``.
-from utils.logger import get_logger
 from utils.datetime_utils import convert_to_utc_and_dedup
+from utils.logger import get_logger
 from utils.seed import set_seed
 
 logger = get_logger(__name__)
@@ -31,42 +30,42 @@ from features.agent_sentiment import aggregate_sentiment, attach_sentiment_featu
 from features.intrinsic_time import build_intrinsic_time_bars
 
 
-def validate_dataframe(df: pd.DataFrame, required_cols: List[str]) -> pd.DataFrame:
+def validate_dataframe(df: pd.DataFrame, required_cols: list[str]) -> pd.DataFrame:
     """Validate and sanitize raw price data."""
     logger.info(f"Validating DataFrame with {len(df)} rows and columns: {list(df.columns)}")
-    
+
     # Check required columns
     missing = set(required_cols) - set(df.columns)
     if missing:
         raise ValueError(f"Missing columns: {missing}")
-    
+
     # Check and convert datetime dtype
     if not pd.api.types.is_datetime64_any_dtype(df["datetime"]):
         logger.warning("Converting datetime column to datetime64[ns]")
         df["datetime"] = pd.to_datetime(df["datetime"])
-    
+
     # Remove NaN rows for critical columns
     initial_len = len(df)
     df = df.dropna(subset=["open", "high", "low", "close"])
     if len(df) < initial_len:
         logger.warning(f"Dropped {initial_len - len(df)} NaN rows from OHLC data")
-    
+
     # Detect and remove duplicate timestamps
     dups = df.duplicated(subset=["datetime"], keep="first")
     if dups.any():
         logger.warning(f"Removing {dups.sum()} duplicate timestamps")
         df = df[~dups].reset_index(drop=True)
-    
+
     # Validate OHLC relationships
     invalid_ohlc = (df["high"] < df["low"]) | (df["high"] < df["open"]) | (df["high"] < df["close"]) | (df["low"] > df["open"]) | (df["low"] > df["close"])
     if invalid_ohlc.any():
         invalid_count = invalid_ohlc.sum()
         logger.warning(f"Removing {invalid_count} rows with invalid OHLC relationships")
         df = df[~invalid_ohlc].reset_index(drop=True)
-    
+
     # Sort by datetime and reset index
     df = df.sort_values("datetime").reset_index(drop=True)
-    
+
     logger.info(f"Validation complete. DataFrame reduced to {len(df)} valid rows")
     return df
 
@@ -120,19 +119,45 @@ def parse_args():
         help="Include news sentiment features (requires GDELT data). Adds sentiment_score, sentiment_5min, sentiment_15min, sentiment_60min columns.",
     )
     parser.add_argument(
+        "--use-bigquery-gdelt",
+        action="store_true",
+        help="Use BigQuery to fetch GDELT data (recommended for Colab). Requires Google Cloud authentication.",
+    )
+    parser.add_argument(
+        "--gdelt-themes",
+        default=None,
+        help="Comma-separated list of GDELT themes to filter (e.g., ECON_CURRENCY,TAX_FNCACT). Default: all financial themes.",
+    )
+    parser.add_argument(
         "--gdelt-path",
         default=None,
-        help="Path to GDELT GKG file or directory of .zip files (required when --include-sentiment is set)",
+        help="Path to GDELT GKG file or directory of .zip files (only used if --use-bigquery-gdelt is NOT set)",
     )
     parser.add_argument(
         "--gdelt-tz",
         default="UTC",
         help="Timezone to convert GDELT timestamps to (default: UTC)",
     )
+
+    # Cognee Cloud knowledge graph integration
+    parser.add_argument("--use-cognee", action="store_true", help="Enable Cognee Cloud knowledge graph features")
+    parser.add_argument("--cognee-api-key", default=None, help="Cognee API key (or set COGNEE_API_KEY env var)")
+    parser.add_argument("--cognee-dataset", default=None, help="Cognee dataset name (default: fx_{pair})")
+    parser.add_argument("--cognee-rebuild-graph", action="store_true",
+                        help="Force rebuild of knowledge graph (default: use cache)")
+    parser.add_argument("--include-economic-indicators", action="store_true",
+                        help="Download and ingest economic indicator data into Cognee")
+    parser.add_argument("--include-price-narratives", action="store_true",
+                        help="Generate price pattern text descriptions for Cognee")
+    parser.add_argument("--cognee-entity-window", type=int, default=24,
+                        help="Entity mention lookback window in hours (default: 24)")
+    parser.add_argument("--cognee-event-window", type=int, default=48,
+                        help="Event proximity lookback window in hours (default: 48)")
+
     return parser.parse_args()
 
 
-def _load_pair_data(pair: str, input_root: Path, years: Optional[List[str]]) -> pd.DataFrame:
+def _load_pair_data(pair: str, input_root: Path, years: list[str] | None) -> pd.DataFrame:
     pair_dir = input_root / pair
     if not pair_dir.exists():
         raise FileNotFoundError(f"No data folder for pair {pair} under {input_root}")
@@ -182,11 +207,11 @@ def _load_pair_data(pair: str, input_root: Path, years: Optional[List[str]]) -> 
     full_df = pd.concat(frames, ignore_index=True)
     full_df["datetime"] = pd.to_datetime(full_df["datetime"], format="%Y%m%d %H%M%S")
     full_df = full_df.sort_values("datetime").reset_index(drop=True)
-    
+
     # Validate the data after loading
     required_cols = ["datetime", "open", "high", "low", "close", "volume"]
     full_df = validate_dataframe(full_df, required_cols)
-    
+
     return full_df
 
 
@@ -205,7 +230,7 @@ def _compute_time_ranges(df: pd.DataFrame, train_ratio: float, val_ratio: float)
     return train_range, val_range, test_range
 
 
-def process_pair(pair: str, args, batch_size: Optional[int] = None):
+def process_pair(pair: str, args, batch_size: int | None = None):
     years = args.years.split(",") if args.years else None
     input_root = Path(args.input_root)
     if not input_root.is_absolute():
@@ -289,17 +314,36 @@ def process_pair(pair: str, args, batch_size: Optional[int] = None):
         feature_df = build_feature_frame(df_for_features, config=feature_cfg)
         feature_df.to_feather(cache_path)
         logger.info("[cache] saved computed features to %s", cache_path)
-    
+
     # Optional: Attach sentiment features if GDELT data available
     if args.include_sentiment:
-        if not args.gdelt_path:
-            logger.warning(
-                "[sentiment] --include-sentiment specified but --gdelt-path not provided. Skipping sentiment features.")
-        else:
+        if args.use_bigquery_gdelt:
+            # Use BigQuery to fetch GDELT data (recommended for Colab)
             try:
-                logger.info("[sentiment] loading GDELT data from %s", args.gdelt_path)
-                gdelt_df = load_gdelt_gkg(Path(args.gdelt_path), target_tz=args.gdelt_tz)
-                logger.info("[sentiment] loaded %d GDELT records", len(gdelt_df))
+                from data.gdelt_bigquery import query_gdelt_for_date_range, FINANCIAL_THEMES
+
+                logger.info("[sentiment] querying GDELT data from BigQuery...")
+
+                # Parse themes if provided
+                themes = None
+                if args.gdelt_themes:
+                    themes = [t.strip() for t in args.gdelt_themes.split(',') if t.strip()]
+                else:
+                    themes = FINANCIAL_THEMES  # Use default financial themes
+
+                # Query GDELT for the same date range as our feature data
+                start_dt = feature_df['datetime'].min()
+                end_dt = feature_df['datetime'].max()
+
+                logger.info(f"[sentiment] date range: {start_dt} to {end_dt}")
+                logger.info(f"[sentiment] themes: {themes}")
+
+                gdelt_df = query_gdelt_for_date_range(
+                    start_datetime=start_dt,
+                    end_datetime=end_dt,
+                    themes=themes
+                )
+                logger.info("[sentiment] retrieved %d GDELT records from BigQuery", len(gdelt_df))
 
                 logger.info("[sentiment] aggregating sentiment to bar frequency...")
                 sent_feats = aggregate_sentiment(
@@ -314,8 +358,141 @@ def process_pair(pair: str, args, batch_size: Optional[int] = None):
                 logger.info("[sentiment] successfully merged %d sentiment features to feature frame",
                             len(sent_feats.columns))
             except Exception as e:
-                logger.warning(f"[sentiment] failed to attach sentiment features: {e}. Continuing without sentiment.")
-    
+                logger.warning(f"[sentiment] failed to query GDELT from BigQuery: {e}. Continuing without sentiment.")
+        else:
+            # Use local GDELT files (legacy approach)
+            if not args.gdelt_path:
+                logger.warning(
+                    "[sentiment] --include-sentiment specified but --gdelt-path not provided. Skipping sentiment features.")
+            else:
+                try:
+                    logger.info("[sentiment] loading GDELT data from %s", args.gdelt_path)
+                    gdelt_df = load_gdelt_gkg(Path(args.gdelt_path), target_tz=args.gdelt_tz)
+                    logger.info("[sentiment] loaded %d GDELT records", len(gdelt_df))
+
+                    logger.info("[sentiment] aggregating sentiment to bar frequency...")
+                    sent_feats = aggregate_sentiment(
+                        gdelt_df,
+                        feature_df,
+                        time_col="datetime",
+                        score_col="sentiment_score"
+                    )
+                    logger.info("[sentiment] created %d sentiment features", len(sent_feats.columns))
+
+                    feature_df = attach_sentiment_features(feature_df, sent_feats)
+                    logger.info("[sentiment] successfully merged %d sentiment features to feature frame",
+                                len(sent_feats.columns))
+                except Exception as e:
+                    logger.warning(
+                        f"[sentiment] failed to attach sentiment features: {e}. Continuing without sentiment.")
+
+    # Cognee Cloud knowledge graph integration
+    if args.use_cognee:
+        logger.info("[cognee] Cognee Cloud integration enabled")
+
+        try:
+            import os
+            from data.cognee_client import CogneeClient
+            from data.cognee_processor import CogneeDataProcessor
+            from features.cognee_features import build_cognee_features
+
+            # Initialize Cognee client
+            api_key = args.cognee_api_key or os.getenv("COGNEE_API_KEY")
+            if not api_key:
+                logger.error("[cognee] API key not provided. Set COGNEE_API_KEY env var or use --cognee-api-key")
+                logger.warning("[cognee] Skipping Cognee features")
+            else:
+                client = CogneeClient(api_key=api_key)
+                processor = CogneeDataProcessor(client)
+
+                # Determine dataset name
+                dataset_name = args.cognee_dataset or f"fx_{args.pair}"
+                logger.info(f"[cognee] Using dataset: {dataset_name}")
+
+                # Rebuild graph if requested
+                if args.cognee_rebuild_graph:
+                    logger.info("[cognee] Rebuilding knowledge graph...")
+
+                    # Ingest GDELT news (if we have it from sentiment integration)
+                    if args.include_sentiment and 'gdelt_df' in locals():
+                        logger.info("[cognee] Ingesting GDELT news into knowledge graph...")
+                        processor.ingest_gdelt_news(gdelt_df, dataset_name)
+
+                    # Ingest economic indicators if requested
+                    if args.include_economic_indicators:
+                        logger.info("[cognee] Downloading and ingesting economic indicators...")
+                        try:
+                            from data.downloaders.economic_indicators import download_forex_fred_bundle
+
+                            start_dt = feature_df['datetime'].min()
+                            end_dt = feature_df['datetime'].max()
+
+                            indicators_df = download_forex_fred_bundle(
+                                start_date=start_dt.strftime('%Y-%m-%d'),
+                                end_date=end_dt.strftime('%Y-%m-%d'),
+                                api_key=os.getenv("FRED_API_KEY")
+                            )
+
+                            if len(indicators_df) > 0:
+                                processor.ingest_economic_indicators(indicators_df, dataset_name)
+                            else:
+                                logger.warning("[cognee] No economic indicators data downloaded")
+
+                        except Exception as e:
+                            logger.warning(f"[cognee] Failed to download economic indicators: {e}")
+
+                    # Ingest price pattern narratives if requested
+                    if args.include_price_narratives:
+                        logger.info("[cognee] Generating and ingesting price pattern narratives...")
+                        try:
+                            from data.price_pattern_narrator import generate_pattern_text
+
+                            pattern_df = generate_pattern_text(
+                                df=feature_df,
+                                pair=args.pair.upper()
+                            )
+
+                            processor.ingest_price_patterns(pattern_df, dataset_name, args.pair.upper())
+
+                        except Exception as e:
+                            logger.warning(f"[cognee] Failed to generate price narratives: {e}")
+
+                    # Trigger cognify
+                    logger.info("[cognee] Triggering knowledge graph building...")
+                    job_id = client.cognify(dataset_name)
+                    success = processor.wait_for_cognify(job_id, timeout=600)
+
+                    if not success:
+                        logger.error("[cognee] Knowledge graph building failed or timed out")
+                        logger.warning("[cognee] Skipping Cognee features")
+                    else:
+                        logger.info("[cognee] ✅ Knowledge graph built successfully")
+
+                # Extract features from knowledge graph
+                if not args.cognee_rebuild_graph or success:
+                    logger.info("[cognee] Extracting features from knowledge graph...")
+
+                    cognee_features = build_cognee_features(
+                        client=client,
+                        price_df=feature_df,
+                        pair=args.pair,
+                        dataset_name=dataset_name,
+                        cache_dir=cache_dir / "cognee",
+                        entity_window_hours=args.cognee_entity_window,
+                        event_window_hours=args.cognee_event_window
+                    )
+
+                    # Merge Cognee features with existing features
+                    feature_df = pd.concat([feature_df, cognee_features], axis=1)
+                    logger.info(f"[cognee] ✅ Added {len(cognee_features.columns)} Cognee features")
+
+        except ImportError as e:
+            logger.error(f"[cognee] Failed to import Cognee modules: {e}")
+            logger.warning("[cognee] Skipping Cognee features")
+        except Exception as e:
+            logger.error(f"[cognee] Cognee integration failed: {e}")
+            logger.warning("[cognee] Continuing without Cognee features")
+
     feature_df["datetime"] = pd.to_datetime(feature_df["datetime"])
 
     train_range, val_range, test_range = _compute_time_ranges(
@@ -343,8 +520,8 @@ def process_pair(pair: str, args, batch_size: Optional[int] = None):
     # ---------------------------------------------------------------------
     # 5️⃣  Create datasets and dataloaders using the unified BaseDataAgent.
     # ---------------------------------------------------------------------
-    from data.agents.single_task_agent import SingleTaskDataAgent
     from data.agents.base_agent import BaseDataAgent as DataAgent
+    from data.agents.single_task_agent import SingleTaskDataAgent
 
     agent = SingleTaskDataAgent(data_cfg)
     datasets = agent.build_datasets(feature_df)

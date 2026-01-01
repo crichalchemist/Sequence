@@ -5,15 +5,14 @@ instances, reducing code duplication and ensuring consistency across entry point
 """
 
 import argparse
-from typing import Optional
 
 from config.constants import (
     DEFAULT_BATCH_SIZE,
-    DEFAULT_LEARNING_RATE,
-    DEFAULT_WEIGHT_DECAY,
     DEFAULT_EPOCHS,
+    DEFAULT_LEARNING_RATE,
     DEFAULT_NUM_WORKERS,
     DEFAULT_PREFETCH_FACTOR,
+    DEFAULT_WEIGHT_DECAY,
 )
 from features.constants import DEFAULT_DC_THRESHOLD
 

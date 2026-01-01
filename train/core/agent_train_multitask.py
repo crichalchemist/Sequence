@@ -1,4 +1,3 @@
-from typing import Dict, List, Tuple
 
 import torch
 from torch.utils.data import DataLoader
@@ -17,10 +16,10 @@ def _to_device(batch, device):
 
 
 def _compute_losses(
-    outputs: Dict[str, torch.Tensor],
-    targets: Dict[str, torch.Tensor],
+        outputs: dict[str, torch.Tensor],
+        targets: dict[str, torch.Tensor],
     loss_weights: MultiTaskLossWeights,
-) -> Tuple[torch.Tensor, Dict[str, float]]:
+) -> tuple[torch.Tensor, dict[str, float]]:
     losses = {}
     ce = torch.nn.CrossEntropyLoss()
     mse = torch.nn.MSELoss()
@@ -73,7 +72,7 @@ def _evaluate(
     loss_weights: MultiTaskLossWeights,
     device,
     risk_manager: RiskManager | None = None,
-) -> Dict[str, float]:
+) -> dict[str, float]:
     model.eval()
     totals = {
         "loss": 0.0,
@@ -125,7 +124,7 @@ def train_multitask(
     cfg: TrainingConfig,
     loss_weights: MultiTaskLossWeights,
     risk_manager: RiskManager | None = None,
-) -> Dict[str, List[float]]:
+) -> dict[str, list[float]]:
     # ------------------------------------------------------------------
     # Initialize tracing if enabled
     # ------------------------------------------------------------------
@@ -143,7 +142,7 @@ def train_multitask(
             pass  # OpenTelemetry not available
         except Exception:
             pass  # Tracing initialization failed, continue without it
-    
+
     device_str = cfg.device
     if device_str.startswith("cuda") and not torch.cuda.is_available():
         device_str = "cpu"
@@ -170,13 +169,13 @@ def train_multitask(
     for epoch in range(1, cfg.epochs + 1):
         model.train()
         running_loss = 0.0
-        
+
         # Initialize epoch span (null-safe)
         span = None
         if tracer is not None:
             span = tracer.start_span(f"epoch_{epoch}")
             span.set_attribute("epoch", epoch)
-        
+
         try:
             for step, batch in enumerate(train_loader, start=1):
                 # Initialize batch span (null-safe)
@@ -184,7 +183,7 @@ def train_multitask(
                 if tracer is not None:
                     batch_span = tracer.start_span(f"batch_{step}")
                     batch_span.set_attribute("step", step)
-                
+
                 try:
                     x, targets = _to_device(batch, device)
                     outputs, _ = model(x)
@@ -207,13 +206,13 @@ def train_multitask(
                     optimizer.step()
                     optimizer.zero_grad()
                     running_loss += loss.item()
-                    
+
                     # Record batch metrics (null-safe)
                     if batch_span:
                         batch_span.set_attribute("loss", loss.item())
                         for task_name, task_loss in per_task.items():
                             batch_span.set_attribute(f"task.{task_name}", task_loss)
-                    
+
                     if step % cfg.log_every == 0:
                         print(f"epoch {epoch} step {step} loss {running_loss / step:.4f} tasks {per_task}")
                         if span:
@@ -221,10 +220,10 @@ def train_multitask(
                 finally:
                     if batch_span:
                         batch_span.end()
-            
+
             train_epoch_loss = running_loss / max(1, len(train_loader))
             val_metrics = _evaluate(model, val_loader, loss_weights, device, risk_manager=risk_manager)
-            
+
             # Initialize validation span (null-safe)
             val_span = None
             if tracer is not None:
@@ -232,7 +231,7 @@ def train_multitask(
                 val_span.set_attribute("epoch", epoch)
                 for key, val in val_metrics.items():
                     val_span.set_attribute(f"val.{key}", val)
-            
+
             try:
                 history["train_loss"].append(train_epoch_loss)
                 history["val_loss"].append(val_metrics["loss"])
@@ -241,7 +240,7 @@ def train_multitask(
                 history["val_trend_acc"].append(val_metrics["trend_acc"])
                 history["val_vol_regime_acc"].append(val_metrics["vol_regime_acc"])
                 history["val_candle_acc"].append(val_metrics["candle_acc"])
-                
+
                 # Record epoch metrics on span (null-safe)
                 if span:
                     span.set_attribute("train_loss", train_epoch_loss)

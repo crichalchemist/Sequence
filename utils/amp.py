@@ -4,11 +4,9 @@ from __future__ import annotations
 
 import logging
 from contextlib import nullcontext
-from typing import Optional
 
 import torch
 from torch.cuda.amp import GradScaler
-
 
 logger = logging.getLogger(__name__)
 
@@ -28,18 +26,18 @@ class AMPTrainer:
     device : str, optional
         Device to use for training. Default: "cuda".
     """
-    
+
     def __init__(self, enabled: bool = True, fp16: bool = False, device: str = "cuda"):
         self.enabled = enabled and torch.cuda.is_available()
         self.fp16 = fp16 and torch.cuda.is_available()
         self.device = device
         self.scaler = GradScaler() if self.enabled else None
-        
+
         if self.enabled:
             logger.info("AMP training enabled with GradScaler")
         if self.fp16:
             logger.info("FP16 training enabled")
-    
+
     def backward(
         self,
         loss: torch.Tensor,
@@ -62,7 +60,7 @@ class AMPTrainer:
         """
         if zero_grad_first:
             optimizer.zero_grad()
-        
+
         if self.enabled:
             self.scaler.scale(loss).backward()
             if max_grad_norm:
@@ -81,7 +79,7 @@ class AMPTrainer:
                     max_grad_norm
                 )
             optimizer.step()
-    
+
     def autocast_context(self):
         """Get autocast context manager for forward pass.
         
@@ -93,7 +91,7 @@ class AMPTrainer:
         if self.enabled:
             return torch.autocast('cuda', dtype=torch.float16)
         return nullcontext()
-    
+
     def scale_loss(self, loss: torch.Tensor) -> torch.Tensor:
         """Scale the loss for AMP training.
         
@@ -110,7 +108,7 @@ class AMPTrainer:
         if self.enabled and self.scaler is not None:
             return self.scaler.scale(loss)
         return loss
-    
+
     def step_optimizer(self, optimizer: torch.optim.Optimizer) -> None:
         """Step the optimizer with proper AMP handling.
         
@@ -124,7 +122,7 @@ class AMPTrainer:
             self.scaler.update()
         else:
             optimizer.step()
-    
+
     def unscale_gradients(self, optimizer: torch.optim.Optimizer) -> None:
         """Unscale gradients for gradient clipping.
         
@@ -135,7 +133,7 @@ class AMPTrainer:
         """
         if self.enabled and self.scaler is not None:
             self.scaler.unscale_(optimizer)
-    
+
     def is_enabled(self) -> bool:
         """Check if AMP is enabled.
         
@@ -145,7 +143,7 @@ class AMPTrainer:
             True if AMP is enabled, False otherwise.
         """
         return self.enabled
-    
+
     def is_fp16_enabled(self) -> bool:
         """Check if FP16 is enabled.
         
@@ -155,8 +153,8 @@ class AMPTrainer:
             True if FP16 is enabled, False otherwise.
         """
         return self.fp16
-    
-    def get_scaler(self) -> Optional[GradScaler]:
+
+    def get_scaler(self) -> GradScaler | None:
         """Get the GradScaler instance.
         
         Returns

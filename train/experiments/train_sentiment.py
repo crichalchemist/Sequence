@@ -1,6 +1,6 @@
 import argparse
 import logging
-from typing import Dict, Iterable, Union
+from collections.abc import Iterable
 
 import numpy as np
 import torch
@@ -13,9 +13,8 @@ from transformers import (
     TrainingArguments,
 )
 
-
-LABEL2ID: Dict[str, int] = {"negative": 0, "neutral": 1, "positive": 2}
-ID2LABEL: Dict[int, str] = {v: k for k, v in LABEL2ID.items()}
+LABEL2ID: dict[str, int] = {"negative": 0, "neutral": 1, "positive": 2}
+ID2LABEL: dict[int, str] = {v: k for k, v in LABEL2ID.items()}
 
 
 def parse_args() -> argparse.Namespace:
@@ -67,7 +66,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def to_label_id(label: Union[str, int]) -> int:
+def to_label_id(label: str | int) -> int:
     if isinstance(label, str):
         key = label.lower()
         if key not in LABEL2ID:
@@ -95,7 +94,7 @@ def main() -> None:
         label2id=LABEL2ID,
     )
 
-    def preprocess(batch: Dict[str, Iterable[Union[str, int]]]) -> Dict[str, Iterable]:
+    def preprocess(batch: dict[str, Iterable[str | int]]) -> dict[str, Iterable]:
         texts = batch[args.text_column]
         encodings = tokenizer(
             texts,

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Tuple
 
 import torch
 
@@ -25,16 +24,16 @@ class EarlyStopping:
     mode : str, optional
         Either 'min' (lower is better) or 'max' (higher is better). Default: 'min'.
     """
-    
+
     patience: int
     min_delta: float = 0.0
     mode: str = 'min'
-    
+
     def __post_init__(self):
         self.counter = 0
         self.best_score = None
         self.should_stop = False
-    
+
     def __call__(self, score: float) -> bool:
         """Check if training should stop.
         
@@ -51,9 +50,9 @@ class EarlyStopping:
         if self.best_score is None:
             self.best_score = score
             return False
-        
+
         is_improvement = self._is_improvement(score)
-        
+
         if not is_improvement:
             self.counter += 1
             if self.counter >= self.patience:
@@ -61,9 +60,9 @@ class EarlyStopping:
         else:
             self.best_score = score
             self.counter = 0
-        
+
         return self.should_stop
-    
+
     def _is_improvement(self, score: float) -> bool:
         """Check if score represents an improvement over best_score."""
         threshold = self.best_score + (self.min_delta if self.mode == 'max' else -self.min_delta)
@@ -71,7 +70,7 @@ class EarlyStopping:
             return score < threshold
         else:  # mode == 'max'
             return score > threshold
-    
+
     def reset(self) -> None:
         """Reset early stopping state for a new training run."""
         self.counter = 0
@@ -94,14 +93,14 @@ class CheckpointManager:
     mode : str, optional
         Either 'min' (lower is better) or 'max' (higher is better). Default: 'min'.
     """
-    
+
     def __init__(self, save_dir: Path | str, top_n: int = 3, mode: str = 'min'):
         self.save_dir = Path(save_dir)
         self.save_dir.mkdir(parents=True, exist_ok=True)
         self.top_n = top_n
         self.mode = mode
-        self.checkpoints: List[Tuple[float, Path]] = []
-    
+        self.checkpoints: list[tuple[float, Path]] = []
+
     def save(self, state_dict: dict, score: float, epoch: int, suffix: str = '') -> Path:
         """Save a checkpoint and manage retention.
         
@@ -123,22 +122,22 @@ class CheckpointManager:
         """
         filename = f"checkpoint_epoch{epoch}_score{score:.4f}{suffix}.pt"
         path = self.save_dir / filename
-        
+
         torch.save(state_dict, path)
         self.checkpoints.append((score, path))
-        
+
         # Sort by score: best first
         reverse = self.mode == 'max'
         self.checkpoints.sort(key=lambda x: x[0], reverse=reverse)
-        
+
         # Delete old checkpoints beyond top_n
         while len(self.checkpoints) > self.top_n:
             _, old_path = self.checkpoints.pop()
             old_path.unlink(missing_ok=True)
-        
+
         return path
-    
-    def load_best(self) -> Optional[dict]:
+
+    def load_best(self) -> dict | None:
         """Load the best checkpoint found so far.
         
         Returns
@@ -150,8 +149,8 @@ class CheckpointManager:
             return None
         _, best_path = self.checkpoints[0]
         return torch.load(best_path, weights_only=False)
-    
-    def best_checkpoint_path(self) -> Optional[Path]:
+
+    def best_checkpoint_path(self) -> Path | None:
         """Get path to the best checkpoint.
         
         Returns
@@ -163,7 +162,7 @@ class CheckpointManager:
             return None
         _, best_path = self.checkpoints[0]
         return best_path
-    
+
     def clear(self) -> None:
         """Delete all managed checkpoints and reset state."""
         for _, path in self.checkpoints:
