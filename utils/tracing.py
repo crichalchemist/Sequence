@@ -19,6 +19,8 @@ Usage:
         # Your training code here
 """
 
+from __future__ import annotations
+
 from typing import Any
 
 # Optional OpenTelemetry imports - gracefully degrade if not installed
@@ -33,7 +35,7 @@ try:
 except ImportError:
     # OpenTelemetry not installed - use no-op implementations
     OTEL_AVAILABLE = False
-    TracerProvider = None
+    TracerProvider = type(None)  # Placeholder type for annotations
     trace = None
 
 

@@ -23,7 +23,7 @@ if str(ROOT) not in sys.path:
 
 from config.config import PolicyConfig, RLTrainingConfig, SignalModelConfig
 from execution.simulated_retail_env import ExecutionConfig, SimulatedRetailExecutionEnv
-from models.policy import ExecutionPolicy
+from models.signal_policy import ExecutionPolicy
 from train.core.env_based_rl_training import ActionConverter
 from utils.logger import get_logger
 from utils.seed import set_seed

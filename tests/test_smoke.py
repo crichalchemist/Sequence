@@ -7,12 +7,14 @@ import pytest
 
 
 def test_imports():
+    """Test that core modules can be imported."""
     modules = [
-        "data.download_gdelt",
-        "utils.run_training_pipeline",
-        "train.run_finetune_novasky",
-        "train.run_finetune_novasky_lora",
-        "eval.run_evaluation",
+        "data.gdelt_ingest",
+        "run.training_pipeline",
+        "models.agent_hybrid",
+        "models.signal_policy",
+        "features.agent_features",
+        "config.constants",
     ]
     for mod in modules:
         importlib.import_module(mod)
@@ -41,7 +43,7 @@ def test_testcontainers_echo():
 def test_training_pipeline_help(tmp_path: Path):
     # Ensure the CLI can render help without accessing data.
     result = subprocess.run(
-        [sys.executable, "utils/run_training_pipeline.py", "--help"],
+        [sys.executable, "run/training_pipeline.py", "--help"],
         cwd=Path(__file__).resolve().parents[1],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,

@@ -1,8 +1,8 @@
 import torch
 
 from config.config import ExportConfig
-from models.hybrid import DignityModel
-from models.policy import SignalPolicyAgent
+from models.agent_hybrid import DignityModel
+from models.signal_policy import SignalPolicyAgent
 
 
 def export_to_onnx(

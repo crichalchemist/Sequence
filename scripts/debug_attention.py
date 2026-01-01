@@ -2,7 +2,7 @@
 
 import torch
 
-from models.attention import (
+from utils.attention_optimization import (
     OptimizedMultiHeadAttention,
     AdaptiveAttention,
     TemporalAttention

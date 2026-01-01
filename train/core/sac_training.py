@@ -25,7 +25,7 @@ sys.path.insert(0, "/Volumes/Containers/Sequence")
 from config.config import SignalModelConfig
 from execution.limit_order_engine import LimitOrderConfig
 from execution.simulated_retail_env import ExecutionConfig, SimulatedRetailExecutionEnv
-from models.policy import SignalModel
+from models.signal_policy import SignalModel
 from rl.agents.sac_agent import SACAgent
 from rl.replay_buffer import PrioritizedReplayBuffer, ReplayBuffer
 

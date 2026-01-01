@@ -98,10 +98,13 @@ class SignalPolicyAgent(nn.Module):
 
     def forward(self, x: torch.Tensor, detach_signal: bool = False):
         signal_out = self.signal_model(x)
-        logits, value = self.policy(signal_out["embedding"], detach_signal=detach_signal)
+        logits, value, aggressiveness = self.policy(
+            signal_out["embedding"], detach_signal=detach_signal
+        )
         return {
             "policy_logits": logits,
             "value": value,
+            "aggressiveness": aggressiveness,
             "signal": signal_out,
         }
 

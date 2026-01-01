@@ -11,7 +11,7 @@ from collections.abc import Sequence
 import numpy as np
 import pandas as pd
 
-from features.constants import DEFAULT_DC_THRESHOLD, MAX_THRESHOLD_VALUE
+from config.constants import DEFAULT_DC_THRESHOLD, MAX_THRESHOLD_VALUE
 
 
 def _validate_thresholds(up_threshold: float, down_threshold: float) -> None:

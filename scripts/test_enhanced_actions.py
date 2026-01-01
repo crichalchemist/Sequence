@@ -20,7 +20,7 @@ from execution.simulated_retail_env import (
     OrderAction,
     SimulatedRetailExecutionEnv,
 )
-from models.policy import ExecutionPolicy, SignalModel
+from models.signal_policy import ExecutionPolicy, SignalModel
 
 
 def test_policy_aggressiveness_output():

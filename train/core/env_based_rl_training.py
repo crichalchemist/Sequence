@@ -31,7 +31,7 @@ from execution.simulated_retail_env import (
     OrderAction,
     SimulatedRetailExecutionEnv,
 )
-from models.policy import ExecutionPolicy, SignalModel
+from models.signal_policy import ExecutionPolicy, SignalModel
 from train.core.target_network import TargetNetwork
 from utils.logger import get_logger
 from utils.seed import set_seed

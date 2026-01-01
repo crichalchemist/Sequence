@@ -8,13 +8,13 @@ import argparse
 
 from config.constants import (
     DEFAULT_BATCH_SIZE,
+    DEFAULT_DC_THRESHOLD,
     DEFAULT_EPOCHS,
     DEFAULT_LEARNING_RATE,
     DEFAULT_NUM_WORKERS,
     DEFAULT_PREFETCH_FACTOR,
     DEFAULT_WEIGHT_DECAY,
 )
-from features.constants import DEFAULT_DC_THRESHOLD
 
 
 def add_data_preparation_args(parser: argparse.ArgumentParser) -> None:

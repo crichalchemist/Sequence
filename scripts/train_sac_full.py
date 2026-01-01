@@ -24,7 +24,7 @@ sys.path.insert(0, "/Volumes/Containers/Sequence")
 from config.config import SignalModelConfig
 from execution.limit_order_engine import LimitOrderConfig
 from execution.simulated_retail_env import ExecutionConfig
-from models.policy import SignalModel
+from models.signal_policy import SignalModel
 
 # Import directly from module to bypass __init__.py with Python version issues
 import importlib.util

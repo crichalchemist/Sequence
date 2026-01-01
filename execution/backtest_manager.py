@@ -10,7 +10,7 @@ from typing import Any
 import pandas as pd
 from backtesting import Backtest
 
-from execution.constants import DEFAULT_BACKTEST_CASH, DEFAULT_COMMISSION_RATE
+from config.constants import DEFAULT_BACKTEST_CASH, DEFAULT_COMMISSION_RATE
 
 logger = logging.getLogger("BacktestManager")
 

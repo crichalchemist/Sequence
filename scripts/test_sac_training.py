@@ -10,7 +10,7 @@ sys.path.insert(0, "/Volumes/Containers/Sequence")
 from config.config import SignalModelConfig
 from execution.limit_order_engine import LimitOrderConfig
 from execution.simulated_retail_env import ExecutionConfig
-from models.policy import SignalModel
+from models.signal_policy import SignalModel
 from train.core.sac_training import SACConfig, train_with_sac
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")

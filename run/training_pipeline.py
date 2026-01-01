@@ -31,7 +31,7 @@ if str(ROOT) not in sys.path:
 from config.config import ModelConfig, TrainingConfig  # noqa: E402
 from data.prepare_dataset import process_pair  # noqa: E402
 from eval.agent_eval import evaluate_model  # noqa: E402
-from models.hybrid import build_model  # noqa: E402
+from models.agent_hybrid import build_model  # noqa: E402
 from risk.risk_manager import RiskManager  # noqa: E402
 from train.core.agent_train import train_model  # noqa: E402
 
@@ -614,13 +614,7 @@ def run_rl_training(pair: str, args, prepared_data_path: Path) -> None:
     except Exception as exc:
         log.error(f"RL training failed for {pair}: {exc}")
         import traceback
-
-
-from utils.logger import get_logger
-
-log = get_logger(__name__)
         traceback.print_exc()
-
 
 
 def main() -> None:
