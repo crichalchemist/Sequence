@@ -16,7 +16,7 @@ import sys
 import numpy as np
 import torch
 
-sys.path.insert(0, "/Volumes/Containers/Sequence")
+sys.path.insert(0, "/")
 
 from config.config import SignalModelConfig
 from execution.limit_order_engine import LimitOrderConfig

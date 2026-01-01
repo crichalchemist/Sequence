@@ -91,12 +91,12 @@ def _parse_v2tone(tone_string: str) -> float:
 
 
 def query_gdelt_sentiment(
-    start_date: str,
-    end_date: str,
-    themes: list[str] | None = None,
-    cache_dir: Path | None = None,
-    use_cache: bool = True,
-    limit: int | None = None
+        start_date: str,
+        end_date: str,
+        themes: list[str] | None = None,
+        cache_dir: Path | None = None,
+        use_cache: bool = True,
+        limit: int | None = None
 ) -> pd.DataFrame:
     """Query GDELT GKG data from BigQuery and extract sentiment scores.
 
@@ -205,10 +205,10 @@ def query_gdelt_sentiment(
 
 
 def query_gdelt_for_date_range(
-    start_datetime: pd.Timestamp,
-    end_datetime: pd.Timestamp,
-    themes: list[str] | None = None,
-    cache_dir: Path | None = None
+        start_datetime: pd.Timestamp,
+        end_datetime: pd.Timestamp,
+        themes: list[str] | None = None,
+        cache_dir: Path | None = None
 ) -> pd.DataFrame:
     """Query GDELT data matching a specific datetime range (for FX/crypto data alignment).
 
@@ -237,20 +237,20 @@ def query_gdelt_for_date_range(
 
 # Default themes for financial/currency analysis
 FINANCIAL_THEMES = [
-    "ECON_CURRENCY",           # Currency and exchange rates
-    "TAX_FNCACT",              # Financial activities
-    "ECON_FINANCIAL_CRISIS",   # Financial crises
-    "ECON_INFLATION",          # Inflation
-    "ECON_INTERESTRATE",       # Interest rates
-    "ECON_STOCKMARKET",        # Stock market
-    "ECON_TRADE",              # International trade
+    "ECON_CURRENCY",  # Currency and exchange rates
+    "TAX_FNCACT",  # Financial activities
+    "ECON_FINANCIAL_CRISIS",  # Financial crises
+    "ECON_INFLATION",  # Inflation
+    "ECON_INTERESTRATE",  # Interest rates
+    "ECON_STOCKMARKET",  # Stock market
+    "ECON_TRADE",  # International trade
 ]
 
 
 def query_financial_sentiment(
-    start_date: str,
-    end_date: str,
-    cache_dir: Path | None = None
+        start_date: str,
+        end_date: str,
+        cache_dir: Path | None = None
 ) -> pd.DataFrame:
     """Query GDELT data filtered for financial/currency themes.
 

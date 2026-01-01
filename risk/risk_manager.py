@@ -152,7 +152,7 @@ class RiskManager:
 
     # --- Convenience ---------------------------------------------------
     def build_context(
-        self,
+            self,
             x: torch.Tensor | None = None,
             timestamp: datetime | None = None,
             spread: float | None = None,

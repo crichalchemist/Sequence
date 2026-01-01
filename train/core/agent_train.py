@@ -1,9 +1,8 @@
-
 import torch
 import torch.nn.functional as F
+from config.config import RLTrainingConfig, TrainingConfig
 from torch.utils.data import DataLoader
 
-from config.config import RLTrainingConfig, TrainingConfig
 from models.agent_hybrid import DignityModel
 from models.signal_policy import ExecutionPolicy, SignalModel
 from risk.risk_manager import RiskManager
@@ -84,12 +83,12 @@ def _compute_losses(
 
 
 def _evaluate(
-    model: DignityModel,
-    loader: DataLoader,
-    cfg: TrainingConfig,
-    device,
-    task_type: str,
-    risk_manager: RiskManager | None = None,
+        model: DignityModel,
+        loader: DataLoader,
+        cfg: TrainingConfig,
+        device,
+        task_type: str,
+        risk_manager: RiskManager | None = None,
 ) -> tuple[float, float]:
     model.eval()
     total_loss = 0.0
@@ -125,13 +124,13 @@ def _evaluate(
 
 
 def train_model(
-    model: DignityModel,
-    train_loader: DataLoader,
-    val_loader: DataLoader,
-    cfg: TrainingConfig,
-    scheduler=None,
-    task_type: str = "classification",
-    risk_manager: RiskManager | None = None,
+        model: DignityModel,
+        train_loader: DataLoader,
+        val_loader: DataLoader,
+        cfg: TrainingConfig,
+        scheduler=None,
+        task_type: str = "classification",
+        risk_manager: RiskManager | None = None,
 ) -> dict[str, list[float]]:
     # ------------------------------------------------------------------
     # Logging configuration and device handling
@@ -246,11 +245,11 @@ def _signal_losses(signal_out: dict, targets: torch.Tensor, task_type: str):
 
 
 def pretrain_signal_model(
-    signal_model: SignalModel,
-    train_loader: DataLoader,
-    val_loader: DataLoader,
-    cfg: TrainingConfig,
-    task_type: str = "classification",
+        signal_model: SignalModel,
+        train_loader: DataLoader,
+        val_loader: DataLoader,
+        cfg: TrainingConfig,
+        task_type: str = "classification",
 ) -> dict[str, list[float]]:
     device_str = cfg.device
     if device_str.startswith("cuda") and not torch.cuda.is_available():
@@ -333,11 +332,11 @@ def _prepare_actions_and_rewards(targets: torch.Tensor, task_type: str):
 
 
 def train_execution_policy(
-    signal_model: SignalModel,
-    policy_head: ExecutionPolicy,
-    train_loader: DataLoader,
-    cfg: RLTrainingConfig,
-    task_type: str = "classification",
+        signal_model: SignalModel,
+        policy_head: ExecutionPolicy,
+        train_loader: DataLoader,
+        cfg: RLTrainingConfig,
+        task_type: str = "classification",
 ):
     device = next(signal_model.parameters()).device
     policy_head.to(device)

@@ -62,8 +62,8 @@ class BacktestingRetailExecutionEnv:
     """Gym-like retail execution environment powered by backtesting.py."""
 
     def __init__(
-        self,
-        price_df: pd.DataFrame,
+            self,
+            price_df: pd.DataFrame,
             config: ExecutionConfig | None = None,
             logger: logging.Logger | None = None,
     ) -> None:

@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
 from config.config import MultiTaskModelConfig
+
 from models.agent_hybrid import TemporalAttention
 
 

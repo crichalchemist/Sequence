@@ -93,34 +93,34 @@
 
 ### Core Modules
 
-| Module | Purpose | Key Classes/Functions |
-|--------|---------|----------------------|
-| `config/config.py` | Unified dataclass configs | `ModelConfig`, `TrainingConfig`, `DataConfig` |
-| `data/agents/base_agent.py` | Base data pipeline | `BaseDataAgent`, `SequenceDataset`, `ensure_utc_timezone()` |
-| `data/agents/single_task_agent.py` | Single-task data flow | `SingleTaskDataAgent` |
-| `data/agents/multitask_agent.py` | Multi-task data flow | `MultiTaskDataAgent` |
-| `data/prepare_dataset.py` | Entry point for data prep | `process_pair()`, `validate_dataframe()` |
-| `models/agent_hybrid.py` | Hybrid architectures | `SharedEncoder`, `PriceSequenceEncoder`, `DignityModel` |
-| `models/signal_policy.py` | Signal + policy models | `SignalBackbone`, `SignalModel`, `ExecutionPolicy` |
-| `train/core/agent_train.py` | Training loops | `train_model()`, `train_multitask()`, `_evaluate()` |
-| `train/run_training.py` | Supervised training CLI | `main()` |
-| `rl/agents/a3c_agent.py` | A3C implementation | `A3CAgent`, `ActorCriticNetwork` |
-| `rl/run_a3c_training.py` | RL training CLI | `main()` |
-| `eval/run_evaluation.py` | Evaluation CLI | `main()` |
-| `eval/agent_eval.py` | Evaluation functions | `evaluate_a3c_agent()` |
-| `risk/risk_manager.py` | Risk gating | `RiskManager` |
+| Module                             | Purpose                   | Key Classes/Functions                                       |
+|------------------------------------|---------------------------|-------------------------------------------------------------|
+| `config/config.py`                 | Unified dataclass configs | `ModelConfig`, `TrainingConfig`, `DataConfig`               |
+| `data/agents/base_agent.py`        | Base data pipeline        | `BaseDataAgent`, `SequenceDataset`, `ensure_utc_timezone()` |
+| `data/agents/single_task_agent.py` | Single-task data flow     | `SingleTaskDataAgent`                                       |
+| `data/agents/multitask_agent.py`   | Multi-task data flow      | `MultiTaskDataAgent`                                        |
+| `data/prepare_dataset.py`          | Entry point for data prep | `process_pair()`, `validate_dataframe()`                    |
+| `models/agent_hybrid.py`           | Hybrid architectures      | `SharedEncoder`, `PriceSequenceEncoder`, `DignityModel`     |
+| `models/signal_policy.py`          | Signal + policy models    | `SignalBackbone`, `SignalModel`, `ExecutionPolicy`          |
+| `train/core/agent_train.py`        | Training loops            | `train_model()`, `train_multitask()`, `_evaluate()`         |
+| `train/run_training.py`            | Supervised training CLI   | `main()`                                                    |
+| `rl/agents/a3c_agent.py`           | A3C implementation        | `A3CAgent`, `ActorCriticNetwork`                            |
+| `rl/run_a3c_training.py`           | RL training CLI           | `main()`                                                    |
+| `eval/run_evaluation.py`           | Evaluation CLI            | `main()`                                                    |
+| `eval/agent_eval.py`               | Evaluation functions      | `evaluate_a3c_agent()`                                      |
+| `risk/risk_manager.py`             | Risk gating               | `RiskManager`                                               |
 
 ### Utility Modules
 
-| Module | Purpose | Key Classes/Functions |
-|--------|---------|----------------------|
-| `utils/seed.py` | Reproducibility | `set_seed()` (returns seed value) |
-| `utils/logger.py` | Logging | `get_logger()` |
-| `utils/training_checkpoint.py` | Checkpoint management | `EarlyStopping`, `CheckpointManager` |
-| `utils/amp.py` | Mixed precision | `AMPTrainer` |
-| `utils/async_checkpoint_saver.py` | Async I/O | `AsyncCheckpointSaver` |
-| `utils/attention_optimization.py` | Optimized attention | `TemporalAttention`, `MultiHeadTemporalAttention` |
-| `utils/datetime_utils.py` | Timezone handling | `convert_to_utc_and_dedup()` |
+| Module                            | Purpose               | Key Classes/Functions                             |
+|-----------------------------------|-----------------------|---------------------------------------------------|
+| `utils/seed.py`                   | Reproducibility       | `set_seed()` (returns seed value)                 |
+| `utils/logger.py`                 | Logging               | `get_logger()`                                    |
+| `utils/training_checkpoint.py`    | Checkpoint management | `EarlyStopping`, `CheckpointManager`              |
+| `utils/amp.py`                    | Mixed precision       | `AMPTrainer`                                      |
+| `utils/async_checkpoint_saver.py` | Async I/O             | `AsyncCheckpointSaver`                            |
+| `utils/attention_optimization.py` | Optimized attention   | `TemporalAttention`, `MultiHeadTemporalAttention` |
+| `utils/datetime_utils.py`         | Timezone handling     | `convert_to_utc_and_dedup()`                      |
 
 ---
 
@@ -144,6 +144,7 @@ python data/prepare_dataset.py \
 ```
 
 **Outputs:**
+
 - `data/cache/gbpusd_features_cache.csv` (features)
 - `data/cache/gbpusd_splits.npz` (train/val/test indices)
 
@@ -172,6 +173,7 @@ python train/run_training.py \
 ```
 
 **Outputs:**
+
 - `models/gbpusd_best.pt` (best checkpoint)
 
 ### Step 3: Evaluation
@@ -183,6 +185,7 @@ python eval/run_evaluation.py \
 ```
 
 **Outputs:**
+
 - Accuracy, F1, confusion matrix (classification)
 - RMSE, MAE (regression)
 - Per-regime performance
@@ -194,6 +197,7 @@ python eval/run_evaluation.py \
 ### Step 1: RL Policy Training
 
 **Option A: Stochastic Simulation (Default)**
+
 ```bash
 # Train A3C agent with stochastic retail execution simulation
 python rl/run_a3c_training.py \
@@ -207,6 +211,7 @@ python rl/run_a3c_training.py \
 ```
 
 **Option B: Deterministic Backtesting (Historical Replay)**
+
 ```bash
 # Train A3C agent with deterministic backtesting.py historical replay
 python rl/run_a3c_training.py \
@@ -222,10 +227,14 @@ python rl/run_a3c_training.py \
 ```
 
 **Key Differences:**
-- **Simulated mode** (`--env-mode simulated`): Stochastic execution with spread, slippage, realistic fills (non-deterministic, better for exploration)
-- **Backtesting mode** (`--env-mode backtesting`): Deterministic bar-by-bar replay using backtesting.py (reproducible, good for validation)
+
+- **Simulated mode** (`--env-mode simulated`): Stochastic execution with spread, slippage, realistic fills (
+  non-deterministic, better for exploration)
+- **Backtesting mode** (`--env-mode backtesting`): Deterministic bar-by-bar replay using backtesting.py (reproducible,
+  good for validation)
 
 **Outputs:**
+
 - `models/a3c_gbpusd.pt` (trained policy)
 
 ### Step 2: RL Policy Evaluation
@@ -325,6 +334,7 @@ class A3CConfig:
 ### Key Functions
 
 #### `set_seed(seed: int | None) -> int`
+
 Set reproducible seeds across all libraries.
 
 ```python
@@ -333,6 +343,7 @@ seed_value = set_seed(42)  # Returns 42
 ```
 
 #### `train_model(...) -> Dict[str, List[float]]`
+
 Train a DignityModel on classification/regression task.
 
 ```python
@@ -351,6 +362,7 @@ history = train_model(
 ```
 
 #### `evaluate_a3c_agent(...) -> Dict[str, float]`
+
 Evaluate trained A3C agent on environment.
 
 ```python
@@ -366,6 +378,7 @@ metrics = evaluate_a3c_agent(
 ```
 
 #### `EarlyStopping(patience: int) -> bool`
+
 Monitor validation metric and halt training on plateau.
 
 ```python
@@ -380,6 +393,7 @@ for epoch in range(100):
 ```
 
 #### `CheckpointManager(save_dir: Path, top_n: int)`
+
 Manage checkpoint retention and best model tracking.
 
 ```python
@@ -395,6 +409,7 @@ model.load_state_dict(best_state)
 ```
 
 #### `validate_dataframe(df: pd.DataFrame) -> pd.DataFrame`
+
 Validate and sanitize raw price data.
 
 ```python
@@ -410,64 +425,64 @@ df_clean = validate_dataframe(df_raw)
 
 ### Training Issues
 
-| Issue | Solution |
-|-------|----------|
-| Out of Memory (OOM) | Reduce `batch_size`, use `--use-amp`, enable `--num-workers` for async loading |
-| Slow training | Use `--num-workers 4 --pin-memory --prefetch-factor 4`, enable `--use-amp` on GPU |
-| Poor accuracy | Check data quality (validation output), increase `t_in`, tune learning rate |
-| Non-deterministic results | Call `set_seed(42)` at program start |
-| Model diverges | Reduce `learning_rate`, enable `grad_clip`, lower batch size |
+| Issue                     | Solution                                                                          |
+|---------------------------|-----------------------------------------------------------------------------------|
+| Out of Memory (OOM)       | Reduce `batch_size`, use `--use-amp`, enable `--num-workers` for async loading    |
+| Slow training             | Use `--num-workers 4 --pin-memory --prefetch-factor 4`, enable `--use-amp` on GPU |
+| Poor accuracy             | Check data quality (validation output), increase `t_in`, tune learning rate       |
+| Non-deterministic results | Call `set_seed(42)` at program start                                              |
+| Model diverges            | Reduce `learning_rate`, enable `grad_clip`, lower batch size                      |
 
 ### Data Issues
 
-| Issue | Solution |
-|-------|----------|
-| Missing data | Run `validate_dataframe()`, check for NaN rows |
-| Time zone misalignment | Use `ensure_utc_timezone()` after loading |
-| Duplicate timestamps | Use `deduplicate_on_datetime()` |
-| Unbalanced splits | Check `train_ratio`, `val_ratio` parameters |
+| Issue                  | Solution                                       |
+|------------------------|------------------------------------------------|
+| Missing data           | Run `validate_dataframe()`, check for NaN rows |
+| Time zone misalignment | Use `ensure_utc_timezone()` after loading      |
+| Duplicate timestamps   | Use `deduplicate_on_datetime()`                |
+| Unbalanced splits      | Check `train_ratio`, `val_ratio` parameters    |
 
 ### RL Issues
 
-| Issue | Solution |
-|-------|----------|
-| Policy doesn't learn | Reduce `entropy_coef`, check reward signal, verify environment |
-| Workers hang | Set `daemon=True` (already set), check for deadlocks |
-| Low win rate | Increase `total_steps`, tune `learning_rate`, adjust reward shaping |
+| Issue                | Solution                                                            |
+|----------------------|---------------------------------------------------------------------|
+| Policy doesn't learn | Reduce `entropy_coef`, check reward signal, verify environment      |
+| Workers hang         | Set `daemon=True` (already set), check for deadlocks                |
+| Low win rate         | Increase `total_steps`, tune `learning_rate`, adjust reward shaping |
 
 ### CLI Issues
 
-| Issue | Solution |
-|-------|----------|
-| `ModuleNotFoundError` | Verify imports, check `sys.path`, run from repo root |
+| Issue                  | Solution                                                 |
+|------------------------|----------------------------------------------------------|
+| `ModuleNotFoundError`  | Verify imports, check `sys.path`, run from repo root     |
 | Argument parsing fails | Check argument names: `--pairs` vs `--pair`, check types |
-| CUDA not found | Set `--device cpu`, verify PyTorch CUDA installation |
+| CUDA not found         | Set `--device cpu`, verify PyTorch CUDA installation     |
 
 ---
 
 ## Performance Tips
 
 1. **GPU Acceleration:**
-   - Use `--device cuda --use-amp --num-workers 4`
-   - Expected speedup: 3-5x
+    - Use `--device cuda --use-amp --num-workers 4`
+    - Expected speedup: 3-5x
 
 2. **Large-Scale Training:**
-   - Enable `--pin-memory --prefetch-factor 4`
-   - Use async checkpoint saving: `AsyncCheckpointSaver`
+    - Enable `--pin-memory --prefetch-factor 4`
+    - Use async checkpoint saving: `AsyncCheckpointSaver`
 
 3. **Reproducibility:**
-   - Always call `set_seed()` at program start
-   - Log random seed for experiment tracking
+    - Always call `set_seed()` at program start
+    - Log random seed for experiment tracking
 
 4. **Memory Efficiency:**
-   - Enable AMP: `--use-amp` (float16)
-   - Use gradient accumulation (not yet implemented)
-   - Reduce `t_in` window if memory constrained
+    - Enable AMP: `--use-amp` (float16)
+    - Use gradient accumulation (not yet implemented)
+    - Reduce `t_in` window if memory constrained
 
 5. **Model Convergence:**
-   - Use cosine annealing scheduler
-   - Early stopping with patience=3
-   - Gradient clipping (default: 1.0)
+    - Use cosine annealing scheduler
+    - Early stopping with patience=3
+    - Gradient clipping (default: 1.0)
 
 ---
 
@@ -500,11 +515,13 @@ config = ExecutionConfig(
 ```
 
 **Cost Tracking**:
+
 - `env._commission_paid`: Total commission costs
 - `env._spread_paid`: Total spread costs
 - `env._slippage_paid`: Total slippage costs
 
 **Behavior**:
+
 - Spreads widen when `volatility_ratio > 1.5`
 - Uses EMA of recent price shocks to detect volatility regimes
 - All costs deducted from cash on every fill
@@ -525,6 +542,7 @@ converter = ActionConverter(
 ```
 
 **Sizing Formula** (when `use_dynamic_sizing=True`):
+
 ```python
 portfolio_value = cash + (inventory * mid_price)
 risk_amount = portfolio_value * risk_per_trade
@@ -532,11 +550,13 @@ size = risk_amount / mid_price
 ```
 
 **Constraints Applied**:
+
 1. **Position Limits**: Size capped to prevent exceeding `max_position`
 2. **Cash Constraints**: Buy orders limited by available cash
 3. **Lot Rounding**: Sizes rounded to `lot_size` increments
 
 **Multi-Pair Behavior**:
+
 - `max_position` is per-pair (independent inventory tracking)
 - Enables diversification: long 8 EUR/USD AND long 6 GBP/USD simultaneously
 
@@ -561,11 +581,13 @@ config = ExecutionConfig(
 ```
 
 **Risk Metrics**:
+
 - `env._stop_loss_triggered`: Count of stop-loss exits
 - `env._take_profit_triggered`: Count of take-profit exits
 - `env._peak_portfolio_value`: Peak portfolio for drawdown calculation
 
 **Behavior**:
+
 - Stop-loss/take-profit checked every step after price update
 - Drawdown = `(peak_portfolio - current_portfolio) / peak_portfolio`
 - Episode terminates early if `drawdown >= max_drawdown_pct`
@@ -573,6 +595,7 @@ config = ExecutionConfig(
 ### Production Configuration Examples
 
 #### Balanced (Recommended)
+
 ```python
 env_config = ExecutionConfig(
     initial_cash=50_000.0,
@@ -590,6 +613,7 @@ converter = ActionConverter(
 ```
 
 #### Conservative (High Safety)
+
 ```python
 env_config = ExecutionConfig(
     initial_cash=50_000.0,
@@ -615,6 +639,7 @@ See [Configuration Reference](../CONFIGURATION_REFERENCE.md) for complete option
 ### Testing & Validation
 
 All Phase 3 features validated with comprehensive test suite:
+
 - **16/16 Phase 3 tests passing**
 - **25/25 total tests passing** (Phases 1-3)
 

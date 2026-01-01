@@ -61,6 +61,7 @@ def parse_args():
     add_rl_training_args(parser)
     return parser.parse_args()
 
+
 def main():
     # Initialize tracing for observability
     try:

@@ -82,7 +82,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--short-vol-window", type=int, default=10, help="Short window for volatility clustering")
     parser.add_argument("--long-vol-window", type=int, default=50, help="Long window for volatility clustering")
     parser.add_argument("--spread-windows", default="20", help="Comma-separated windows for normalized spread stats")
-    parser.add_argument("--imbalance-smoothing", type=int, default=5, help="Rolling mean window for wick/body imbalance")
+    parser.add_argument("--imbalance-smoothing", type=int, default=5,
+                        help="Rolling mean window for wick/body imbalance")
     parser.add_argument(
         "--intrinsic-time",
         action="store_true",
@@ -215,7 +216,7 @@ def parse_args() -> argparse.Namespace:
         help="Disable automatic download when pair data is missing.",
     )
     parser.set_defaults(auto_download_missing=True)
-    
+
     # RL Training arguments
     parser.add_argument(
         "--run-rl-training",
@@ -479,12 +480,13 @@ def load_rl_modules():
     global A3CAgent, A3CConfig, SimulatedRetailExecutionEnv, BacktestingRetailExecutionEnv, ExecutionConfig
     if A3CAgent is None:
         from rl.agents.a3c_agent import A3CAgent as A3C, A3CConfig as A3CCfg  # noqa: E402
-        from execution.simulated_retail_env import SimulatedRetailExecutionEnv as SimEnv, ExecutionConfig as ExecCfg  # noqa: E402
+        from execution.simulated_retail_env import SimulatedRetailExecutionEnv as SimEnv, \
+            ExecutionConfig as ExecCfg  # noqa: E402
         A3CAgent = A3C
         A3CConfig = A3CCfg
         SimulatedRetailExecutionEnv = SimEnv
         ExecutionConfig = ExecCfg
-        
+
         # Backtesting environment is optional
         if BacktestingRetailExecutionEnv is None:
             try:
@@ -497,24 +499,24 @@ def load_rl_modules():
 def run_rl_training(pair: str, args, prepared_data_path: Path) -> None:
     """Run A3C RL training for a single pair."""
     import pandas as pd
-    
+
     load_rl_modules()
 
     log.info(f"\nRL: Starting RL training for {pair}")
     log.info(f"RL: Environment mode: {args.rl_env_mode}")
     log.info(f"RL: Workers: {args.rl_num_workers}")
     log.info(f"RL: Total steps: {args.rl_total_steps}")
-    
+
     # Create RL checkpoint directory
     rl_ckpt_root = Path(args.rl_checkpoint_dir)
     rl_ckpt_root.mkdir(parents=True, exist_ok=True)
     rl_ckpt_path = rl_ckpt_root / f"a3c_{pair}.pt"
-    
+
     # Determine device
     device = args.device
     if device.startswith("cuda") and not torch.cuda.is_available():
         device = "cpu"
-    
+
     # Create model config (reuse supervised model architecture)
     model_cfg = ModelConfig(
         num_features=20,  # Will be adjusted based on environment observations
@@ -525,7 +527,7 @@ def run_rl_training(pair: str, args, prepared_data_path: Path) -> None:
         attention_dim=64,
         dropout=0.1,
     )
-    
+
     # Create A3C config
     a3c_cfg = A3CConfig(
         n_workers=args.rl_num_workers,
@@ -541,7 +543,7 @@ def run_rl_training(pair: str, args, prepared_data_path: Path) -> None:
         log_interval=1000,
         device=device,
     )
-    
+
     # Create environment factory based on mode
     if args.rl_env_mode == "simulated":
         # Stochastic retail simulation
@@ -554,13 +556,13 @@ def run_rl_training(pair: str, args, prepared_data_path: Path) -> None:
             )
 
         log.info(f"RL: Using SimulatedRetailExecutionEnv (stochastic)")
-    
+
     else:  # backtesting mode
         if BacktestingRetailExecutionEnv is None:
             log.error("backtesting.py is required for --rl-env-mode=backtesting")
             log.error("Install with: pip install backtesting>=0.3.2")
             return
-        
+
         # Load historical OHLCV data
         if not prepared_data_path.exists():
             log.error(f"Prepared data not found: {prepared_data_path}")
@@ -569,12 +571,12 @@ def run_rl_training(pair: str, args, prepared_data_path: Path) -> None:
 
         log.info(f"RL: Loading historical data from {prepared_data_path}")
         price_df = pd.read_csv(prepared_data_path)
-        
+
         # Ensure datetime column and required OHLCV columns
         if "datetime" in price_df.columns:
             price_df["datetime"] = pd.to_datetime(price_df["datetime"])
             price_df = price_df.set_index("datetime")
-        
+
         required_cols = {"open", "high", "low", "close"}
         available_cols = {c.lower() for c in price_df.columns}
         if not required_cols.issubset(available_cols):
@@ -584,7 +586,7 @@ def run_rl_training(pair: str, args, prepared_data_path: Path) -> None:
             return
 
         log.info(f"RL: Loaded {len(price_df)} bars for backtesting")
-        
+
         def make_env():
             exec_cfg = ExecutionConfig(initial_cash=args.rl_initial_balance)
             return BacktestingRetailExecutionEnv(
@@ -593,7 +595,7 @@ def run_rl_training(pair: str, args, prepared_data_path: Path) -> None:
             )
 
         log.info(f"RL: Using BacktestingRetailExecutionEnv (deterministic historical)")
-    
+
     # Create and train agent
     try:
         log.info(f"RL: Initializing A3C agent...")
@@ -608,7 +610,7 @@ def run_rl_training(pair: str, args, prepared_data_path: Path) -> None:
         agent.train()
 
         log.info(f"RL: Training complete! Checkpoint saved to: {rl_ckpt_path}")
-    
+
     except KeyboardInterrupt:
         log.warning(f"RL training interrupted for {pair}")
     except Exception as exc:
@@ -760,7 +762,7 @@ def main() -> None:
                     if alt.exists():
                         prepared_data_path = alt
                         break
-            
+
             run_rl_training(pair, args, prepared_data_path)
 
         if args.delete_input_zips:

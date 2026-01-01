@@ -17,8 +17,8 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-
 from config.config import MultiTaskDataConfig
+
 from .base_agent import BaseDataAgent, _label_from_return
 
 
@@ -56,10 +56,10 @@ class MultiTaskDataAgent(BaseDataAgent):
         return 1
 
     def _build_windows(
-        self,
-        df: pd.DataFrame,
+            self,
+            df: pd.DataFrame,
             feature_cols: list[str],
-        norm_stats,
+            norm_stats,
     ) -> tuple[np.ndarray, dict[str, np.ndarray]]:
         """Build sliding windows with multitask targets.
 
@@ -114,7 +114,7 @@ class MultiTaskDataAgent(BaseDataAgent):
 
         for idx in range(t_in - 1, last_idx):
             # Extract sequence window
-            seq = features[idx - t_in + 1 : idx + 1]
+            seq = features[idx - t_in + 1: idx + 1]
 
             # Compute primary future return target
             future_log_ret = log_close[idx + t_out] - log_close[idx]
@@ -127,7 +127,7 @@ class MultiTaskDataAgent(BaseDataAgent):
             next_close_target = float(df["close"].iloc[idx + t_out])
 
             # Auxiliary targets: max_return, topk
-            future_returns = log_close[idx + 1 : idx + lookahead + 1] - log_close[idx]
+            future_returns = log_close[idx + 1: idx + lookahead + 1] - log_close[idx]
             if len(future_returns) < lookahead or np.isnan(future_returns).any():
                 continue
 
@@ -143,8 +143,8 @@ class MultiTaskDataAgent(BaseDataAgent):
             topk_prices = np.exp(topk_returns) * df["close"].iloc[idx]
 
             # Volatility targets: compare past vs future volatility
-            past_ret_window = log_returns[idx - t_out + 1 : idx + 1]
-            future_ret_window = log_returns[idx + 1 : idx + t_out + 1]
+            past_ret_window = log_returns[idx - t_out + 1: idx + 1]
+            future_ret_window = log_returns[idx + 1: idx + t_out + 1]
             if len(past_ret_window) < t_out or len(future_ret_window) < t_out:
                 continue
             if np.isnan(past_ret_window).any() or np.isnan(future_ret_window).any():

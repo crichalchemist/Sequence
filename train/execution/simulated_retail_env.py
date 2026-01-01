@@ -28,7 +28,6 @@ from collections import deque
 from dataclasses import dataclass, field
 
 import numpy as np
-
 from execution.limit_order_engine import LimitOrderConfig, LimitOrderEngine
 
 
@@ -187,7 +186,7 @@ class SimulatedRetailExecutionEnv:
     metadata = {"render.modes": ["human"]}
 
     def __init__(
-        self,
+            self,
             config: ExecutionConfig | None = None,
             seed: int | None = None,
             logger: logging.Logger | None = None,
@@ -306,7 +305,8 @@ class SimulatedRetailExecutionEnv:
 
     def render(self, mode: str = "human") -> None:
         if mode == "human":
-            self.logger.info("Step %s | Mid %.4f | Inv %.2f | PnL %.2f", self.step_count, self.mid_price, self.inventory, self.realized_pnl)
+            self.logger.info("Step %s | Mid %.4f | Inv %.2f | PnL %.2f", self.step_count, self.mid_price,
+                             self.inventory, self.realized_pnl)
 
     # Internal mechanics
 

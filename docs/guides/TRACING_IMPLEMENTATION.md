@@ -1,32 +1,36 @@
 # Tracing Implementation Summary
 
 **Date:** 2025-12-06  
-**Status:** ✅ Complete  
+**Status:** ✅ Complete
 
 ## What Was Added
 
-Comprehensive OpenTelemetry tracing infrastructure for the Sequence FX Forecasting Toolkit, enabling full observability of training, validation, and data pipeline operations.
+Comprehensive OpenTelemetry tracing infrastructure for the Sequence FX Forecasting Toolkit, enabling full observability
+of training, validation, and data pipeline operations.
 
 ---
 
 ## Files Created
 
 ### 1. `utils/tracing.py` (New)
+
 **Purpose:** Core tracing infrastructure and utilities
 
 **Key Components:**
+
 - `setup_tracing()` - Initialize OpenTelemetry with AI Toolkit's OTLP endpoint
 - `get_tracer()` - Get tracer instances for modules
 - `TracingContext` - Context manager for named spans with automatic error handling
 - `trace_function()` - Decorator for automatic function tracing
 - Convenience functions for common scenarios:
-  - `trace_training_epoch()` - Track training epochs
-  - `trace_batch_processing()` - Track batch operations
-  - `trace_validation()` - Track validation runs
-  - `trace_data_loading()` - Track data loading
-  - `trace_feature_engineering()` - Track feature computation
+    - `trace_training_epoch()` - Track training epochs
+    - `trace_batch_processing()` - Track batch operations
+    - `trace_validation()` - Track validation runs
+    - `trace_data_loading()` - Track data loading
+    - `trace_feature_engineering()` - Track feature computation
 
 **Key Features:**
+
 - Auto-instruments PyTorch operations
 - Auto-instruments logging
 - Batch span export for efficiency
@@ -34,9 +38,11 @@ Comprehensive OpenTelemetry tracing infrastructure for the Sequence FX Forecasti
 - Exception tracking with error details
 
 ### 2. `docs/TRACING_SETUP.md` (New)
+
 **Purpose:** Complete tracing setup and usage guide
 
 **Contents:**
+
 - Quick start (5-step guide)
 - Architecture overview
 - Usage examples (basic, manual, decorators, data pipeline)
@@ -52,7 +58,9 @@ Comprehensive OpenTelemetry tracing infrastructure for the Sequence FX Forecasti
 ## Files Modified
 
 ### 1. `train/core/agent_train.py`
+
 **Changes:**
+
 - Added import: `from utils.tracing import get_tracer, trace_training_epoch, trace_batch_processing, trace_validation`
 - Initialize tracer in `train_model()` function
 - Wrapped training epochs with `trace_training_epoch()` context
@@ -62,13 +70,16 @@ Comprehensive OpenTelemetry tracing infrastructure for the Sequence FX Forecasti
 - Track epoch metrics on spans (train_loss, val_loss, val_metric)
 
 **Instrumented Operations:**
+
 - Training epochs (epoch number, total epochs)
 - Individual batch processing (batch index, batch size, loss)
 - Validation runs (validation loss, metrics)
 - Per-step loss tracking
 
 ### 2. `train/core/agent_train_multitask.py`
+
 **Changes:**
+
 - Added import: `from utils.tracing import get_tracer, trace_training_epoch, trace_batch_processing, trace_validation`
 - Initialize tracer in `train_multitask()` function
 - Wrapped training epochs with `trace_training_epoch()` context
@@ -79,19 +90,24 @@ Comprehensive OpenTelemetry tracing infrastructure for the Sequence FX Forecasti
 - Record epoch metrics on epoch span
 
 **Instrumented Operations:**
+
 - Training epochs with multitask context
 - Per-task loss tracking in batches
 - Multi-metric validation (dir_acc, vol_acc, trend_acc, vol_regime_acc, candle_acc, rmse metrics)
 
 ### 3. `train/run_training.py`
+
 **Changes:**
+
 - Added tracing initialization in `main()` function
 - Wrapped in try-except for graceful fallback if OpenTelemetry not available
 - Service name: `"sequence-training"`
 - OTLP endpoint: `"http://localhost:4318"` (AI Toolkit default)
 
 ### 4. `train/run_training_multitask.py`
+
 **Changes:**
+
 - Added tracing initialization in `main()` function
 - Wrapped in try-except for graceful fallback
 - Service name: `"sequence-multitask-training"`
@@ -102,6 +118,7 @@ Comprehensive OpenTelemetry tracing infrastructure for the Sequence FX Forecasti
 ## Integration Points
 
 ### Training Pipeline
+
 ```
 run_training.py / run_training_multitask.py
     ↓ (initializes tracing)
@@ -121,6 +138,7 @@ Training loop with spans:
 ```
 
 ### Span Hierarchy
+
 - **Service**: `sequence-training` or `sequence-multitask-training`
 - **Top-level**: Individual training epochs
 - **Mid-level**: Batch processing and validation
@@ -161,18 +179,21 @@ with TracingContext(tracer, "my_operation", {"pair": "gbpusd"}) as span:
 ## Benefits
 
 ### Observability
+
 - ✅ See full training pipeline execution timeline
 - ✅ Identify performance bottlenecks
 - ✅ Track metrics per epoch and batch
 - ✅ Monitor validation performance
 
 ### Debugging
+
 - ✅ Trace errors with exception details
 - ✅ Correlate metrics across training runs
 - ✅ Analyze convergence patterns
 - ✅ Compare different training configurations
 
 ### Production Ready
+
 - ✅ Minimal performance overhead (batch export)
 - ✅ Graceful degradation if collector unavailable
 - ✅ Auto-instrumentation of PyTorch and logging
@@ -183,6 +204,7 @@ with TracingContext(tracer, "my_operation", {"pair": "gbpusd"}) as span:
 ## Span Metrics Captured
 
 ### Training Epoch Spans
+
 - `epoch`: Epoch number
 - `total_epochs`: Total number of epochs
 - `train_loss`: Average training loss for epoch
@@ -191,18 +213,21 @@ with TracingContext(tracer, "my_operation", {"pair": "gbpusd"}) as span:
 - `loss_at_step_N`: Loss at specific training steps
 
 ### Batch Spans
+
 - `batch_index`: Batch number
 - `batch_size`: Samples per batch
 - `loss`: Batch loss value
 - `task.{task_name}`: Per-task loss (multitask only)
 
 ### Validation Spans
+
 - `epoch`: Epoch number
 - `val_loss`: Total validation loss
 - `val_metric`: Primary validation metric
 - `val.{metric_name}`: All validation metrics (multitask)
 
 ### Error Tracking
+
 - `error.type`: Exception class name
 - `error.message`: Exception message
 
@@ -211,6 +236,7 @@ with TracingContext(tracer, "my_operation", {"pair": "gbpusd"}) as span:
 ## Next Steps
 
 ### Optional Enhancements
+
 - Add tracing to data pipeline (`prepare_dataset.py`)
 - Add tracing to feature engineering (`agent_features.py`)
 - Add tracing to evaluation pipeline (`run_evaluation.py`)
@@ -218,6 +244,7 @@ with TracingContext(tracer, "my_operation", {"pair": "gbpusd"}) as span:
 - Add correlation IDs for distributed tracing
 
 ### Integration with Monitoring
+
 - Export metrics to Prometheus
 - Create dashboards in Grafana
 - Set up alerts for training anomalies
@@ -227,28 +254,31 @@ with TracingContext(tracer, "my_operation", {"pair": "gbpusd"}) as span:
 
 ## Files Reference
 
-| File | Purpose | Status |
-|------|---------|--------|
-| `utils/tracing.py` | Core tracing infrastructure | ✅ Created |
-| `docs/TRACING_SETUP.md` | Setup guide and documentation | ✅ Created |
-| `train/core/agent_train.py` | Single-task training loops | ✅ Instrumented |
-| `train/core/agent_train_multitask.py` | Multi-task training loops | ✅ Instrumented |
-| `train/run_training.py` | Single-task CLI runner | ✅ Instrumented |
-| `train/run_training_multitask.py` | Multi-task CLI runner | ✅ Instrumented |
+| File                                  | Purpose                       | Status         |
+|---------------------------------------|-------------------------------|----------------|
+| `utils/tracing.py`                    | Core tracing infrastructure   | ✅ Created      |
+| `docs/TRACING_SETUP.md`               | Setup guide and documentation | ✅ Created      |
+| `train/core/agent_train.py`           | Single-task training loops    | ✅ Instrumented |
+| `train/core/agent_train_multitask.py` | Multi-task training loops     | ✅ Instrumented |
+| `train/run_training.py`               | Single-task CLI runner        | ✅ Instrumented |
+| `train/run_training_multitask.py`     | Multi-task CLI runner         | ✅ Instrumented |
 
 ---
 
 ## Configuration
 
 ### Default OTLP Endpoint
+
 - **HTTP**: `http://localhost:4318` (AI Toolkit default)
 - **gRPC**: `http://localhost:4317` (alternative)
 
 ### Service Names
+
 - Single-task: `sequence-training`
 - Multi-task: `sequence-multitask-training`
 
 ### Environment
+
 - Default: `development`
 - Can be changed in `setup_tracing(environment="production")`
 

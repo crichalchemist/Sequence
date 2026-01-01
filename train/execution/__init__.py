@@ -12,6 +12,7 @@ from execution.simulated_retail_env import SimulatedRetailExecutionEnv
 # Optional import for backtesting environment (requires backtesting library)
 try:
     from execution.backtesting_env import BacktestingRetailExecutionEnv
+
     __all__ = [
         "BacktestingRetailExecutionEnv",
         "SimulatedRetailExecutionEnv",
@@ -21,4 +22,3 @@ except ImportError:
     __all__ = [
         "SimulatedRetailExecutionEnv",
     ]
-

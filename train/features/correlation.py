@@ -86,10 +86,10 @@ def compute_returns(df: pd.DataFrame, periods: list[int] = [1, 5, 20]) -> pd.Dat
 
 
 def build_returns_matrix(
-    data_dir: Path,
+        data_dir: Path,
         pairs: list[str],
-    interval: str,
-    return_period: int = 1
+        interval: str,
+        return_period: int = 1
 ) -> pd.DataFrame:
     """Build a matrix of returns across all pairs, aligned by datetime.
 
@@ -131,9 +131,9 @@ def build_returns_matrix(
 
 
 def compute_rolling_correlation(
-    returns_df: pd.DataFrame,
-    window: int = 20,
-    min_periods: int = 10
+        returns_df: pd.DataFrame,
+        window: int = 20,
+        min_periods: int = 10
 ) -> dict[tuple[str, str], pd.Series]:
     """Compute rolling pairwise correlations.
 
@@ -163,8 +163,8 @@ def compute_rolling_correlation(
 
 
 def compute_correlation_matrix(
-    returns_df: pd.DataFrame,
-    method: str = "pearson"
+        returns_df: pd.DataFrame,
+        method: str = "pearson"
 ) -> pd.DataFrame:
     """Compute static correlation matrix.
 
@@ -184,7 +184,7 @@ def compute_correlation_matrix(
 
 
 def compute_cross_asset_correlations(
-    returns_df: pd.DataFrame,
+        returns_df: pd.DataFrame,
         reference_pairs: list[str] | None = None
 ) -> pd.DataFrame:
     """Compute correlations of each pair against reference pairs (e.g., BTC, Gold).
@@ -225,8 +225,8 @@ def compute_cross_asset_correlations(
 
 
 def find_highly_correlated_pairs(
-    corr_matrix: pd.DataFrame,
-    threshold: float = 0.7
+        corr_matrix: pd.DataFrame,
+        threshold: float = 0.7
 ) -> list[tuple[str, str, float]]:
     """Find pairs with absolute correlation above threshold.
 
@@ -257,8 +257,8 @@ def find_highly_correlated_pairs(
 
 
 def compute_regime_correlations(
-    returns_df: pd.DataFrame,
-    regime_series: pd.Series,
+        returns_df: pd.DataFrame,
+        regime_series: pd.Series,
 ) -> dict[int, pd.DataFrame]:
     """Compute correlation matrices for each market regime.
 
@@ -292,10 +292,10 @@ def compute_regime_correlations(
 
 
 def generate_correlation_features(
-    returns_df: pd.DataFrame,
-    target_pair: str,
+        returns_df: pd.DataFrame,
+        target_pair: str,
         reference_pairs: list[str] | None = None,
-    window: int = 20
+        window: int = 20
 ) -> pd.DataFrame:
     """Generate rolling correlation features for a target pair.
 
@@ -404,4 +404,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

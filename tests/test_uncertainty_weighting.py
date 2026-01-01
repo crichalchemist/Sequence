@@ -39,6 +39,7 @@ def test_basic_functionality():
 
     print("✓ Basic functionality test passed!")
 
+
 def test_uncertainty_learning():
     """Test that uncertainty parameters can be learned."""
     print("\nTesting Uncertainty Learning...")
@@ -75,6 +76,7 @@ def test_uncertainty_learning():
     assert final_uncertainties["classification_loss"] > final_uncertainties["regression_loss"]
 
     print("✓ Uncertainty learning test passed!")
+
 
 def test_regularization():
     """Test regularization to prevent unbounded growth."""
@@ -114,6 +116,7 @@ def test_regularization():
 
     print("✓ Regularization test passed!")
 
+
 def test_initial_weights():
     """Test initialization with custom weights."""
     print("\nTesting Custom Initial Weights...")
@@ -135,6 +138,7 @@ def test_initial_weights():
     assert abs(uncertainties["loss2"] - 0.5) < 0.1, f"loss2 uncertainty should be 0.5, got {uncertainties['loss2']}"
 
     print("✓ Custom initial weights test passed!")
+
 
 if __name__ == "__main__":
     test_basic_functionality()

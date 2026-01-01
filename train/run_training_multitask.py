@@ -51,7 +51,8 @@ def parse_args():
     parser.add_argument("--short-vol-window", type=int, default=10, help="Short window for volatility clustering")
     parser.add_argument("--long-vol-window", type=int, default=50, help="Long window for volatility clustering")
     parser.add_argument("--spread-windows", default="20", help="Comma-separated windows for normalized spread stats")
-    parser.add_argument("--imbalance-smoothing", type=int, default=5, help="Rolling mean window for wick/body imbalance")
+    parser.add_argument("--imbalance-smoothing", type=int, default=5,
+                        help="Rolling mean window for wick/body imbalance")
     parser.add_argument("--gdelt-path", default=None, help="Optional path to a GDELT GKG file for sentiment features")
     parser.add_argument("--gdelt-tz", default="UTC", help="Timezone to convert GDELT timestamps into (default UTC)")
     parser.add_argument("--batch-size", type=int, default=64)

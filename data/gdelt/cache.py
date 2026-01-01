@@ -5,7 +5,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
-
 from gdelt.config import REGIME_FEATURE_DIM
 
 

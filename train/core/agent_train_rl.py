@@ -47,11 +47,11 @@ logger = get_logger(__name__)
 @dataclass
 class RLConfig:
     """RL hyperparameters for policy training."""
-    entropy_coeff: float = 0.01          # Entropy regularization weight
-    value_loss_coeff: float = 0.5        # Value network loss weight
-    gae_gamma: float = 0.99              # Discount factor
-    gae_lambda: float = 0.95             # GAE lambda for advantage smoothing
-    clip_norm: float = 1.0               # Gradient clipping norm
+    entropy_coeff: float = 0.01  # Entropy regularization weight
+    value_loss_coeff: float = 0.5  # Value network loss weight
+    gae_gamma: float = 0.99  # Discount factor
+    gae_lambda: float = 0.95  # GAE lambda for advantage smoothing
+    clip_norm: float = 1.0  # Gradient clipping norm
     learning_rate: float = 1e-4
     batch_size: int = 32
     epochs: int = 10
@@ -59,10 +59,10 @@ class RLConfig:
 
 
 def compute_gae(
-    rewards: np.ndarray,
-    values: np.ndarray,
-    gamma: float = 0.99,
-    lambda_: float = 0.95,
+        rewards: np.ndarray,
+        values: np.ndarray,
+        gamma: float = 0.99,
+        lambda_: float = 0.95,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Compute Generalized Advantage Estimation (GAE).
@@ -106,11 +106,11 @@ def compute_gae(
 
 
 def train_epoch(
-    policy: ExecutionPolicy,
-    optimizer: optim.Optimizer,
-    train_loader: DataLoader,
-    rl_cfg: RLConfig,
-    device: str,
+        policy: ExecutionPolicy,
+        optimizer: optim.Optimizer,
+        train_loader: DataLoader,
+        rl_cfg: RLConfig,
+        device: str,
 ) -> dict:
     """
     Train policy for one epoch using A2C updates.
@@ -151,9 +151,9 @@ def train_epoch(
 
         # Combined loss
         loss = (
-            policy_loss
-            + rl_cfg.value_loss_coeff * value_loss
-            - rl_cfg.entropy_coeff * entropy
+                policy_loss
+                + rl_cfg.value_loss_coeff * value_loss
+                - rl_cfg.entropy_coeff * entropy
         )
 
         optimizer.zero_grad()

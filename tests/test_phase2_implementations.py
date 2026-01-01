@@ -228,6 +228,7 @@ def test_integration_all_components():
 if __name__ == "__main__":
     # Set up logging
     import logging
+
     logging.basicConfig(level=logging.INFO)
 
     # Run all tests

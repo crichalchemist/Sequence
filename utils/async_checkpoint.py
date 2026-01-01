@@ -18,11 +18,11 @@ class AsyncCheckpointManager:
     """Asynchronous checkpoint manager with thread pool and queue-based processing."""
 
     def __init__(
-        self,
-        save_dir: Path,
-        max_workers: int = 2,
-        queue_size: int = 10,
-        top_n_checkpoints: int = 3
+            self,
+            save_dir: Path,
+            max_workers: int = 2,
+            queue_size: int = 10,
+            top_n_checkpoints: int = 3
     ):
         """Initialize asynchronous checkpoint manager.
         
@@ -164,13 +164,13 @@ class AsyncCheckpointManager:
         self.checkpoint_history = self.checkpoint_history[:self.top_n_checkpoints]
 
     def save_checkpoint(
-        self,
-        state_dict: dict,
-        score: float,
-        epoch: int,
-        model_name: str = "model",
+            self,
+            state_dict: dict,
+            score: float,
+            epoch: int,
+            model_name: str = "model",
             callback: Callable | None = None,
-        blocking: bool = False
+            blocking: bool = False
     ) -> bool:
         """Queue a checkpoint for asynchronous saving.
         
@@ -331,8 +331,8 @@ class AsyncCheckpointManager:
 
 
 def create_async_checkpoint_manager(
-    save_dir: Path,
-    training_config
+        save_dir: Path,
+        training_config
 ) -> AsyncCheckpointManager:
     """Create async checkpoint manager from training configuration.
     

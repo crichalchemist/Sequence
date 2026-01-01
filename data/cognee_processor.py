@@ -62,11 +62,11 @@ class CogneeDataProcessor:
         logger.info(f"[cognee] Initialized processor with batch_size={batch_size}")
 
     def ingest_gdelt_news(
-        self,
-        gdelt_df: pd.DataFrame,
-        dataset_name: str,
-        text_col: str = "source_url",
-        include_themes: bool = True
+            self,
+            gdelt_df: pd.DataFrame,
+            dataset_name: str,
+            text_col: str = "source_url",
+            include_themes: bool = True
     ) -> int:
         """
         Ingest GDELT news articles into Cognee.
@@ -135,7 +135,8 @@ class CogneeDataProcessor:
                 ingested_count += len(doc_ids)
 
                 if (batch_end % 1000) == 0 or batch_end == len(gdelt_df):
-                    logger.info(f"  Progress: {batch_end:,}/{len(gdelt_df):,} records ({batch_end/len(gdelt_df):.1%})")
+                    logger.info(
+                        f"  Progress: {batch_end:,}/{len(gdelt_df):,} records ({batch_end / len(gdelt_df):.1%})")
 
             except CogneeAPIError as e:
                 logger.error(f"  Failed to ingest batch {batch_start}-{batch_end}: {e}")
@@ -146,11 +147,11 @@ class CogneeDataProcessor:
         return ingested_count
 
     def ingest_economic_indicators(
-        self,
-        indicators_df: pd.DataFrame,
-        dataset_name: str,
-        text_col: str = "full_text",
-        title_col: str = "title"
+            self,
+            indicators_df: pd.DataFrame,
+            dataset_name: str,
+            text_col: str = "full_text",
+            title_col: str = "title"
     ) -> int:
         """
         Ingest economic indicator announcements into Cognee.
@@ -223,11 +224,11 @@ class CogneeDataProcessor:
         return ingested_count
 
     def ingest_price_patterns(
-        self,
-        pattern_df: pd.DataFrame,
-        dataset_name: str,
-        pair: str,
-        description_col: str = "pattern_description"
+            self,
+            pattern_df: pd.DataFrame,
+            dataset_name: str,
+            pair: str,
+            description_col: str = "pattern_description"
     ) -> int:
         """
         Ingest price pattern narratives into Cognee.
@@ -296,10 +297,10 @@ class CogneeDataProcessor:
         return ingested_count
 
     def wait_for_cognify(
-        self,
-        job_id: str,
-        timeout: int = 600,
-        poll_interval: int = 5
+            self,
+            job_id: str,
+            timeout: int = 600,
+            poll_interval: int = 5
     ) -> bool:
         """
         Wait for cognify job to complete with progress updates.
@@ -359,10 +360,10 @@ class CogneeDataProcessor:
         return False
 
     def export_entity_cache(
-        self,
-        dataset_name: str,
-        output_dir: Path,
-        include_relationships: bool = True
+            self,
+            dataset_name: str,
+            output_dir: Path,
+            include_relationships: bool = True
     ) -> dict[str, Path]:
         """
         Export entities and relationships from knowledge graph to local cache.

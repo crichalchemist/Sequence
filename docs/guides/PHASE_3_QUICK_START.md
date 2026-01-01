@@ -216,16 +216,19 @@ config = ExecutionConfig(
 ## Next Steps
 
 ### Beginner
+
 1. Run example above to validate Phase 3 works
 2. Experiment with different `risk_per_trade` values (0.01, 0.02, 0.05)
 3. Compare episodes with/without risk controls
 
 ### Intermediate
+
 1. Review full configuration options: [Configuration Reference](../CONFIGURATION_REFERENCE.md)
 2. Read implementation details: [Phase 3 Implementation Summary](../implementation/PHASE_3_IMPLEMENTATION_SUMMARY.md)
 3. Explore multi-pair training patterns
 
 ### Advanced
+
 1. Design custom reward functions incorporating transaction costs
 2. Tune hyperparameters (risk_per_trade, max_position, drawdown limits)
 3. Implement portfolio-level position sizing across multiple pairs
@@ -269,6 +272,7 @@ print("✅ All tests passed!")
 Copy-paste ready configurations:
 
 ### FX Day Trading
+
 ```python
 config = ExecutionConfig(
     initial_cash=50_000.0,
@@ -288,6 +292,7 @@ converter = ActionConverter(
 ```
 
 ### Crypto Trading (Higher Costs)
+
 ```python
 config = ExecutionConfig(
     initial_cash=10_000.0,
@@ -319,21 +324,22 @@ converter = ActionConverter(
 
 ## Quick Reference
 
-| Feature | Config Parameter | Default | Recommended |
-|---------|------------------|---------|-------------|
-| Commission (%) | `commission_pct` | 0.0 | 0.0001 (FX) |
-| Variable Spreads | `variable_spread` | False | True |
-| Drawdown Limit | `enable_drawdown_limit` | False | True (training) |
-| Max Drawdown | `max_drawdown_pct` | 0.20 | 0.15-0.25 |
-| Risk per Trade | `risk_per_trade` | 0.02 | 0.015-0.02 |
-| Dynamic Sizing | `use_dynamic_sizing` | False | True |
-| Max Position | `max_position` | 10.0 | 5-15 (by pair) |
+| Feature          | Config Parameter        | Default | Recommended     |
+|------------------|-------------------------|---------|-----------------|
+| Commission (%)   | `commission_pct`        | 0.0     | 0.0001 (FX)     |
+| Variable Spreads | `variable_spread`       | False   | True            |
+| Drawdown Limit   | `enable_drawdown_limit` | False   | True (training) |
+| Max Drawdown     | `max_drawdown_pct`      | 0.20    | 0.15-0.25       |
+| Risk per Trade   | `risk_per_trade`        | 0.02    | 0.015-0.02      |
+| Dynamic Sizing   | `use_dynamic_sizing`    | False   | True            |
+| Max Position     | `max_position`          | 10.0    | 5-15 (by pair)  |
 
 ---
 
 **Ready to train?** Run your first Phase 3 episode and monitor the metrics above!
 
-**Questions?** See [troubleshooting](#troubleshooting) or review the [Configuration Reference](../CONFIGURATION_REFERENCE.md).
+**Questions?** See [troubleshooting](#troubleshooting) or review
+the [Configuration Reference](../CONFIGURATION_REFERENCE.md).
 
 ---
 

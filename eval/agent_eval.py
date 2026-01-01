@@ -1,4 +1,3 @@
-
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
@@ -9,11 +8,11 @@ from risk.risk_manager import RiskManager
 
 
 def _collect_outputs(
-    model: DignityModel,
-    loader: DataLoader,
-    device: torch.device,
-    risk_manager: RiskManager | None = None,
-    task_type: str = "classification",
+        model: DignityModel,
+        loader: DataLoader,
+        device: torch.device,
+        risk_manager: RiskManager | None = None,
+        task_type: str = "classification",
 ) -> tuple[np.ndarray, np.ndarray]:
     model.eval()
     preds: list[np.ndarray] = []
@@ -82,10 +81,10 @@ def regression_metrics(preds: np.ndarray, targets: np.ndarray) -> dict[str, floa
 
 
 def evaluate_model(
-    model: DignityModel,
-    loader: DataLoader,
-    task_type: str = "classification",
-    risk_manager: RiskManager | None = None,
+        model: DignityModel,
+        loader: DataLoader,
+        task_type: str = "classification",
+        risk_manager: RiskManager | None = None,
 ) -> dict[str, float]:
     device = next(model.parameters()).device
     logits_or_preds, targets = _collect_outputs(
@@ -97,7 +96,7 @@ def evaluate_model(
 
 
 def evaluate_policy_agent(
-    agent: SignalPolicyAgent, loader: DataLoader, task_type: str = "classification"
+        agent: SignalPolicyAgent, loader: DataLoader, task_type: str = "classification"
 ) -> dict[str, float]:
     device = next(agent.parameters()).device
     agent.eval()
@@ -124,7 +123,7 @@ def evaluate_policy_agent(
 
 
 def evaluate_a3c_agent(
-    agent, env_factory, num_episodes: int = 100, device: str = "cpu"
+        agent, env_factory, num_episodes: int = 100, device: str = "cpu"
 ) -> dict[str, float]:
     """Evaluate trained A3C agent on simulated execution environment.
     

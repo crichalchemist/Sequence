@@ -4,7 +4,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-
 from config.config import FeatureConfig, ResearchConfig
 
 
@@ -42,6 +41,7 @@ def _load_generated_features():
     except Exception:
         # If anything fails, return empty dict (fail-safe)
         return {}
+
 
 GENERATED_FEATURES = _load_generated_features()
 

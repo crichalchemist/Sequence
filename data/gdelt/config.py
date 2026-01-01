@@ -12,6 +12,7 @@ def get_gdelt_bucket_minutes() -> int:
 
     return GDELT_TIME_DELTA_MINUTES
 
+
 # Theme groupings for regime feature construction.
 @dataclass(frozen=True)
 class GDELTThemeConfig:

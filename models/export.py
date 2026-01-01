@@ -1,15 +1,15 @@
 import torch
-
 from config.config import ExportConfig
+
 from models.agent_hybrid import DignityModel
 from models.signal_policy import SignalPolicyAgent
 
 
 def export_to_onnx(
-    model: DignityModel,
-    export_cfg: ExportConfig,
-    example_input: torch.Tensor,
-    task_type: str = "classification",
+        model: DignityModel,
+        export_cfg: ExportConfig,
+        example_input: torch.Tensor,
+        task_type: str = "classification",
 ):
     model.eval()
     input_names = ["input"]
@@ -30,10 +30,10 @@ def export_to_onnx(
 
 
 def export_signal_policy_to_onnx(
-    agent: SignalPolicyAgent,
-    export_cfg: ExportConfig,
-    example_input: torch.Tensor,
-    task_type: str = "classification",
+        agent: SignalPolicyAgent,
+        export_cfg: ExportConfig,
+        example_input: torch.Tensor,
+        task_type: str = "classification",
 ):
     agent.eval()
     input_names = ["input"]

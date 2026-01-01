@@ -10,7 +10,6 @@ from collections.abc import Sequence
 
 import numpy as np
 import pandas as pd
-
 from config.constants import DEFAULT_DC_THRESHOLD, MAX_THRESHOLD_VALUE
 
 
@@ -25,8 +24,8 @@ def _validate_thresholds(up_threshold: float, down_threshold: float) -> None:
 
 
 def detect_directional_changes(
-    prices: pd.Series,
-    up_threshold: float,
+        prices: pd.Series,
+        up_threshold: float,
         down_threshold: float | None = None,
         timestamps: Sequence | None = None,
 ) -> pd.DataFrame:
@@ -122,10 +121,10 @@ def detect_directional_changes(
 
 
 def build_intrinsic_time_bars(
-    df: pd.DataFrame,
-    price_col: str = "close",
-    datetime_col: str = "datetime",
-    up_threshold: float = DEFAULT_DC_THRESHOLD,
+        df: pd.DataFrame,
+        price_col: str = "close",
+        datetime_col: str = "datetime",
+        up_threshold: float = DEFAULT_DC_THRESHOLD,
         down_threshold: float | None = None,
 ) -> pd.DataFrame:
     """

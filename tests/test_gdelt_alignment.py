@@ -56,6 +56,8 @@ def test_iter_gdelt_buckets_matches_alignment():
         b2 - b1 == timedelta(minutes=bucket) for b1, b2 in zip(buckets, buckets[1:])
     )
     assert bucket == GDELT_TIME_DELTA_MINUTES
+
+
 """Tests for GDELT alignment utilities."""
 import sys
 import types

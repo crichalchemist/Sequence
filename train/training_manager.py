@@ -65,41 +65,86 @@ class TrainingManager:
         cursor = conn.cursor()
 
         cursor.execute('''
-            CREATE TABLE IF NOT EXISTS training_jobs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                job_id TEXT UNIQUE,
-                model_name TEXT NOT NULL,
-                dataset_path TEXT,
-                epochs INTEGER,
-                batch_size INTEGER,
-                learning_rate REAL,
-                validation_split REAL,
-                status TEXT DEFAULT 'QUEUED',
-                current_epoch INTEGER DEFAULT 0,
-                best_loss REAL,
-                best_epoch INTEGER,
-                training_time REAL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                started_at TIMESTAMP,
-                completed_at TIMESTAMP,
-                error_message TEXT,
-                metrics_json TEXT
-            )
-        ''')
+                       CREATE TABLE IF NOT EXISTS training_jobs
+                       (
+                           id
+                           INTEGER
+                           PRIMARY
+                           KEY
+                           AUTOINCREMENT,
+                           job_id
+                           TEXT
+                           UNIQUE,
+                           model_name
+                           TEXT
+                           NOT
+                           NULL,
+                           dataset_path
+                           TEXT,
+                           epochs
+                           INTEGER,
+                           batch_size
+                           INTEGER,
+                           learning_rate
+                           REAL,
+                           validation_split
+                           REAL,
+                           status
+                           TEXT
+                           DEFAULT
+                           'QUEUED',
+                           current_epoch
+                           INTEGER
+                           DEFAULT
+                           0,
+                           best_loss
+                           REAL,
+                           best_epoch
+                           INTEGER,
+                           training_time
+                           REAL,
+                           created_at
+                           TIMESTAMP
+                           DEFAULT
+                           CURRENT_TIMESTAMP,
+                           started_at
+                           TIMESTAMP,
+                           completed_at
+                           TIMESTAMP,
+                           error_message
+                           TEXT,
+                           metrics_json
+                           TEXT
+                       )
+                       ''')
 
         # GPU monitoring table
         cursor.execute('''
-            CREATE TABLE IF NOT EXISTS gpu_stats (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                gpu_id INTEGER,
-                utilization REAL,
-                memory_used INTEGER,
-                memory_total INTEGER,
-                temperature REAL,
-                power_usage REAL
-            )
-        ''')
+                       CREATE TABLE IF NOT EXISTS gpu_stats
+                       (
+                           id
+                           INTEGER
+                           PRIMARY
+                           KEY
+                           AUTOINCREMENT,
+                           timestamp
+                           TIMESTAMP
+                           DEFAULT
+                           CURRENT_TIMESTAMP,
+                           gpu_id
+                           INTEGER,
+                           utilization
+                           REAL,
+                           memory_used
+                           INTEGER,
+                           memory_total
+                           INTEGER,
+                           temperature
+                           REAL,
+                           power_usage
+                           REAL
+                       )
+                       ''')
 
         conn.commit()
         conn.close()
@@ -113,15 +158,15 @@ class TrainingManager:
             cursor = conn.cursor()
 
             cursor.execute('''
-                INSERT INTO training_jobs
-                (job_id, model_name, dataset_path, epochs, batch_size,
-                 learning_rate, validation_split, status, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                job.job_id, job.model_name, job.dataset_path,
-                job.epochs, job.batch_size, job.learning_rate,
-                job.validation_split, JobStatus.QUEUED.value, job.created_at
-            ))
+                           INSERT INTO training_jobs
+                           (job_id, model_name, dataset_path, epochs, batch_size,
+                            learning_rate, validation_split, status, created_at)
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                           ''', (
+                               job.job_id, job.model_name, job.dataset_path,
+                               job.epochs, job.batch_size, job.learning_rate,
+                               job.validation_split, JobStatus.QUEUED.value, job.created_at
+                           ))
 
             conn.commit()
             conn.close()
@@ -167,10 +212,11 @@ class TrainingManager:
 
             # Update status to RUNNING
             cursor.execute('''
-                UPDATE training_jobs
-                SET status = ?, started_at = ?
-                WHERE job_id = ?
-            ''', (JobStatus.RUNNING.value, datetime.now().isoformat(), job.job_id))
+                           UPDATE training_jobs
+                           SET status     = ?,
+                               started_at = ?
+                           WHERE job_id = ?
+                           ''', (JobStatus.RUNNING.value, datetime.now().isoformat(), job.job_id))
 
             conn.commit()
             conn.close()
@@ -199,15 +245,17 @@ class TrainingManager:
             cursor = conn.cursor()
 
             cursor.execute('''
-                UPDATE training_jobs
-                SET status = ?, completed_at = ?, metrics_json = ?
-                WHERE job_id = ?
-            ''', (
-                JobStatus.COMPLETED.value,
-                datetime.now().isoformat(),
-                json.dumps(metrics),
-                job_id
-            ))
+                           UPDATE training_jobs
+                           SET status       = ?,
+                               completed_at = ?,
+                               metrics_json = ?
+                           WHERE job_id = ?
+                           ''', (
+                               JobStatus.COMPLETED.value,
+                               datetime.now().isoformat(),
+                               json.dumps(metrics),
+                               job_id
+                           ))
 
             conn.commit()
             conn.close()
@@ -227,15 +275,17 @@ class TrainingManager:
             cursor = conn.cursor()
 
             cursor.execute('''
-                UPDATE training_jobs
-                SET status = ?, completed_at = ?, error_message = ?
-                WHERE job_id = ?
-            ''', (
-                JobStatus.FAILED.value,
-                datetime.now().isoformat(),
-                error,
-                job_id
-            ))
+                           UPDATE training_jobs
+                           SET status        = ?,
+                               completed_at  = ?,
+                               error_message = ?
+                           WHERE job_id = ?
+                           ''', (
+                               JobStatus.FAILED.value,
+                               datetime.now().isoformat(),
+                               error,
+                               job_id
+                           ))
 
             conn.commit()
             conn.close()
@@ -255,11 +305,18 @@ class TrainingManager:
             cursor = conn.cursor()
 
             cursor.execute('''
-                SELECT job_id, model_name, status, current_epoch, best_loss,
-                       training_time, created_at, started_at, completed_at
-                FROM training_jobs
-                WHERE job_id = ?
-            ''', (job_id,))
+                           SELECT job_id,
+                                  model_name,
+                                  status,
+                                  current_epoch,
+                                  best_loss,
+                                  training_time,
+                                  created_at,
+                                  started_at,
+                                  completed_at
+                           FROM training_jobs
+                           WHERE job_id = ?
+                           ''', (job_id,))
 
             row = cursor.fetchone()
             conn.close()
@@ -329,15 +386,15 @@ class GPUMonitor:
                 mem_reserved = torch.cuda.memory_reserved(i)
 
                 cursor.execute('''
-                    INSERT INTO gpu_stats
-                    (gpu_id, utilization, memory_used, memory_total)
-                    VALUES (?, ?, ?, ?)
-                ''', (
-                    i,
-                    (mem_allocated / mem_reserved * 100) if mem_reserved > 0 else 0,
-                    mem_allocated,
-                    mem_reserved
-                ))
+                               INSERT INTO gpu_stats
+                                   (gpu_id, utilization, memory_used, memory_total)
+                               VALUES (?, ?, ?, ?)
+                               ''', (
+                                   i,
+                                   (mem_allocated / mem_reserved * 100) if mem_reserved > 0 else 0,
+                                   mem_allocated,
+                                   mem_reserved
+                               ))
 
             conn.commit()
             conn.close()
@@ -382,4 +439,3 @@ class GPUMonitor:
 
 # Global manager instance
 manager = TrainingManager()
-

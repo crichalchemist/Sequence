@@ -15,13 +15,13 @@ class OptimizedMultiHeadAttention(nn.Module):
     """Memory-optimized multi-head attention for longer sequences."""
 
     def __init__(
-        self,
-        input_dim: int,
-        attention_dim: int,
-        n_heads: int = 4,
-        max_seq_length: int = 2048,
-        use_chunking: bool = True,
-        chunk_size: int = 512
+            self,
+            input_dim: int,
+            attention_dim: int,
+            n_heads: int = 4,
+            max_seq_length: int = 2048,
+            use_chunking: bool = True,
+            chunk_size: int = 512
     ):
         """Initialize optimized multi-head attention.
         
@@ -62,13 +62,14 @@ class OptimizedMultiHeadAttention(nn.Module):
         self.layer_norm = nn.LayerNorm(input_dim)
         self.dropout = nn.Dropout(0.1)
 
-        logger.info(f"Initialized optimized attention: {n_heads} heads, chunk_size={chunk_size if use_chunking else 'N/A'}")
+        logger.info(
+            f"Initialized optimized attention: {n_heads} heads, chunk_size={chunk_size if use_chunking else 'N/A'}")
 
     def _compute_attention_chunked(
-        self,
-        query: torch.Tensor,
-        key: torch.Tensor,
-        value: torch.Tensor,
+            self,
+            query: torch.Tensor,
+            key: torch.Tensor,
+            value: torch.Tensor,
             attention_mask: torch.Tensor | None = None
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """Compute attention with chunking for memory efficiency."""
@@ -107,10 +108,10 @@ class OptimizedMultiHeadAttention(nn.Module):
         return output, weights
 
     def _compute_attention_standard(
-        self,
-        query: torch.Tensor,
-        key: torch.Tensor,
-        value: torch.Tensor,
+            self,
+            query: torch.Tensor,
+            key: torch.Tensor,
+            value: torch.Tensor,
             attention_mask: torch.Tensor | None = None
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """Standard attention computation for shorter sequences."""
@@ -129,8 +130,8 @@ class OptimizedMultiHeadAttention(nn.Module):
         return output, weights
 
     def forward(
-        self,
-        x: torch.Tensor,
+            self,
+            x: torch.Tensor,
             attention_mask: torch.Tensor | None = None
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """Forward pass with memory optimization.
@@ -152,7 +153,7 @@ class OptimizedMultiHeadAttention(nn.Module):
 
         # Project to query, key, value
         query = self.query_proj(x)  # [B, L, attention_dim]
-        key = self.key_proj(x)      # [B, L, attention_dim]
+        key = self.key_proj(x)  # [B, L, attention_dim]
         value = self.value_proj(x)  # [B, L, attention_dim]
 
         # Choose computation method based on sequence length
@@ -212,7 +213,7 @@ class MultiHeadTemporalAttention(nn.Module):
         # Compute context for each head
         contexts = []
         for h in range(self.n_heads):
-            head_weights = weights[:, h:h+1, :]  # [B, 1, T]
+            head_weights = weights[:, h:h + 1, :]  # [B, 1, T]
             head_context = torch.bmm(head_weights, x_heads[:, h, :, :])  # [B, 1, head_dim]
             contexts.append(head_context)
 
@@ -229,11 +230,11 @@ class SlidingWindowAttention(nn.Module):
     """Sliding window attention for very long sequences."""
 
     def __init__(
-        self,
-        input_dim: int,
-        attention_dim: int,
-        window_size: int = 512,
-        step_size: int = 256
+            self,
+            input_dim: int,
+            attention_dim: int,
+            window_size: int = 512,
+            step_size: int = 256
     ):
         """Initialize sliding window attention.
         
@@ -261,8 +262,8 @@ class SlidingWindowAttention(nn.Module):
         self.dropout = nn.Dropout(0.1)
 
     def forward(
-        self,
-        x: torch.Tensor,
+            self,
+            x: torch.Tensor,
             global_context: torch.Tensor | None = None
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """Forward pass with sliding window attention.
@@ -341,10 +342,10 @@ class AdaptiveAttention(nn.Module):
     """Adaptive attention that adjusts computation based on sequence complexity."""
 
     def __init__(
-        self,
-        input_dim: int,
-        attention_dim: int,
-        complexity_threshold: float = 0.5
+            self,
+            input_dim: int,
+            attention_dim: int,
+            complexity_threshold: float = 0.5
     ):
         """Initialize adaptive attention.
         
@@ -394,7 +395,7 @@ class AdaptiveAttention(nn.Module):
         # Estimate sequence complexity
         # Use mean and std of the sequence to estimate complexity
         seq_mean = torch.mean(x, dim=1, keepdim=True)  # [B, 1, D]
-        seq_std = torch.std(x, dim=1, keepdim=True)   # [B, 1, D]
+        seq_std = torch.std(x, dim=1, keepdim=True)  # [B, 1, D]
 
         complexity_features = torch.cat([seq_mean, seq_std], dim=-1)
         complexity_score = self.complexity_estimator(complexity_features).squeeze(-1)  # [B, 1]
@@ -451,11 +452,11 @@ class TemporalAttention(nn.Module):
 
 
 def create_optimized_attention(
-    input_dim: int,
-    attention_dim: int,
-    n_heads: int = 4,
-    max_seq_length: int = 1024,
-    use_adaptive: bool = True
+        input_dim: int,
+        attention_dim: int,
+        n_heads: int = 4,
+        max_seq_length: int = 1024,
+        use_adaptive: bool = True
 ) -> nn.Module:
     """Factory function to create optimized attention layer.
     

@@ -9,7 +9,6 @@ from typing import Any
 
 import pandas as pd
 from backtesting import Backtest
-
 from config.constants import DEFAULT_BACKTEST_CASH, DEFAULT_COMMISSION_RATE
 
 logger = logging.getLogger("BacktestManager")
@@ -31,62 +30,124 @@ class BacktestManager:
         cursor = conn.cursor()
 
         cursor.execute("""
-            CREATE TABLE IF NOT EXISTS backtest_runs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                run_id TEXT UNIQUE,
-                strategy_name TEXT NOT NULL,
-                symbol TEXT NOT NULL,
-                timeframe TEXT,
-                start_date TEXT,
-                end_date TEXT,
-                cash INTEGER,
-                commission REAL,
-                total_return REAL,
-                sharpe_ratio REAL,
-                sortino_ratio REAL,
-                max_drawdown REAL,
-                win_rate REAL,
-                trades_count INTEGER,
-                avg_trade_duration TEXT,
-                best_trade REAL,
-                worst_trade REAL,
-                profit_factor REAL,
-                equity_peak REAL,
-                result_json TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
+                       CREATE TABLE IF NOT EXISTS backtest_runs
+                       (
+                           id
+                           INTEGER
+                           PRIMARY
+                           KEY
+                           AUTOINCREMENT,
+                           run_id
+                           TEXT
+                           UNIQUE,
+                           strategy_name
+                           TEXT
+                           NOT
+                           NULL,
+                           symbol
+                           TEXT
+                           NOT
+                           NULL,
+                           timeframe
+                           TEXT,
+                           start_date
+                           TEXT,
+                           end_date
+                           TEXT,
+                           cash
+                           INTEGER,
+                           commission
+                           REAL,
+                           total_return
+                           REAL,
+                           sharpe_ratio
+                           REAL,
+                           sortino_ratio
+                           REAL,
+                           max_drawdown
+                           REAL,
+                           win_rate
+                           REAL,
+                           trades_count
+                           INTEGER,
+                           avg_trade_duration
+                           TEXT,
+                           best_trade
+                           REAL,
+                           worst_trade
+                           REAL,
+                           profit_factor
+                           REAL,
+                           equity_peak
+                           REAL,
+                           result_json
+                           TEXT,
+                           created_at
+                           TIMESTAMP
+                           DEFAULT
+                           CURRENT_TIMESTAMP
+                       )
+                       """)
 
         # Comparison table for side-by-side analysis
         cursor.execute("""
-            CREATE TABLE IF NOT EXISTS backtest_comparisons (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                comparison_id TEXT UNIQUE,
-                strategy_1_id INTEGER,
-                strategy_2_id INTEGER,
-                comparison_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                winner TEXT,
-                delta_return REAL,
-                delta_sharpe REAL,
-                delta_drawdown REAL,
-                FOREIGN KEY(strategy_1_id) REFERENCES backtest_runs(id),
-                FOREIGN KEY(strategy_2_id) REFERENCES backtest_runs(id)
-            )
-        """)
+                       CREATE TABLE IF NOT EXISTS backtest_comparisons
+                       (
+                           id
+                           INTEGER
+                           PRIMARY
+                           KEY
+                           AUTOINCREMENT,
+                           comparison_id
+                           TEXT
+                           UNIQUE,
+                           strategy_1_id
+                           INTEGER,
+                           strategy_2_id
+                           INTEGER,
+                           comparison_date
+                           TIMESTAMP
+                           DEFAULT
+                           CURRENT_TIMESTAMP,
+                           winner
+                           TEXT,
+                           delta_return
+                           REAL,
+                           delta_sharpe
+                           REAL,
+                           delta_drawdown
+                           REAL,
+                           FOREIGN
+                           KEY
+                       (
+                           strategy_1_id
+                       ) REFERENCES backtest_runs
+                       (
+                           id
+                       ),
+                           FOREIGN KEY
+                       (
+                           strategy_2_id
+                       ) REFERENCES backtest_runs
+                       (
+                           id
+                       )
+                           )
+                       """)
 
         conn.commit()
         conn.close()
         logger.info(f"Backtest database initialized at {DB_PATH}")
 
     def run_backtest(
-        self,
-        data: pd.DataFrame,
-        strategy_class: type,
-        strategy_name: str,
-        symbol: str,
-        cash: int = DEFAULT_BACKTEST_CASH,
-        commission: float = DEFAULT_COMMISSION_RATE,
-        **strategy_params,
+            self,
+            data: pd.DataFrame,
+            strategy_class: type,
+            strategy_name: str,
+            symbol: str,
+            cash: int = DEFAULT_BACKTEST_CASH,
+            commission: float = DEFAULT_COMMISSION_RATE,
+            **strategy_params,
     ) -> dict[str, Any]:
         """Run backtest with strategy."""
         """Run backtest with strategy."""
@@ -128,15 +189,15 @@ class BacktestManager:
             return None
 
     def save_result(
-        self,
-        run_id: str,
-        strategy_name: str,
-        symbol: str,
-        timeframe: str,
-        start_date: str,
-        end_date: str,
-        cash: int,
-        commission: float,
+            self,
+            run_id: str,
+            strategy_name: str,
+            symbol: str,
+            timeframe: str,
+            start_date: str,
+            end_date: str,
+            cash: int,
+            commission: float,
             result: dict[str, Any],
     ) -> bool:
         """Save backtest result to database."""
@@ -151,7 +212,7 @@ class BacktestManager:
                  cash, commission, total_return, sharpe_ratio, sortino_ratio,
                  max_drawdown, win_rate, trades_count, equity_peak, result_json)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
+                """,
                 (
                     run_id,
                     strategy_name,

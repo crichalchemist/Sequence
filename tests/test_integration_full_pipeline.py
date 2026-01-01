@@ -7,8 +7,8 @@ import numpy as np
 import pandas as pd
 import pytest
 import torch
-
 from config.config import DataConfig, ModelConfig, TrainingConfig
+
 from data.agents.single_task_agent import SingleTaskDataAgent
 from models.agent_hybrid import build_model
 from train.core.agent_train import train_model
@@ -83,7 +83,7 @@ class TestIntegrationPipeline:
         batch_x, batch_y = next(iter(train_loader))
         assert batch_x.shape[0] == 32  # batch size
         assert batch_x.shape[1] == 10  # t_in
-        assert batch_x.shape[2] == 5   # num_features
+        assert batch_x.shape[2] == 5  # num_features
 
         # Build model
         model = build_model(model_cfg, task_type="classification")

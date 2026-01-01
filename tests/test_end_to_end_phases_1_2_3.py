@@ -30,6 +30,7 @@ try:
     from features.intrinsic_time import add_intrinsic_time_features
     from features.microstructure import build_microstructure_features
     from features.regime_detection import RegimeDetector
+
     FEATURES_AVAILABLE = True
 except ImportError:
     FEATURES_AVAILABLE = False

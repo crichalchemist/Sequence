@@ -48,80 +48,168 @@ class DataPipelineController:
 
         # Data collection jobs
         cursor.execute('''
-            CREATE TABLE IF NOT EXISTS data_collections (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                collection_id TEXT UNIQUE,
-                data_source TEXT,
-                symbol TEXT,
-                start_date TEXT,
-                end_date TEXT,
-                resolution TEXT,
-                rows_collected INTEGER,
-                status TEXT DEFAULT 'PENDING',
-                error_message TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                completed_at TIMESTAMP
-            )
-        ''')
+                       CREATE TABLE IF NOT EXISTS data_collections
+                       (
+                           id
+                           INTEGER
+                           PRIMARY
+                           KEY
+                           AUTOINCREMENT,
+                           collection_id
+                           TEXT
+                           UNIQUE,
+                           data_source
+                           TEXT,
+                           symbol
+                           TEXT,
+                           start_date
+                           TEXT,
+                           end_date
+                           TEXT,
+                           resolution
+                           TEXT,
+                           rows_collected
+                           INTEGER,
+                           status
+                           TEXT
+                           DEFAULT
+                           'PENDING',
+                           error_message
+                           TEXT,
+                           created_at
+                           TIMESTAMP
+                           DEFAULT
+                           CURRENT_TIMESTAMP,
+                           completed_at
+                           TIMESTAMP
+                       )
+                       ''')
 
         # Data preprocessing jobs
         cursor.execute('''
-            CREATE TABLE IF NOT EXISTS data_preprocessing (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                preprocessing_id TEXT UNIQUE,
-                collection_id TEXT,
-                normalization_method TEXT,
-                feature_engineering TEXT,
-                rows_processed INTEGER,
-                status TEXT DEFAULT 'PENDING',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                completed_at TIMESTAMP,
-                FOREIGN KEY(collection_id) REFERENCES data_collections(collection_id)
-            )
-        ''')
+                       CREATE TABLE IF NOT EXISTS data_preprocessing
+                       (
+                           id
+                           INTEGER
+                           PRIMARY
+                           KEY
+                           AUTOINCREMENT,
+                           preprocessing_id
+                           TEXT
+                           UNIQUE,
+                           collection_id
+                           TEXT,
+                           normalization_method
+                           TEXT,
+                           feature_engineering
+                           TEXT,
+                           rows_processed
+                           INTEGER,
+                           status
+                           TEXT
+                           DEFAULT
+                           'PENDING',
+                           created_at
+                           TIMESTAMP
+                           DEFAULT
+                           CURRENT_TIMESTAMP,
+                           completed_at
+                           TIMESTAMP,
+                           FOREIGN
+                           KEY
+                       (
+                           collection_id
+                       ) REFERENCES data_collections
+                       (
+                           collection_id
+                       )
+                           )
+                       ''')
 
         # Data validation results
         cursor.execute('''
-            CREATE TABLE IF NOT EXISTS data_validation (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                validation_id TEXT UNIQUE,
-                collection_id TEXT,
-                rows_checked INTEGER,
-                missing_values INTEGER,
-                missing_percent REAL,
-                outliers_detected INTEGER,
-                quality_score REAL,
-                status TEXT,
-                issues_json TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY(collection_id) REFERENCES data_collections(collection_id)
-            )
-        ''')
+                       CREATE TABLE IF NOT EXISTS data_validation
+                       (
+                           id
+                           INTEGER
+                           PRIMARY
+                           KEY
+                           AUTOINCREMENT,
+                           validation_id
+                           TEXT
+                           UNIQUE,
+                           collection_id
+                           TEXT,
+                           rows_checked
+                           INTEGER,
+                           missing_values
+                           INTEGER,
+                           missing_percent
+                           REAL,
+                           outliers_detected
+                           INTEGER,
+                           quality_score
+                           REAL,
+                           status
+                           TEXT,
+                           issues_json
+                           TEXT,
+                           created_at
+                           TIMESTAMP
+                           DEFAULT
+                           CURRENT_TIMESTAMP,
+                           FOREIGN
+                           KEY
+                       (
+                           collection_id
+                       ) REFERENCES data_collections
+                       (
+                           collection_id
+                       )
+                           )
+                       ''')
 
         # Dataset versions for reproducibility
         cursor.execute('''
-            CREATE TABLE IF NOT EXISTS dataset_versions (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                version_id TEXT UNIQUE,
-                dataset_name TEXT,
-                rows INTEGER,
-                columns INTEGER,
-                features_list TEXT,
-                file_path TEXT,
-                file_size INTEGER,
-                checksum TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
+                       CREATE TABLE IF NOT EXISTS dataset_versions
+                       (
+                           id
+                           INTEGER
+                           PRIMARY
+                           KEY
+                           AUTOINCREMENT,
+                           version_id
+                           TEXT
+                           UNIQUE,
+                           dataset_name
+                           TEXT,
+                           rows
+                           INTEGER,
+                           columns
+                           INTEGER,
+                           features_list
+                           TEXT,
+                           file_path
+                           TEXT,
+                           file_size
+                           INTEGER,
+                           checksum
+                           TEXT,
+                           created_at
+                           TIMESTAMP
+                           DEFAULT
+                           CURRENT_TIMESTAMP
+                       )
+                       ''')
 
         conn.commit()
         conn.close()
         logger.info(f"Data pipeline database initialized at {DB_PATH}")
 
     def collect_data(
-        self,
-        config: DataConfig,
-        data_source: str = None
+            self,
+            config: DataConfig,
+            data_source: str = None
     ) -> tuple[pd.DataFrame | None, str]:
         """Collect data from specified source."""
         try:
@@ -134,15 +222,15 @@ class DataPipelineController:
             source = data_source or config.data_sources[0]
 
             cursor.execute('''
-                INSERT INTO data_collections
-                (collection_id, data_source, symbol, start_date, end_date,
-                 resolution, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                collection_id, source, config.symbols[0],
-                config.start_date, config.end_date,
-                config.resolution, 'RUNNING'
-            ))
+                           INSERT INTO data_collections
+                           (collection_id, data_source, symbol, start_date, end_date,
+                            resolution, status)
+                           VALUES (?, ?, ?, ?, ?, ?, ?)
+                           ''', (
+                               collection_id, source, config.symbols[0],
+                               config.start_date, config.end_date,
+                               config.resolution, 'RUNNING'
+                           ))
 
             conn.commit()
             conn.close()
@@ -230,9 +318,9 @@ class DataPipelineController:
             return None
 
     def preprocess(
-        self,
-        data: pd.DataFrame,
-        collection_id: str,
+            self,
+            data: pd.DataFrame,
+            collection_id: str,
             config: dict[str, Any]
     ) -> tuple[pd.DataFrame | None, str]:
         """Preprocess collected data."""
@@ -244,10 +332,10 @@ class DataPipelineController:
             cursor = conn.cursor()
 
             cursor.execute('''
-                INSERT INTO data_preprocessing
-                (preprocessing_id, collection_id, status)
-                VALUES (?, ?, ?)
-            ''', (preprocessing_id, collection_id, 'RUNNING'))
+                           INSERT INTO data_preprocessing
+                               (preprocessing_id, collection_id, status)
+                           VALUES (?, ?, ?)
+                           ''', (preprocessing_id, collection_id, 'RUNNING'))
 
             conn.commit()
             conn.close()
@@ -271,10 +359,12 @@ class DataPipelineController:
             cursor = conn.cursor()
 
             cursor.execute('''
-                UPDATE data_preprocessing
-                SET status = ?, rows_processed = ?, completed_at = ?
-                WHERE preprocessing_id = ?
-            ''', ('COMPLETED', len(processed), datetime.now().isoformat(), preprocessing_id))
+                           UPDATE data_preprocessing
+                           SET status         = ?,
+                               rows_processed = ?,
+                               completed_at   = ?
+                           WHERE preprocessing_id = ?
+                           ''', ('COMPLETED', len(processed), datetime.now().isoformat(), preprocessing_id))
 
             conn.commit()
             conn.close()
@@ -287,9 +377,9 @@ class DataPipelineController:
             return None, None
 
     def validate(
-        self,
-        data: pd.DataFrame,
-        collection_id: str
+            self,
+            data: pd.DataFrame,
+            collection_id: str
     ) -> tuple[dict[str, Any], str]:
         """Validate data quality."""
         try:
@@ -312,7 +402,7 @@ class DataPipelineController:
                 if 'price' in col.lower() or 'close' in col.lower():
                     prices = data[col].dropna()
                     if (prices < self.validation_rules['price_bounds'][0]).any() or \
-                       (prices > self.validation_rules['price_bounds'][1]).any():
+                            (prices > self.validation_rules['price_bounds'][1]).any():
                         issues.append(f"Price out of bounds in {col}")
 
             # Detect outliers (3-sigma rule)
@@ -321,7 +411,7 @@ class DataPipelineController:
                 col_data = data[col].dropna()
                 mean = col_data.mean()
                 std = col_data.std()
-                outliers += ((col_data < mean - 3*std) | (col_data > mean + 3*std)).sum()
+                outliers += ((col_data < mean - 3 * std) | (col_data > mean + 3 * std)).sum()
 
             quality_score = max(0, 100 - (len(issues) * 10) - (outliers / len(data) * 100))
             status = 'PASS' if quality_score >= 70 else 'WARN' if quality_score >= 50 else 'FAIL'
@@ -331,15 +421,15 @@ class DataPipelineController:
             cursor = conn.cursor()
 
             cursor.execute('''
-                INSERT INTO data_validation
-                (validation_id, collection_id, rows_checked, missing_values,
-                 missing_percent, outliers_detected, quality_score, status, issues_json)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                validation_id, collection_id, len(data),
-                int(data.isnull().sum().sum()), missing_percent,
-                outliers, quality_score, status, json.dumps(issues)
-            ))
+                           INSERT INTO data_validation
+                           (validation_id, collection_id, rows_checked, missing_values,
+                            missing_percent, outliers_detected, quality_score, status, issues_json)
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                           ''', (
+                               validation_id, collection_id, len(data),
+                               int(data.isnull().sum().sum()), missing_percent,
+                               outliers, quality_score, status, json.dumps(issues)
+                           ))
 
             conn.commit()
             conn.close()
@@ -403,11 +493,11 @@ class DataPipelineController:
         return mapping.get(resolution, resolution)
 
     def _update_collection_status(
-        self,
-        collection_id: str,
-        status: str,
-        rows: int = None,
-        error: str = None
+            self,
+            collection_id: str,
+            status: str,
+            rows: int = None,
+            error: str = None
     ):
         """Update collection job status."""
         try:
@@ -416,16 +506,20 @@ class DataPipelineController:
 
             if error:
                 cursor.execute('''
-                    UPDATE data_collections
-                    SET status = ?, error_message = ?, completed_at = ?
-                    WHERE collection_id = ?
-                ''', (status, error, datetime.now().isoformat(), collection_id))
+                               UPDATE data_collections
+                               SET status        = ?,
+                                   error_message = ?,
+                                   completed_at  = ?
+                               WHERE collection_id = ?
+                               ''', (status, error, datetime.now().isoformat(), collection_id))
             else:
                 cursor.execute('''
-                    UPDATE data_collections
-                    SET status = ?, rows_collected = ?, completed_at = ?
-                    WHERE collection_id = ?
-                ''', (status, rows, datetime.now().isoformat(), collection_id))
+                               UPDATE data_collections
+                               SET status         = ?,
+                                   rows_collected = ?,
+                                   completed_at   = ?
+                               WHERE collection_id = ?
+                               ''', (status, rows, datetime.now().isoformat(), collection_id))
 
             conn.commit()
             conn.close()
@@ -468,4 +562,3 @@ class DataPipelineController:
 
 # Global controller instance
 controller = DataPipelineController()
-

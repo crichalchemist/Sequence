@@ -11,6 +11,7 @@
 The repository references 7 PDFs in the `forex research/` folder covering:
 
 ### Primary Research Domains (from README.md)
+
 1. **FX news impact** - `applyingnews_forex.pdf`
 2. **Modern algorithmic trading** - `modernalgotrading.pdf`
 3. **Liquidity-aware execution** - `liquidatingforex.pdf` + `optimal execution day trading.pdf`
@@ -25,6 +26,7 @@ The repository references 7 PDFs in the `forex research/` folder covering:
 ### 1. Market Microstructure & Order Flow ⚠️ PARTIALLY IMPLEMENTED
 
 **Research Concepts:**
+
 - Order imbalance detection
 - Bid-ask spread dynamics
 - Market depth impact
@@ -34,12 +36,14 @@ The repository references 7 PDFs in the `forex research/` folder covering:
 
 **Current Implementation:**
 ✅ **Implemented:**
+
 - Basic candle imbalance features (body/wick ratios in `features/agent_features.py`:82-106)
 - Volume clustering detection
 - Spread gating in RiskManager (`.max_spread` in `risk/risk_manager.py`:31)
 - Volatility-aware order sizing
 
 ❌ **Missing:**
+
 - Order book depth reconstruction (no LOB data ingestion)
 - Real-time bid-ask spread tracking (only static max_spread gate)
 - Adverse selection costs modeling
@@ -48,11 +52,13 @@ The repository references 7 PDFs in the `forex research/` folder covering:
 - Microstructure regimes (tight/wide spread detection)
 
 **Essentiality Assessment:**
+
 - **For paper trading:** Medium - spread gating is sufficient for simple models
 - **For live execution:** High - improper execution without microstructure awareness causes slippage
 - **For model training:** Medium - features would improve directional accuracy by 3-5%
 
 **Recommendation:** Add simplified order flow features from OHLCV data without needing LOB:
+
 ```python
 def order_flow_imbalance(df: pd.DataFrame, window: int = 20) -> pd.Series:
     """Estimate order flow imbalance from volume spikes and close positioning."""
@@ -67,6 +73,7 @@ def order_flow_imbalance(df: pd.DataFrame, window: int = 20) -> pd.Series:
 ### 2. Deep Learning Architecture (CNN + LSTM + Attention) ✅ WELL IMPLEMENTED
 
 **Research Concepts:**
+
 - Convolutional feature extraction (local temporal patterns)
 - Recurrent memory (LSTM for long-range dependencies)
 - Attention mechanisms (focus on salient time steps)
@@ -75,6 +82,7 @@ def order_flow_imbalance(df: pd.DataFrame, window: int = 20) -> pd.Series:
 
 **Current Implementation:**
 ✅ **Strongly Implemented:**
+
 - Hybrid CNN + LSTM + Attention architecture (`models/agent_hybrid.py`)
 - Multi-head temporal attention support
 - Multi-task learning with uncertainty weighting
@@ -83,21 +91,25 @@ def order_flow_imbalance(df: pd.DataFrame, window: int = 20) -> pd.Series:
 - Gradient clipping and regularization
 
 ✅ **Partially Implemented:**
+
 - Ensemble support via `eval/ensemble_timesfm.py` (FinBERT, TimesFM integration)
 - RL policy network architecture (`models/signal_policy.py`)
 
 ❌ **Not Implemented:**
+
 - Transformer-based encoders (current: CNN+LSTM, no self-attention alternatives)
 - Capsule networks for pattern capsules
 - Graph neural networks for feature relationships
 - Knowledge distillation between models
 
 **Essentiality Assessment:**
+
 - **Critical for directional forecasting:** Yes - architecture directly impacts accuracy
 - **Already optimized:** Current implementation matches SOTA papers
 - **Needs update:** Transformer variant would likely improve by 2-3%
 
 **Recommendation:** Current architecture sufficient. Optional enhancement:
+
 ```python
 class TransformerEncoder(nn.Module):
     def __init__(self, num_features: int, num_heads: int = 4, depth: int = 2):
@@ -119,6 +131,7 @@ class TransformerEncoder(nn.Module):
 ### 3. Reinforcement Learning for Trading ⚠️ INCOMPLETE INTEGRATION
 
 **Research Concepts:**
+
 - Actor-Critic architectures (A3C, A2C)
 - Policy gradient methods (PPO, TRPO)
 - Advantage estimation (GAE)
@@ -127,12 +140,14 @@ class TransformerEncoder(nn.Module):
 
 **Current Implementation:**
 ✅ **Partially Implemented:**
+
 - ExecutionPolicy class with actor-critic structure (`models/signal_policy.py`:70-134)
 - Value network for baseline subtraction
 - Policy network for action distribution
 - Optional risk-aware reward shaping in RiskManager
 
 ❌ **Not Integrated:**
+
 - No policy gradient training loop (no `train/core/agent_train_rl.py`)
 - No GAE advantage calculation
 - No entropy regularization in loss
@@ -141,11 +156,13 @@ class TransformerEncoder(nn.Module):
 - SignalModel trained supervised, not with RL rewards
 
 **Integration Status:**
+
 - Signal Model: Supervised classification (not RL-based)
 - Execution Policy: Architecture exists but not trained
 - Training loop: Single-task supervised training only
 
 **Essentiality Assessment:**
+
 - **For signal forecasting:** Low - supervised learning sufficient
 - **For execution optimization:** High - RL essential for proper position sizing
 - **For live trading:** Medium-High - needed for adaptive sizing vs risk
@@ -153,6 +170,7 @@ class TransformerEncoder(nn.Module):
 **Recommendation:** RL integration is optional for Phase 1. If pursued:
 
 1. Modify training loop to use RL rewards:
+
 ```python
 def train_rl(model, policy, env, epochs=10):
     optimizer = torch.optim.Adam([...model.params..., ...policy.params...])
@@ -176,6 +194,7 @@ def train_rl(model, policy, env, epochs=10):
 ```
 
 2. Create training environment:
+
 ```python
 class SimulatedTradingEnv:
     def reset(self, initial_position=0.0):
@@ -195,6 +214,7 @@ class SimulatedTradingEnv:
 ### 4. Sentiment Analysis & News Impact ⚠️ INFRASTRUCTURE ONLY
 
 **Research Concepts:**
+
 - Sentiment scoring (FinBERT, LLMs)
 - News impact on prices (event studies)
 - Sentiment regimes (positive/negative periods)
@@ -203,6 +223,7 @@ class SimulatedTradingEnv:
 
 **Current Implementation:**
 ✅ **Infrastructure Present:**
+
 - GDELT data download support (`data/download_gdelt.py`)
 - FinBERT-tone model checkpoint included (`models/finBERT-tone/`)
 - Sentiment scoring framework (`features/agent_sentiment.py`)
@@ -210,6 +231,7 @@ class SimulatedTradingEnv:
 - Time-aligned sentiment features
 
 ❌ **Not Production-Ready:**
+
 - GDELT integration not wired into data pipeline
 - Sentiment features optional (`--run-gdelt-download` flag)
 - No sentiment regimes (hard/soft labeling)
@@ -218,6 +240,7 @@ class SimulatedTradingEnv:
 - Sentiment features not in default feature set
 
 **Integration Status:**
+
 ```python
 # Current: Optional, not in main pipeline
 if args.run_gdelt_download:
@@ -230,6 +253,7 @@ if args.run_gdelt_download:
 ```
 
 **Essentiality Assessment:**
+
 - **For directional accuracy:** Medium - adds 2-4% if high-quality signals
 - **For volatility prediction:** High - news drives vol spikes
 - **For robustness:** Medium - sentiment regimes help in down markets
@@ -237,6 +261,7 @@ if args.run_gdelt_download:
 **Recommendation:** Sentiment is nice-to-have, not essential for MVP. To enable:
 
 1. Wire GDELT into `data/prepare_dataset.py`:
+
 ```python
 def add_sentiment_features(feature_df, cfg):
     if cfg.include_sentiment:
@@ -254,6 +279,7 @@ def add_sentiment_features(feature_df, cfg):
 ```
 
 2. Add config flag:
+
 ```python
 @dataclass
 class FeatureConfig:
@@ -267,6 +293,7 @@ class FeatureConfig:
 ### 5. Execution & Optimal Order Routing ⚠️ RISK GATING ONLY
 
 **Research Concepts:**
+
 - Execution urgency (VWAP, TWAP, Implementation Shortfall)
 - Order sizing optimization (Kelly criterion, risk-parity)
 - Venue selection (multi-exchange routing)
@@ -275,12 +302,14 @@ class FeatureConfig:
 
 **Current Implementation:**
 ✅ **Partially Implemented:**
+
 - RiskManager gating (position limits, spread limits)
 - Max drawdown enforcement
 - Volatility-based throttling
 - Position flat-on-stop logic
 
 ❌ **Not Implemented:**
+
 - Order sizing algorithms (fixed or uniform sizing only)
 - Execution urgency modeling
 - Slippage prediction
@@ -289,6 +318,7 @@ class FeatureConfig:
 - Adaptive throttling based on fill probability
 
 **Integration Status:**
+
 ```python
 # Current: Deterministic order sizing
 if action == BUY:
@@ -302,6 +332,7 @@ if action == BUY:
 ```
 
 **Essentiality Assessment:**
+
 - **For signal generation:** Low - sizing doesn't affect directional accuracy
 - **For return optimization:** High - proper sizing compounds returns
 - **For risk control:** Medium - needed to prevent over-leverage
@@ -313,6 +344,7 @@ if action == BUY:
 ### 6. Intrinsic Time Bars & Alternative Aggregations ✅ IMPLEMENTED
 
 **Research Concepts:**
+
 - Directional-change aggregation (tick bars when price moves X%)
 - Volume bars (aggregate when volume reaches threshold)
 - Time bars (standard 1-minute bars)
@@ -320,17 +352,20 @@ if action == BUY:
 
 **Current Implementation:**
 ✅ **Well Implemented:**
+
 - Intrinsic-time bars with directional-change thresholds
 - Optional via `--intrinsic-time --dc-threshold-up 0.0005`
 - Conversion utilities (`features/intrinsic_time.py`)
 - Proper forward-fill prevention
 
 ✅ **Production Ready:**
+
 - Flag in training pipeline
 - Works with all downstream components
 - Handles timezone conversions
 
 **Essentiality Assessment:**
+
 - **Impact on accuracy:** Medium - 2-3% improvement in volatile markets
 - **Implementation quality:** Already good
 - **Integration:** Already complete
@@ -342,6 +377,7 @@ if action == BUY:
 ### 7. Parallel & Asynchronous Processing ⚠️ PLACEHOLDER
 
 **Research Concepts:**
+
 - Multi-threaded data loading
 - Asynchronous feature computation
 - Parallel environment sampling (RL)
@@ -350,17 +386,20 @@ if action == BUY:
 
 **Current Implementation:**
 ❌ **Not Implemented:**
+
 - `features/agent_features_parallel.py` exists but is placeholder (12 lines)
 - No ThreadPoolExecutor in feature computation
 - No async checkpoint saving
 - Single-threaded data loading
 
 **Performance Impact:**
+
 - Feature computation: Could be 4-8x faster with parallelization
 - Data loading: Could gain 2-3x with multiple workers
 - Training: Already using single GPU efficiently
 
 **Essentiality Assessment:**
+
 - **For MVP training:** Low - single-threaded acceptable for small datasets
 - **For production:** High - needed for real-time inference
 - **For scaling:** High - parallel features needed for 100+ currency pairs
@@ -368,6 +407,7 @@ if action == BUY:
 **Recommendation:** Parallel features are Phase 3 optimization, not essential for training success.
 
 Implementation (if needed):
+
 ```python
 from concurrent.futures import ThreadPoolExecutor
 
@@ -397,6 +437,7 @@ def build_features_parallel(df, cfg, max_workers=4):
 ### 8. Regime Detection & Adaptation 🔴 MISSING
 
 **Research Concepts:**
+
 - Hidden Markov Models for regime detection
 - Kalman filters for state estimation
 - Dynamic model adaptation
@@ -405,17 +446,20 @@ def build_features_parallel(df, cfg, max_workers=4):
 
 **Current Implementation:**
 ❌ **Not Implemented:**
+
 - No regime classification
 - Single model for all market conditions
 - No state estimation
 - No adaptive model selection
 
 **Impact Assessment:**
+
 - **Directional accuracy:** Medium - separate models could improve 3-5%
 - **Robustness:** High - protects against model degradation in crisis
 - **Implementation:** Medium complexity
 
 **Essentiality Assessment:**
+
 - **For MVP:** Low - single model works for stable markets
 - **For robustness:** Medium - helps in market regime shifts
 - **For production:** High - essential for risk management
@@ -423,6 +467,7 @@ def build_features_parallel(df, cfg, max_workers=4):
 **Recommendation:** Regime detection is Phase 2 enhancement.
 
 Simple implementation:
+
 ```python
 from sklearn.mixture import GaussianMixture
 
@@ -445,6 +490,7 @@ def adaptive_model_forward(model_calm, model_volatile, x, regime):
 ### 9. Uncertainty Quantification ✅ PARTIALLY IMPLEMENTED
 
 **Research Concepts:**
+
 - Epistemic uncertainty (model uncertainty)
 - Aleatoric uncertainty (data uncertainty)
 - Confidence estimation
@@ -453,12 +499,14 @@ def adaptive_model_forward(model_calm, model_volatile, x, regime):
 
 **Current Implementation:**
 ✅ **Partially Implemented:**
+
 - Uncertainty weighting in loss (`utils/loss_weighting.py`)
 - Optional via `--use-uncertainty-weighting`
 - Calibration via learned variances
 - Task-specific uncertainty
 
 ❌ **Not Complete:**
+
 - Epistemic vs. aleatoric not distinguished
 - No Bayesian confidence intervals
 - No Monte Carlo dropout
@@ -466,11 +514,13 @@ def adaptive_model_forward(model_calm, model_volatile, x, regime):
 - Uncertainty output not used in inference
 
 **Essentiality Assessment:**
+
 - **For training:** Medium - helps with multi-task learning
 - **For inference:** Low - not used in predictions
 - **For risk:** High - confidence would guide position sizing
 
 **Recommendation:** Current uncertainty weighting sufficient for training. Optional enhancement for inference:
+
 ```python
 def get_prediction_confidence(model, x, n_samples=10):
     """Estimate epistemic uncertainty via MC dropout."""
@@ -492,23 +542,24 @@ def get_prediction_confidence(model, x, n_samples=10):
 
 ## Summary: Concept Coverage Matrix
 
-| Concept | Implementation | Essential | Status | Priority |
-|---------|---|---|---|---|
-| Market Microstructure | ⚠️ Partial | Medium | Feature gap | Medium |
-| Deep Learning Arch. | ✅ Full | Yes | ✓ Complete | Done |
-| Reinforcement Learning | ⚠️ Partial | Low | RL loop missing | Phase 2 |
-| Sentiment Analysis | ⚠️ Infra only | Medium | Pipeline gap | Phase 2 |
-| Execution Algorithms | ⚠️ Gating only | Medium | Risk controls ok | Phase 2 |
-| Intrinsic Time Bars | ✅ Full | No | ✓ Complete | Done |
-| Parallel Processing | ❌ Missing | Low | Placeholder | Phase 3 |
-| Regime Detection | ❌ Missing | Medium | Not needed for MVP | Phase 2 |
-| Uncertainty Quant. | ✅ Partial | Medium | Training works | Optional |
+| Concept                | Implementation | Essential | Status             | Priority |
+|------------------------|----------------|-----------|--------------------|----------|
+| Market Microstructure  | ⚠️ Partial     | Medium    | Feature gap        | Medium   |
+| Deep Learning Arch.    | ✅ Full         | Yes       | ✓ Complete         | Done     |
+| Reinforcement Learning | ⚠️ Partial     | Low       | RL loop missing    | Phase 2  |
+| Sentiment Analysis     | ⚠️ Infra only  | Medium    | Pipeline gap       | Phase 2  |
+| Execution Algorithms   | ⚠️ Gating only | Medium    | Risk controls ok   | Phase 2  |
+| Intrinsic Time Bars    | ✅ Full         | No        | ✓ Complete         | Done     |
+| Parallel Processing    | ❌ Missing      | Low       | Placeholder        | Phase 3  |
+| Regime Detection       | ❌ Missing      | Medium    | Not needed for MVP | Phase 2  |
+| Uncertainty Quant.     | ✅ Partial      | Medium    | Training works     | Optional |
 
 ---
 
 ## Key Findings
 
 ### 🟢 Critical Path (Ready for MVP)
+
 1. ✅ Data pipeline with features
 2. ✅ Hybrid CNN+LSTM+Attention model
 3. ✅ Multi-task learning setup
@@ -520,6 +571,7 @@ def get_prediction_confidence(model, x, n_samples=10):
 **Result:** Codebase is ready for training and evaluation. All essential research concepts implemented.
 
 ### 🟡 Medium Priority (Recommended for Phase 2)
+
 1. ⚠️ Sentiment integration (news features)
 2. ⚠️ Regime detection (market-adaptive models)
 3. ⚠️ RL execution policy training
@@ -529,6 +581,7 @@ def get_prediction_confidence(model, x, n_samples=10):
 **Impact:** +3-5% accuracy, +20% robustness across market conditions
 
 ### 🔴 Low Priority (Phase 3+)
+
 1. ❌ Parallel feature computation
 2. ❌ Distributed training
 3. ❌ Async checkpoint saving
@@ -541,16 +594,19 @@ def get_prediction_confidence(model, x, n_samples=10):
 ## Recommendations for Training Success
 
 ### For Immediate Training (Current State)
+
 ✅ **Proceed with:** Single-task supervised learning on price-based features
 ✅ **Expected accuracy:** 52-54% directional (vs 50% random baseline)
 ✅ **Training time:** ~2 hours on single GPU with 500K+ samples
 
 ### For Robust Deployment
+
 ⭐ **Add sentiment features** - Quick win: +2-3% accuracy
 ⭐ **Add regime detection** - Medium effort: +1-2% in crisis periods
 ⭐ **Improve order flow** - Microstructure features from OHLCV data
 
 ### For Production Excellence
+
 🚀 **RL-based execution** - Proper position sizing based on confidence
 🚀 **Ensemble predictions** - Multiple models voting
 🚀 **Real-time regime adaptation** - Switch models based on market state
@@ -569,12 +625,14 @@ Phase 3 completes several research concepts identified as Phase 2/3 priorities:
 **Implementation:** `execution/simulated_retail_env.py`
 
 ✅ **Fully Implemented:**
+
 - Commission modeling (per-lot and percentage-based)
 - Variable bid-ask spreads with volatility-dependent widening
 - Slippage modeling based on order size
 - Cost attribution tracking (commission, spread, slippage separated)
 
 **Research Mapping:**
+
 - **Kyle's Lambda**: Spread as function of order flow → Variable spreads during volatility
 - **Market Impact Models**: Slippage increases with size → Implemented in `SlippageModel`
 - **Transaction Cost Analysis**: Almgren-Chriss framework → Cost tracking for optimization
@@ -585,12 +643,14 @@ Phase 3 completes several research concepts identified as Phase 2/3 priorities:
 **Implementation:** `train/core/env_based_rl_training.py` - `ActionConverter`
 
 ✅ **Fully Implemented:**
+
 - Dynamic position sizing based on portfolio value
 - Kelly-criterion-inspired risk allocation (2% per trade)
 - Position limits to prevent concentration
 - Cash constraint enforcement
 
 **Research Mapping:**
+
 - **Kelly Criterion**: `size = (edge * portfolio) / price` → Dynamic sizing formula
 - **Risk Parity**: Equal risk contribution across trades → `risk_per_trade` parameter
 - **Position Limits**: Concentration risk management → `max_position` per pair
@@ -601,36 +661,39 @@ Phase 3 completes several research concepts identified as Phase 2/3 priorities:
 **Implementation:** `execution/simulated_retail_env.py` - Risk management system
 
 ✅ **Fully Implemented:**
+
 - Portfolio-level drawdown monitoring
 - Episode termination at drawdown threshold
 - Peak portfolio tracking with continuous updates
 - Stop-loss and take-profit (optional, disabled for learning)
 
 **Research Mapping:**
+
 - **Maximum Drawdown Control**: Terminate when `drawdown > threshold`
 - **Dynamic Risk Allocation**: Position size scales down during losses
 - **Circuit Breakers**: Episode termination prevents catastrophic losses
 
 ### Updated Concept Coverage Matrix
 
-| Concept | Implementation | Essential | Status | Priority |
-|---------|---|---|---|---|
-| Market Microstructure | ✅ Full | Medium | **✓ Complete (Phase 3)** | Done |
-| Deep Learning Arch. | ✅ Full | Yes | ✓ Complete | Done |
-| Reinforcement Learning | ✅ Full | Medium | **✓ Complete (Phase 1)** | Done |
-| Sentiment Analysis | ✅ Full | Medium | **✓ Complete (Phase 1)** | Done |
-| Execution Algorithms | ✅ Full | High | **✓ Complete (Phase 3)** | Done |
-| Intrinsic Time Bars | ✅ Full | No | ✓ Complete | Done |
-| Parallel Processing | ❌ Missing | Low | Placeholder | Phase 4 |
-| Regime Detection | ✅ Full | Medium | **✓ Complete (Phase 2)** | Done |
-| Uncertainty Quant. | ✅ Partial | Medium | Training works | Optional |
-| **Transaction Costs** | ✅ Full | High | **✓ Complete (Phase 3)** | Done |
-| **Position Sizing** | ✅ Full | High | **✓ Complete (Phase 3)** | Done |
-| **Risk Management** | ✅ Full | High | **✓ Complete (Phase 3)** | Done |
+| Concept                | Implementation | Essential | Status                   | Priority |
+|------------------------|----------------|-----------|--------------------------|----------|
+| Market Microstructure  | ✅ Full         | Medium    | **✓ Complete (Phase 3)** | Done     |
+| Deep Learning Arch.    | ✅ Full         | Yes       | ✓ Complete               | Done     |
+| Reinforcement Learning | ✅ Full         | Medium    | **✓ Complete (Phase 1)** | Done     |
+| Sentiment Analysis     | ✅ Full         | Medium    | **✓ Complete (Phase 1)** | Done     |
+| Execution Algorithms   | ✅ Full         | High      | **✓ Complete (Phase 3)** | Done     |
+| Intrinsic Time Bars    | ✅ Full         | No        | ✓ Complete               | Done     |
+| Parallel Processing    | ❌ Missing      | Low       | Placeholder              | Phase 4  |
+| Regime Detection       | ✅ Full         | Medium    | **✓ Complete (Phase 2)** | Done     |
+| Uncertainty Quant.     | ✅ Partial      | Medium    | Training works           | Optional |
+| **Transaction Costs**  | ✅ Full         | High      | **✓ Complete (Phase 3)** | Done     |
+| **Position Sizing**    | ✅ Full         | High      | **✓ Complete (Phase 3)** | Done     |
+| **Risk Management**    | ✅ Full         | High      | **✓ Complete (Phase 3)** | Done     |
 
 ### Production Readiness Assessment
 
 **Phase 3 Impact:**
+
 - **Transaction costs**: Realistic friction modeling prevents overfitting to frictionless backtests
 - **Position sizing**: Kelly-inspired sizing prevents compounding losses during drawdowns
 - **Risk management**: Drawdown limits act as safety net during exploration
@@ -645,6 +708,7 @@ Phase 3 completes several research concepts identified as Phase 2/3 priorities:
 ### Testing & Validation
 
 **Phase 3 Validation:**
+
 - 16/16 transaction cost tests passing
 - 16/16 position sizing tests passing
 - 16/16 risk management tests passing
@@ -656,9 +720,11 @@ See [Testing & Validation Report](../TESTING_VALIDATION_REPORT.md) for full resu
 
 ## Conclusion
 
-**The codebase now implements all essential research concepts for a production-ready FX trading system.** Phase 3 completes the transition from research prototype to live-trading-ready platform.
+**The codebase now implements all essential research concepts for a production-ready FX trading system.** Phase 3
+completes the transition from research prototype to live-trading-ready platform.
 
 **Key Achievements:**
+
 - **Phases 1-2**: Core RL infrastructure, 51+ features, sentiment integration, regime detection
 - **Phase 3**: Production enhancements (transaction costs, position sizing, risk management)
 - **Research Coverage**: 9/9 critical concepts fully implemented
@@ -670,10 +736,12 @@ See [Testing & Validation Report](../TESTING_VALIDATION_REPORT.md) for full resu
 ✅ Multi-pair trading support
 ✅ Comprehensive test validation (25/25 passing)
 
-**Recommendation:** System ready for live capital deployment with recommended configuration (see [Configuration Reference](../CONFIGURATION_REFERENCE.md)).
+**Recommendation:** System ready for live capital deployment with recommended configuration (
+see [Configuration Reference](../CONFIGURATION_REFERENCE.md)).
 
 ---
 
 **Completed:** 2025-12-29 (Phase 3)
 **Status:** Production-ready
-**Next Step:** Deploy with conservative configuration, monitor Phase 3 metrics (transaction costs, position sizes, drawdown)
+**Next Step:** Deploy with conservative configuration, monitor Phase 3 metrics (transaction costs, position sizes,
+drawdown)

@@ -4,10 +4,10 @@ import pandas as pd
 
 
 def score_news(
-    news_df: pd.DataFrame,
-    scorer: Callable[[str], float],
-    text_col: str = "headline",
-    score_col: str = "sentiment_score",
+        news_df: pd.DataFrame,
+        scorer: Callable[[str], float],
+        text_col: str = "headline",
+        score_col: str = "sentiment_score",
 ) -> pd.DataFrame:
     """
     Apply a user-provided scoring function to each headline.
@@ -19,12 +19,12 @@ def score_news(
 
 
 def aggregate_sentiment(
-    news_df: pd.DataFrame,
-    price_df: pd.DataFrame,
-    time_col: str = "datetime",
-    score_col: str = "sentiment_score",
-    freq: str = "1min",
-    rolling_windows: Sequence[int] = (5, 15, 60),
+        news_df: pd.DataFrame,
+        price_df: pd.DataFrame,
+        time_col: str = "datetime",
+        score_col: str = "sentiment_score",
+        freq: str = "1min",
+        rolling_windows: Sequence[int] = (5, 15, 60),
 ) -> pd.DataFrame:
     """
     Aggregate timestamped sentiment scores to the bar frequency and align to price_df.
@@ -64,9 +64,9 @@ def aggregate_sentiment(
 
 
 def attach_sentiment_features(
-    feature_df: pd.DataFrame,
-    sentiment_df: pd.DataFrame,
-    drop_na: bool = True,
+        feature_df: pd.DataFrame,
+        sentiment_df: pd.DataFrame,
+        drop_na: bool = True,
 ) -> pd.DataFrame:
     """
     Concatenate sentiment features (already time-aligned) to the existing feature frame.

@@ -21,7 +21,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Literal
 
 import pandas as pd
-
 from config.config import FeatureConfig
 from features.agent_features import (
     _should_add,
@@ -126,10 +125,10 @@ def _compute_group_features(df: pd.DataFrame, cfg: FeatureConfig, group: str) ->
 
 
 def build_feature_frame_parallel(
-    df: pd.DataFrame,
+        df: pd.DataFrame,
         config: FeatureConfig | None = None,
-    parallel: bool | Literal["auto"] = "auto",
-    min_rows_for_parallel: int = _DEFAULT_PARALLEL_ROW_THRESHOLD,
+        parallel: bool | Literal["auto"] = "auto",
+        min_rows_for_parallel: int = _DEFAULT_PARALLEL_ROW_THRESHOLD,
 ) -> pd.DataFrame:
     """Parallelised drop-in replacement for ``build_feature_frame``.
 
@@ -152,8 +151,8 @@ def build_feature_frame_parallel(
     base_df = add_base_features(df, spread_windows=cfg.spread_windows)
 
     should_parallel = (
-        parallel is True
-        or (parallel == "auto" and len(base_df) >= min_rows_for_parallel)
+            parallel is True
+            or (parallel == "auto" and len(base_df) >= min_rows_for_parallel)
     )
 
     feature_frames = [base_df]

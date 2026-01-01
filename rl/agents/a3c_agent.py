@@ -103,11 +103,11 @@ class SharedAdam(optim.Adam):
     """Adam optimizer with shared states for multiprocessing."""
 
     def __init__(
-        self,
-        params,
-        lr: float,
+            self,
+            params,
+            lr: float,
             betas: tuple[float, float],
-        weight_decay: float = 0.0,
+            weight_decay: float = 0.0,
     ):
         super().__init__(params, lr=lr, betas=betas, weight_decay=weight_decay)
         for group in self.param_groups:
@@ -126,11 +126,11 @@ class A3CAgent:
     """Asynchronous Advantage Actor-Critic training harness."""
 
     def __init__(
-        self,
-        model_cfg: ModelConfig,
-        a3c_cfg: A3CConfig,
-        action_dim: int,
-        env_factory: Callable[[], Any],
+            self,
+            model_cfg: ModelConfig,
+            a3c_cfg: A3CConfig,
+            action_dim: int,
+            env_factory: Callable[[], Any],
     ):
         self.model_cfg = model_cfg
         self.cfg = a3c_cfg
@@ -270,7 +270,7 @@ class A3CAgent:
                     break
 
     def _compute_losses(
-        self, rollout: list, next_value: torch.Tensor
+            self, rollout: list, next_value: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         returns = []
         R = next_value

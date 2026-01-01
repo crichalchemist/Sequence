@@ -23,11 +23,11 @@ from sklearn.preprocessing import StandardScaler
 @dataclass
 class RegimeConfig:
     """Regime detection configuration."""
-    n_regimes: int = 4              # Number of regimes: trend_up, trend_down, consolidate, volatile
-    lookback: int = 50              # Window for computing features
-    max_iter: int = 100             # EM iterations
+    n_regimes: int = 4  # Number of regimes: trend_up, trend_down, consolidate, volatile
+    lookback: int = 50  # Window for computing features
+    max_iter: int = 100  # EM iterations
     random_state: int = 42
-    min_samples: int = 100          # Minimum samples to fit model
+    min_samples: int = 100  # Minimum samples to fit model
 
 
 class RegimeDetector:

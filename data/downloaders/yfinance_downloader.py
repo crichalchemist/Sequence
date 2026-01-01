@@ -200,7 +200,8 @@ def download_pair(
 def main():
     parser = argparse.ArgumentParser(description="Download FX data from yfinance.")
     parser.add_argument("--pairs-csv", default="", help="Path to pairs.csv (default: repo root or data/pairs.csv)")
-    parser.add_argument("--pairs", default="", help="Comma-separated pairs to override pairs file (e.g., eurusd,usdjpy)")
+    parser.add_argument("--pairs", default="",
+                        help="Comma-separated pairs to override pairs file (e.g., eurusd,usdjpy)")
     parser.add_argument("--output-root", default="yfinance_output", help="Output directory")
     parser.add_argument("--start", default="2018-01-01", help="Start date YYYY-MM-DD (default: 2018-01-01)")
     parser.add_argument("--end", default=None, help="End date YYYY-MM-DD (default: today)")

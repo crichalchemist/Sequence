@@ -3,7 +3,8 @@
 **Last Updated**: 2025-12-29
 **Phase**: 3 Complete
 
-This guide consolidates all configuration options for the Sequence FX trading system, with production-ready examples and parameter tuning guidelines.
+This guide consolidates all configuration options for the Sequence FX trading system, with production-ready examples and
+parameter tuning guidelines.
 
 ---
 
@@ -65,51 +66,61 @@ config = ExecutionConfig(
 #### Transaction Costs
 
 **`commission_per_lot`** (float, default: 0.0)
+
 - Fixed commission per trading lot
 - Example: $7 per 100k lot in FX retail trading
 - Use when broker charges per-lot fees
 
 **`commission_pct`** (float, default: 0.0)
+
 - Commission as percentage of notional value
 - Example: 0.0001 = 1 basis point = $10 on $100,000 trade
 - Use when broker charges percentage-based fees
 
 **`variable_spread`** (bool, default: False)
+
 - Enable spread widening during high volatility
 - Spread multiplies by `spread_volatility_multiplier` when volatility_ratio > 1.5
 - Realistic behavior: liquidity providers widen quotes during turbulence
 
 **`spread_volatility_multiplier`** (float, default: 2.0)
+
 - Multiplier applied to base spread during high volatility
 - Example: 0.02 base spread → 0.04 during volatility spike
 
 #### Risk Management
 
 **`enable_stop_loss`** (bool, default: False)
+
 - Automatically close position when loss exceeds threshold
 - Per-position risk control
 - **Recommendation**: Disable for training (let agent learn), enable for safety during exploration
 
 **`stop_loss_pct`** (float, default: 0.02)
+
 - Stop loss threshold as % of entry price
 - Example: 0.02 = close position if 2% loss from entry
 - Calculated per-position, not portfolio-wide
 
 **`enable_take_profit`** (bool, default: False)
+
 - Automatically close position when profit exceeds threshold
 - Teaches agent to book profits vs. letting winners run
 - **Recommendation**: Disable for training (reward function handles this)
 
 **`take_profit_pct`** (float, default: 0.04)
+
 - Take profit threshold as % of entry price
 - Example: 0.04 = close position if 4% gain from entry
 
 **`enable_drawdown_limit`** (bool, default: False)
+
 - Terminate episode if portfolio drawdown exceeds limit
 - Portfolio-level risk control (across all positions)
 - **Recommendation**: Enable for training (prevents catastrophic episodes)
 
 **`max_drawdown_pct`** (float, default: 0.20)
+
 - Maximum allowable drawdown from peak portfolio value
 - Example: 0.20 = terminate if portfolio drops 20% from peak
 - Acts as circuit breaker for training stability
@@ -176,23 +187,27 @@ converter = ActionConverter(
 ### Key Parameters Explained
 
 **`lot_size`** (float, default: 1.0)
+
 - Base lot size for position rounding
 - All position sizes are multiples of this value
 - Example: lot_size=0.5 → positions of 0.5, 1.0, 1.5, 2.0, ...
 
 **`max_position`** (float, default: 10.0)
+
 - Maximum absolute inventory (long or short)
 - Hard constraint prevents catastrophic concentration
 - **Per-pair limit** in multi-pair trading
 - Example: max_position=10.0 → can hold max 10 lots long or 10 lots short
 
 **`risk_per_trade`** (float, default: 0.02)
+
 - Fraction of portfolio to risk per trade
 - Used when `use_dynamic_sizing=True`
 - Formula: `size = (portfolio_value * risk_per_trade) / mid_price`
 - Example: 0.02 = risk 2% of portfolio, Kelly-criterion-inspired
 
 **`use_dynamic_sizing`** (bool, default: False)
+
 - Enable position sizing based on portfolio value
 - When True: position size scales with portfolio growth/shrinkage
 - When False: fixed `lot_size` positions
@@ -222,18 +237,21 @@ rl_config = RLTrainingConfig(
 ### Key Parameters Explained
 
 **`learning_rate`** (float, default: 1e-4)
+
 - Step size for policy gradient updates
 - Smaller = more stable, slower learning
 - Larger = faster learning, risk of instability
 - **Recommendation**: Start with 1e-4, reduce if unstable
 
 **`discount_factor`** (float, default: 0.99)
+
 - Gamma parameter for future reward discounting
 - Higher = agent values long-term rewards more
 - Example: 0.99 = rewards 100 steps away are worth 36.6% of immediate reward
 - **Recommendation**: 0.95-0.99 for trading (balance short/long-term)
 
 **`entropy_coef`** (float, default: 0.01)
+
 - Exploration bonus coefficient
 - Higher = more exploration, more random actions
 - Lower = more exploitation, greedier policy
@@ -368,11 +386,13 @@ for pair in ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", ...]:
 ### Transaction Cost Calibration
 
 **Commission**:
+
 - **Retail FX**: 0.5-1.5 pips (commission_pct = 0.00005 to 0.00015)
 - **ECN brokers**: ~$5-7 per 100k lot (commission_per_lot = 5.0 to 7.0)
 - **Crypto**: 0.1-0.5% (commission_pct = 0.001 to 0.005)
 
 **Spreads**:
+
 - **EUR/USD**: 0.5-2 pips (spread = 0.00005 to 0.0002)
 - **GBP/JPY**: 2-5 pips (spread = 0.002 to 0.005)
 - **Exotics**: 5-20 pips (spread = 0.005 to 0.020)
@@ -380,12 +400,14 @@ for pair in ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", ...]:
 ### Position Sizing Tuning
 
 **Risk per trade** (`risk_per_trade`):
+
 - **Conservative**: 0.5-1% (0.005 to 0.01)
 - **Moderate**: 1-2% (0.01 to 0.02)
 - **Aggressive**: 2-5% (0.02 to 0.05)
 - **Rule of thumb**: Total exposure across all pairs should not exceed 10-20% of portfolio
 
 **Maximum position** (`max_position`):
+
 - **High volatility pairs** (GBP/JPY): Lower limits (5-8 lots)
 - **Low volatility pairs** (EUR/USD): Higher limits (10-15 lots)
 - **Total exposure**: Sum across all pairs should align with portfolio risk tolerance
@@ -393,12 +415,14 @@ for pair in ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", ...]:
 ### Risk Management Tuning
 
 **Drawdown limit** (`max_drawdown_pct`):
+
 - **Conservative**: 10-15% (0.10 to 0.15)
 - **Moderate**: 15-25% (0.15 to 0.25)
 - **Aggressive**: 25-40% (0.25 to 0.40)
 - **Align with**: Account size, risk tolerance, recovery time
 
 **Stop-loss** (`stop_loss_pct`):
+
 - **Tight stops**: 0.5-1% (0.005 to 0.01) - high-frequency strategies
 - **Moderate stops**: 1-2% (0.01 to 0.02) - swing trading
 - **Wide stops**: 2-5% (0.02 to 0.05) - position trading

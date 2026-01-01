@@ -3,8 +3,8 @@ from __future__ import annotations
 
 import torch
 import torch.nn as nn
-
 from config.config import ModelConfig
+
 from models.agent_hybrid import PriceSequenceEncoder
 from models.regime_encoder import RegimeEncoder
 
@@ -13,14 +13,14 @@ class RegimeAwareHybrid(nn.Module):
     """Two-stream model that fuses price and regime embeddings."""
 
     def __init__(
-        self,
-        cfg: ModelConfig,
-        shared_dim: int = 128,
-        regime_input_dim: int = 18,
-        regime_hidden_dim: int = 32,
-        regime_emb_dim: int = 16,
-        regime_classes: int = 3,
-        vol_classes: int | None = None,
+            self,
+            cfg: ModelConfig,
+            shared_dim: int = 128,
+            regime_input_dim: int = 18,
+            regime_hidden_dim: int = 32,
+            regime_emb_dim: int = 16,
+            regime_classes: int = 3,
+            vol_classes: int | None = None,
     ) -> None:
         super().__init__()
         self.cfg = cfg

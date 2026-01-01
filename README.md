@@ -4,18 +4,23 @@
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c.svg)](https://pytorch.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-**Sequence** is a comprehensive deep learning toolkit for foreign exchange (FX) market forecasting and algorithmic trading. The framework combines state-of-the-art neural architectures (CNN-LSTM-Attention hybrids), intrinsic time representations, sentiment analysis, and reinforcement learning for end-to-end trading strategy development.
+**Sequence** is a comprehensive deep learning toolkit for foreign exchange (FX) market forecasting and algorithmic
+trading. The framework combines state-of-the-art neural architectures (CNN-LSTM-Attention hybrids), intrinsic time
+representations, sentiment analysis, and reinforcement learning for end-to-end trading strategy development.
 
 ## Overview
 
 This repository implements a multi-modal approach to FX prediction integrating:
 
-- **Hybrid Neural Architecture**: Deep CNN-LSTM networks with multi-head attention mechanisms for temporal pattern recognition
-- **Intrinsic Time Representation**: Directional-change based time transformation for enhanced market structure capture [1]
+- **Hybrid Neural Architecture**: Deep CNN-LSTM networks with multi-head attention mechanisms for temporal pattern
+  recognition
+- **Intrinsic Time Representation**: Directional-change based time transformation for enhanced market structure
+  capture [1]
 - **Multi-Task Learning**: Joint prediction of price movements, volatility, and market regime
 - **Sentiment Integration**: GDELT news event processing with FinBERT sentiment analysis
 - **Reinforcement Learning**: A3C agents for execution policy optimization with backtesting integration
-- **Production Pipeline**: Unified workflow supporting data acquisition, preprocessing, supervised learning, and RL training
+- **Production Pipeline**: Unified workflow supporting data acquisition, preprocessing, supervised learning, and RL
+  training
 
 ## Key Features
 
@@ -166,6 +171,7 @@ The core model (`models/agent_hybrid.py`) implements a hybrid architecture:
 ### Intrinsic Time Representation
 
 Traditional time-based sampling is replaced with directional-change events [1], providing:
+
 - Scale-invariant market structure representation
 - Reduced noise from low-activity periods
 - Enhanced signal-to-noise ratio for pattern recognition
@@ -173,17 +179,20 @@ Traditional time-based sampling is replaced with directional-change events [1], 
 ### Sentiment Integration Pipeline
 
 Multi-stage news sentiment processing from GDELT Global Knowledge Graph:
+
 1. **GDELT Download**: Retrieve Global Knowledge Graph event streams
-2. **Event Filtering**: Extract FX-relevant news using entity/theme filtering  
+2. **Event Filtering**: Extract FX-relevant news using entity/theme filtering
 3. **FinBERT Analysis**: Generate sentiment scores using FinBERT-tone model
 4. **Feature Alignment**: Aggregate and align sentiment features with OHLCV price data
 5. **Model Integration**: Concatenate sentiment features to technical indicators for training
 
-The sentiment pipeline enriches price-based features with market psychology signals, enabling the model to learn correlations between news sentiment and price movements.
+The sentiment pipeline enriches price-based features with market psychology signals, enabling the model to learn
+correlations between news sentiment and price movements.
 
 ### Reinforcement Learning
 
 A3C (Asynchronous Advantage Actor-Critic) agents learn optimal execution policies:
+
 - **Simulated Mode**: Stochastic retail execution with realistic spread/slippage
 - **Backtesting Mode**: Deterministic historical replay for reproducible experiments
 - **Reward Function**: Risk-adjusted PnL with transaction cost penalties
@@ -191,12 +200,14 @@ A3C (Asynchronous Advantage Actor-Critic) agents learn optimal execution policie
 ### TimesFM Ensemble Forecasting
 
 Post-training ensemble evaluation combines model predictions with Google's TimesFM foundation model:
+
 1. **Trained Model**: CNN-LSTM-Attention predictions on normalized features
 2. **TimesFM Forecasting**: Pre-trained foundation model predictions on raw price windows
 3. **Ensemble**: Mean-weighted combination of both predictions
 4. **Evaluation**: RMSE/MAE metrics on test set for model validation
 
-TimesFM integration is used during evaluation (not training) to benchmark model performance against state-of-the-art foundation models.
+TimesFM integration is used during evaluation (not training) to benchmark model performance against state-of-the-art
+foundation models.
 
 ## Repository Structure
 
@@ -288,50 +299,64 @@ This framework is built upon established research in financial machine learning 
 
 ### Deep Learning for FX Markets
 
-The hybrid CNN-LSTM-Attention architecture draws on modern deep learning approaches for financial time series [2, 3]. The multi-scale convolutional layers capture local patterns while LSTMs model long-term temporal dependencies.
+The hybrid CNN-LSTM-Attention architecture draws on modern deep learning approaches for financial time series [2, 3].
+The multi-scale convolutional layers capture local patterns while LSTMs model long-term temporal dependencies.
 
 ### Intrinsic Time & Directional Change
 
-Intrinsic time representation based on directional-change events provides scale-invariant market structure characterization [1], particularly effective for high-frequency FX data.
+Intrinsic time representation based on directional-change events provides scale-invariant market structure
+characterization [1], particularly effective for high-frequency FX data.
 
 ### News Sentiment & Market Impact
 
-Integration of GDELT news sentiment follows research on news-driven FX movements [4], using FinBERT for domain-specific sentiment extraction.
+Integration of GDELT news sentiment follows research on news-driven FX movements [4], using FinBERT for domain-specific
+sentiment extraction.
 
 ### Optimal Execution & RL
 
-The A3C execution policy is inspired by optimal execution research [5, 6] and modern algorithmic trading strategies [7], learning to minimize transaction costs while achieving target positions.
+The A3C execution policy is inspired by optimal execution research [5, 6] and modern algorithmic trading strategies [7],
+learning to minimize transaction costs while achieving target positions.
 
 ## Data Sources
 
 - **Historical Price Data**: [HistData](https://www.histdata.com/) - Minute-level OHLCV data for major FX pairs
-- **News Events**: [GDELT Project](http://data.gdeltproject.org/gdeltv2/) - Global Knowledge Graph for real-time event data
-- **Sentiment Analysis**: [FinBERT-tone](https://huggingface.co/ProsusAI/finbert) - Financial domain sentiment classification
-- **Foundation Model**: [TimesFM](https://github.com/google-research/timesfm) - Google's pre-trained time series forecasting model (evaluation only)
+- **News Events**: [GDELT Project](http://data.gdeltproject.org/gdeltv2/) - Global Knowledge Graph for real-time event
+  data
+- **Sentiment Analysis**: [FinBERT-tone](https://huggingface.co/ProsusAI/finbert) - Financial domain sentiment
+  classification
+- **Foundation Model**: [TimesFM](https://github.com/google-research/timesfm) - Google's pre-trained time series
+  forecasting model (evaluation only)
 
 ## References
 
-[1] Glattfelder, J. B., Dupuis, A., & Olsen, R. B. (2011). Patterns in high-frequency FX data: Discovery of 12 empirical scaling laws. *Quantitative Finance*, 11(4), 599-614.
+[1] Glattfelder, J. B., Dupuis, A., & Olsen, R. B. (2011). Patterns in high-frequency FX data: Discovery of 12 empirical
+scaling laws. *Quantitative Finance*, 11(4), 599-614.
 
-[2] Dixon, M., Klabjan, D., & Bang, J. H. (2017). Classification-based financial markets prediction using deep neural networks. *Algorithmic Finance*, 6(3-4), 67-77.
+[2] Dixon, M., Klabjan, D., & Bang, J. H. (2017). Classification-based financial markets prediction using deep neural
+networks. *Algorithmic Finance*, 6(3-4), 67-77.
 
-[3] Fischer, T., & Krauss, C. (2018). Deep learning with long short-term memory networks for financial market predictions. *European Journal of Operational Research*, 270(2), 654-669.
+[3] Fischer, T., & Krauss, C. (2018). Deep learning with long short-term memory networks for financial market
+predictions. *European Journal of Operational Research*, 270(2), 654-669.
 
-[4] Sinha, N. R., & Tewari, A. (2020). Applying news analytics to financial markets: An empirical study. *Journal of Banking and Financial Technology*, 4(1), 59-73.
+[4] Sinha, N. R., & Tewari, A. (2020). Applying news analytics to financial markets: An empirical study. *Journal of
+Banking and Financial Technology*, 4(1), 59-73.
 
 [5] Almgren, R., & Chriss, N. (2001). Optimal execution of portfolio transactions. *Journal of Risk*, 3, 5-39.
 
-[6] Cartea, Á., Jaimungal, S., & Penalva, J. (2015). *Algorithmic and High-Frequency Trading*. Cambridge University Press.
+[6] Cartea, Á., Jaimungal, S., & Penalva, J. (2015). *Algorithmic and High-Frequency Trading*. Cambridge University
+Press.
 
 [7] Chan, E. P. (2021). *Quantitative Trading: How to Build Your Own Algorithmic Trading Business* (2nd ed.). Wiley.
 
-[8] Das, A., Kong, W., Leach, A., Mathur, S., Sen, R., & Yu, R. (2024). A decoder-only foundation model for time-series forecasting. In *Proceedings of the 41st International Conference on Machine Learning* (ICML 2024).
+[8] Das, A., Kong, W., Leach, A., Mathur, S., Sen, R., & Yu, R. (2024). A decoder-only foundation model for time-series
+forecasting. In *Proceedings of the 41st International Conference on Machine Learning* (ICML 2024).
 
 ## Documentation
 
 For detailed usage guides and integration examples, see:
 
-- [Backtesting Integration Guide](docs/guides/BACKTESTING_INTEGRATION_GUIDE.md) - Comprehensive guide to RL training with backtesting.py
+- [Backtesting Integration Guide](docs/guides/BACKTESTING_INTEGRATION_GUIDE.md) - Comprehensive guide to RL training
+  with backtesting.py
 - [Architecture & API Reference](docs/api/ARCHITECTURE_API_REFERENCE.md) - Technical deep-dive into model architecture
 - [Tracing Implementation Guide](docs/guides/TRACING_IMPLEMENTATION.md) - Observability and debugging with tracing
 - [Research Evaluation](docs/research/RESEARCH_EVALUATION.md) - Analysis of foundational research papers

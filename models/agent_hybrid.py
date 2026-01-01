@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
 from config.config import ModelConfig
+
 from utils.attention_optimization import (
     MultiHeadTemporalAttention,
     TemporalAttention,
@@ -50,20 +50,20 @@ class SharedEncoder(nn.Module):
     """
 
     def __init__(
-        self,
-        num_features: int,
-        hidden_size_lstm: int = 64,
-        num_layers_lstm: int = 1,
-        cnn_num_filters: int = 32,
-        cnn_kernel_size: int = 3,
-        attention_dim: int = 64,
-        dropout: float = 0.1,
-        bidirectional: bool = True,
-        use_optimized_attention: bool = False,
-        use_multihead_attention: bool = False,
-        n_attention_heads: int = 4,
-        max_seq_length: int = 1024,
-        use_adaptive_attention: bool = False,
+            self,
+            num_features: int,
+            hidden_size_lstm: int = 64,
+            num_layers_lstm: int = 1,
+            cnn_num_filters: int = 32,
+            cnn_kernel_size: int = 3,
+            attention_dim: int = 64,
+            dropout: float = 0.1,
+            bidirectional: bool = True,
+            use_optimized_attention: bool = False,
+            use_multihead_attention: bool = False,
+            n_attention_heads: int = 4,
+            max_seq_length: int = 1024,
+            use_adaptive_attention: bool = False,
     ):
         super().__init__()
 
@@ -207,11 +207,11 @@ class DignityModel(nn.Module):
 
 
 def build_model(
-    cfg: ModelConfig,
-    task_type: str = "classification",
-    num_dir_classes: int | None = None,
-    num_volatility_classes: int | None = None,
-    return_dim: int | None = None,
+        cfg: ModelConfig,
+        task_type: str = "classification",
+        num_dir_classes: int | None = None,
+        num_volatility_classes: int | None = None,
+        return_dim: int | None = None,
 ) -> DignityModel:
     if num_dir_classes is not None:
         cfg.num_dir_classes = num_dir_classes

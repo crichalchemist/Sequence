@@ -53,10 +53,10 @@ logger = get_logger(__name__)
 
 
 def download_fred_series(
-    series_id: str,
-    start_date: str,
-    end_date: str,
-    api_key: str | None = None
+        series_id: str,
+        start_date: str,
+        end_date: str,
+        api_key: str | None = None
 ) -> pd.DataFrame:
     """
     Download economic time series from FRED (Federal Reserve Economic Data).
@@ -136,8 +136,8 @@ def download_fred_series(
 
 
 def download_economic_calendar(
-    start_date: str,
-    end_date: str
+        start_date: str,
+        end_date: str
 ) -> pd.DataFrame:
     """
     Download economic calendar events.
@@ -165,9 +165,9 @@ def download_economic_calendar(
 
 
 def download_central_bank_minutes(
-    bank: str,
-    start_year: int,
-    end_year: int
+        bank: str,
+        start_year: int,
+        end_year: int
 ) -> pd.DataFrame:
     """
     Download central bank meeting minutes and policy announcements.
@@ -193,8 +193,8 @@ def download_central_bank_minutes(
 
 
 def combine_economic_data(
-    dataframes: list[pd.DataFrame],
-    deduplicate: bool = True
+        dataframes: list[pd.DataFrame],
+        deduplicate: bool = True
 ) -> pd.DataFrame:
     """
     Combine multiple economic data sources into single DataFrame for Cognee ingestion.
@@ -232,7 +232,8 @@ def combine_economic_data(
         if len(combined) < initial_len:
             logger.info(f"[combine] Removed {initial_len - len(combined)} duplicates")
 
-    logger.info(f"[combine] Combined dataset: {len(combined)} records from {combined['date'].min()} to {combined['date'].max()}")
+    logger.info(
+        f"[combine] Combined dataset: {len(combined)} records from {combined['date'].min()} to {combined['date'].max()}")
 
     return combined
 
@@ -260,10 +261,10 @@ FOREX_FRED_SERIES = {
 
 
 def download_forex_fred_bundle(
-    start_date: str,
-    end_date: str,
-    api_key: str | None = None,
-    series_ids: list[str] | None = None
+        start_date: str,
+        end_date: str,
+        api_key: str | None = None,
+        series_ids: list[str] | None = None
 ) -> pd.DataFrame:
     """
     Download bundle of FX-relevant FRED series.

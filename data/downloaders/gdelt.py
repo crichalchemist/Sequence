@@ -116,13 +116,13 @@ def _load_http_dependencies() -> tuple[Any, Any, Any]:
 
 
 def download_file(
-    session: Any,
-    url: str,
-    dest: Path,
-    overwrite: bool,
-    timeout: int,
-    max_retries: int,
-    backoff: float,
+        session: Any,
+        url: str,
+        dest: Path,
+        overwrite: bool,
+        timeout: int,
+        max_retries: int,
+        backoff: float,
         expected_checksum: str | None,
 ) -> bool:
     if dest.exists() and not overwrite:
@@ -239,7 +239,8 @@ def main():
     parser.add_argument("--overwrite", action="store_true", help="Re-download even if file exists")
     parser.add_argument("--timeout", type=int, default=10, help="HTTP timeout per request (seconds)")
     parser.add_argument("--max-retries", type=int, default=3, help="Max attempts per file before giving up")
-    parser.add_argument("--retry-backoff", type=float, default=2.0, help="Seconds multiplied by attempt number between retries")
+    parser.add_argument("--retry-backoff", type=float, default=2.0,
+                        help="Seconds multiplied by attempt number between retries")
     parser.add_argument(
         "--ca-bundle",
         default=None,

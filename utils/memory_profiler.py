@@ -125,6 +125,7 @@ class MemoryProfiler:
 
     def profile_dataset_iteration(self, dataset, max_samples: int = 1000) -> ProfileResult:
         """Profile iteration through a dataset."""
+
         def iterate():
             count = 0
             for sample in dataset:
@@ -167,7 +168,8 @@ class MemoryProfiler:
         for name, result in results.items():
             if result is not None:
                 samples_per_sec = result.samples_processed / result.duration_s if result.duration_s > 0 else 0
-                report.append(f"| {name} | {result.memory_delta_mb:.1f} | {result.peak_delta_mb:.1f} | {result.duration_s:.2f} | {samples_per_sec:.1f} |")
+                report.append(
+                    f"| {name} | {result.memory_delta_mb:.1f} | {result.peak_delta_mb:.1f} | {result.duration_s:.2f} | {samples_per_sec:.1f} |")
             else:
                 report.append(f"| {name} | ERROR | ERROR | ERROR | ERROR |")
 
@@ -181,7 +183,8 @@ class MemoryProfiler:
         if valid_results:
             # Find most and least efficient
             by_memory = sorted(valid_results.items(), key=lambda x: x[1].memory_delta_mb)
-            by_speed = sorted(valid_results.items(), key=lambda x: x[1].samples_processed / x[1].duration_s, reverse=True)
+            by_speed = sorted(valid_results.items(), key=lambda x: x[1].samples_processed / x[1].duration_s,
+                              reverse=True)
 
             report.append("### Most Memory Efficient")
             for name, result in by_memory[:2]:
@@ -198,7 +201,8 @@ class MemoryProfiler:
                 report.append("### Memory Efficiency vs Baseline")
                 for name, result in valid_results.items():
                     if name != list(valid_results.keys())[0]:
-                        efficiency = (baseline.memory_delta_mb / result.memory_delta_mb) if result.memory_delta_mb > 0 else 0
+                        efficiency = (
+                                    baseline.memory_delta_mb / result.memory_delta_mb) if result.memory_delta_mb > 0 else 0
                         report.append(f"- **{name}**: {efficiency:.2f}x more efficient")
 
         return "\n".join(report)

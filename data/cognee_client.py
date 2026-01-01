@@ -71,11 +71,11 @@ class CogneeClient:
     """Client for interacting with Cognee Cloud API."""
 
     def __init__(
-        self,
-        api_key: str | None = None,
-        base_url: str = "https://api.cognee.ai",
-        timeout: int = 30,
-        max_retries: int = 3
+            self,
+            api_key: str | None = None,
+            base_url: str = "https://api.cognee.ai",
+            timeout: int = 30,
+            max_retries: int = 3
     ):
         """
         Initialize Cognee API client.
@@ -110,12 +110,12 @@ class CogneeClient:
         logger.info(f"[cognee] Initialized client for {self.base_url}")
 
     def _request(
-        self,
-        method: str,
-        endpoint: str,
-        json_data: dict | None = None,
-        params: dict | None = None,
-        retry_count: int = 0
+            self,
+            method: str,
+            endpoint: str,
+            json_data: dict | None = None,
+            params: dict | None = None,
+            retry_count: int = 0
     ) -> dict:
         """
         Make HTTP request to Cognee API with retry logic.
@@ -176,10 +176,10 @@ class CogneeClient:
             )
 
     def add_text(
-        self,
-        dataset_name: str,
-        text: str,
-        metadata: dict | None = None
+            self,
+            dataset_name: str,
+            text: str,
+            metadata: dict | None = None
     ) -> str:
         """
         Add text document to a dataset in Cognee.
@@ -213,10 +213,10 @@ class CogneeClient:
         return doc_id
 
     def add_texts_batch(
-        self,
-        dataset_name: str,
-        texts: list[str],
-        metadatas: list[dict] | None = None
+            self,
+            dataset_name: str,
+            texts: list[str],
+            metadatas: list[dict] | None = None
     ) -> list[str]:
         """
         Add multiple text documents in batch.
@@ -302,11 +302,11 @@ class CogneeClient:
         return status
 
     def search(
-        self,
-        query: str,
-        dataset_name: str,
-        limit: int = 10,
-        search_type: str = "semantic"
+            self,
+            query: str,
+            dataset_name: str,
+            limit: int = 10,
+            search_type: str = "semantic"
     ) -> list[dict]:
         """
         Perform semantic search on knowledge graph.
@@ -347,10 +347,10 @@ class CogneeClient:
         return results
 
     def get_entities(
-        self,
-        dataset_name: str,
-        entity_type: str | None = None,
-        limit: int = 100
+            self,
+            dataset_name: str,
+            entity_type: str | None = None,
+            limit: int = 100
     ) -> list[dict]:
         """
         Retrieve entities from knowledge graph.
@@ -381,10 +381,10 @@ class CogneeClient:
         return entities
 
     def get_relationships(
-        self,
-        dataset_name: str,
-        entity_name: str | None = None,
-        limit: int = 100
+            self,
+            dataset_name: str,
+            entity_name: str | None = None,
+            limit: int = 100
     ) -> list[dict]:
         """
         Retrieve relationships from knowledge graph.

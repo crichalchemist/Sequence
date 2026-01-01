@@ -8,8 +8,8 @@ import numpy as np
 import pandas as pd
 import pytest
 import torch
-
 from config.config import DataConfig, MultiTaskDataConfig
+
 from data.agents.base_agent import BaseDataAgent, SequenceDataset
 from data.agents.multitask_agent import MultiTaskDataAgent
 from data.agents.single_task_agent import SingleTaskDataAgent
@@ -139,7 +139,7 @@ class TestBaseDataAgent:
         """Test normalization fitting."""
         agent = BaseDataAgent(single_task_config)
         feature_cols = [col for col in sample_data.columns
-                       if col not in {single_task_config.datetime_column, 'source_file'}]
+                        if col not in {single_task_config.datetime_column, 'source_file'}]
 
         norm_stats = agent.fit_normalization(sample_data, feature_cols)
 
@@ -152,7 +152,7 @@ class TestBaseDataAgent:
         """Test SequenceDataset creation and indexing."""
         agent = BaseDataAgent(single_task_config)
         feature_cols = [col for col in sample_data.columns
-                       if col not in {single_task_config.datetime_column, 'source_file'}]
+                        if col not in {single_task_config.datetime_column, 'source_file'}]
 
         # Create simple dataset
         sequences = np.random.randn(10, 5, len(feature_cols))
@@ -179,7 +179,7 @@ class TestBaseDataAgent:
         """Test DataLoader building."""
         agent = BaseDataAgent(single_task_config)
         feature_cols = [col for col in sample_data.columns
-                       if col not in {single_task_config.datetime_column, 'source_file'}]
+                        if col not in {single_task_config.datetime_column, 'source_file'}]
 
         # Create simple dataset
         sequences = np.random.randn(20, 5, len(feature_cols))
@@ -267,7 +267,7 @@ class TestSingleTaskDataAgent:
         seq, targets = train_dataset[0]
 
         assert seq.shape == (single_task_config.t_in,
-                           len(sample_data.columns) - 2)  # Excluding datetime, source_file
+                             len(sample_data.columns) - 2)  # Excluding datetime, source_file
         assert 'primary' in targets
         assert 'max_return' in targets
         assert 'topk_returns' in targets
@@ -331,9 +331,9 @@ class TestMultiTaskDataAgent:
 
         # Check targets have correct types
         assert targets['direction_class'].dtype == torch.long  # classification
-        assert targets['return_reg'].dtype == torch.float32   # regression
-        assert targets['vol_class'].dtype == torch.long      # binary classification
-        assert targets['trend_class'].dtype == torch.long    # 3-class classification
+        assert targets['return_reg'].dtype == torch.float32  # regression
+        assert targets['vol_class'].dtype == torch.long  # binary classification
+        assert targets['trend_class'].dtype == torch.long  # 3-class classification
 
     def test_target_consistency(self, multitask_config, sample_data):
         """Test consistency between primary and extended targets."""
@@ -464,7 +464,7 @@ class TestDataAgentConsolidation:
 
         # Should handle zero std gracefully
         assert norm_stats.std[0] == 1.0  # Should be replaced with 1.0
-        assert norm_stats.std[1] > 0     # Should be actual std
+        assert norm_stats.std[1] > 0  # Should be actual std
 
 
 def test_integration_with_existing_workflows(single_task_config, sample_data):

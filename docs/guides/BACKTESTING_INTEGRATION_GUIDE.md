@@ -2,7 +2,8 @@
 
 ## Overview
 
-Backtesting.py is **fully integrated** into both the standalone A3C training script and the unified training pipeline. This provides deterministic historical replay for reproducible training experiments.
+Backtesting.py is **fully integrated** into both the standalone A3C training script and the unified training pipeline.
+This provides deterministic historical replay for reproducible training experiments.
 
 ## Integration Points
 
@@ -16,6 +17,7 @@ Backtesting.py is **fully integrated** into both the standalone A3C training scr
 The unified pipeline handles the complete workflow: download → prepare → train supervised → train RL.
 
 ### Full Pipeline with RL Training
+
 ```bash
 python utils/run_training_pipeline.py \
   --pairs gbpusd,eurusd \
@@ -28,6 +30,7 @@ python utils/run_training_pipeline.py \
 ```
 
 ### Pipeline Stages
+
 1. **Data Download** (optional): HistData, yfinance, GDELT
 2. **Data Preparation**: Feature engineering, train/val/test splits
 3. **Supervised Training**: Classification/regression model
@@ -35,6 +38,7 @@ python utils/run_training_pipeline.py \
 5. **RL Training** (optional): A3C policy with backtesting or simulation
 
 ### Key Pipeline Arguments
+
 - `--run-rl-training`: Enable RL training after supervised training
 - `--rl-env-mode {simulated,backtesting}`: Choose environment type
 - `--rl-num-workers N`: Number of A3C workers
@@ -55,6 +59,7 @@ python utils/run_training_pipeline.py \
 For direct RL training without the full pipeline:
 
 ### Simulated Mode (Default - Stochastic)
+
 ```bash
 python rl/run_a3c_training.py \
   --pair gbpusd \
@@ -62,12 +67,14 @@ python rl/run_a3c_training.py \
   --total-steps 100000 \
   --device cuda
 ```
+
 - Uses `SimulatedRetailExecutionEnv`
 - Stochastic execution with spread, slippage, realistic fills
 - Non-deterministic (different runs produce different results)
 - Best for exploration during training
 
 ### Backtesting Mode (Deterministic)
+
 ```bash
 python rl/run_a3c_training.py \
   --pair gbpusd \
@@ -77,6 +84,7 @@ python rl/run_a3c_training.py \
   --total-steps 100000 \
   --device cuda
 ```
+
 - Uses `BacktestingRetailExecutionEnv`
 - Deterministic bar-by-bar historical replay
 - Reproducible (same seed = same results)
@@ -87,6 +95,7 @@ python rl/run_a3c_training.py \
 ## Usage Examples
 
 ### Example 1: Complete Pipeline with Backtesting RL
+
 ```bash
 python utils/run_training_pipeline.py \
   --pairs gbpusd \
@@ -99,7 +108,9 @@ python utils/run_training_pipeline.py \
   --rl-total-steps 200000 \
   --device cuda
 ```
+
 **Pipeline stages:**
+
 1. Downloads HistData for GBPUSD (2023-2024)
 2. Prepares features and train/val/test splits
 3. Trains supervised model (5 epochs)
@@ -107,6 +118,7 @@ python utils/run_training_pipeline.py \
 5. Trains A3C agent with backtesting (200k steps, 8 workers)
 
 ### Example 2: Multi-Pair Pipeline with Simulated RL
+
 ```bash
 python utils/run_training_pipeline.py \
   --pairs gbpusd,eurusd,usdjpy \
@@ -116,17 +128,22 @@ python utils/run_training_pipeline.py \
   --rl-num-workers 4 \
   --rl-total-steps 50000
 ```
+
 **Runs for each pair sequentially:**
+
 - Supervised training → Evaluation → RL training (simulated)
 
 ### Example 3: Supervised Only (No RL)
+
 ```bash
 python utils/run_training_pipeline.py \
   --pairs gbpusd \
   --epochs 10 \
   --batch-size 128
 ```
+
 **Standard supervised training** (RL disabled by default)
+
 ```bash
 python rl/run_a3c_training.py \
   --pair gbpusd \
@@ -134,12 +151,14 @@ python rl/run_a3c_training.py \
   --total-steps 100000 \
   --device cuda
 ```
+
 - Uses `SimulatedRetailExecutionEnv`
 - Stochastic execution with spread, slippage, realistic fills
 - Non-deterministic (different runs produce different results)
 - Best for exploration during training
 
 ### Backtesting Mode (Deterministic)
+
 ```bash
 python rl/run_a3c_training.py \
   --pair gbpusd \
@@ -149,6 +168,7 @@ python rl/run_a3c_training.py \
   --total-steps 100000 \
   --device cuda
 ```
+
 - Uses `BacktestingRetailExecutionEnv`
 - Deterministic bar-by-bar historical replay
 - Reproducible (same seed = same results)
@@ -156,24 +176,27 @@ python rl/run_a3c_training.py \
 
 ## Key Differences
 
-| Feature | Simulated Mode | Backtesting Mode |
-|---------|----------------|------------------|
-| Execution | Stochastic | Deterministic |
-| Spread/Slippage | Realistic variance | Fixed from data |
-| Reproducibility | Non-deterministic | Fully reproducible |
-| Speed | Fast | Slightly slower (replay overhead) |
-| Data Required | None (generates) | Historical OHLCV CSV |
-| Use Case | Exploration training | Validation/debugging |
+| Feature         | Simulated Mode       | Backtesting Mode                  |
+|-----------------|----------------------|-----------------------------------|
+| Execution       | Stochastic           | Deterministic                     |
+| Spread/Slippage | Realistic variance   | Fixed from data                   |
+| Reproducibility | Non-deterministic    | Fully reproducible                |
+| Speed           | Fast                 | Slightly slower (replay overhead) |
+| Data Required   | None (generates)     | Historical OHLCV CSV              |
+| Use Case        | Exploration training | Validation/debugging              |
 
 ## CLI Arguments
 
 ### Environment Selection
+
 - `--env-mode {simulated,backtesting}`: Choose environment type (default: `simulated`)
 - `--historical-data PATH`: Path to OHLCV CSV (required for backtesting mode)
 - `--data-root PATH`: Root directory to auto-locate data files (default: `data/data`)
 
 ### Automatic Data Location
+
 If `--historical-data` is not provided in backtesting mode, the script tries:
+
 1. `{data-root}/{pair}/{pair}_prepared.csv`
 2. `{data-root}/{pair}.csv`
 3. `data/{pair}/{pair}.csv`
@@ -182,10 +205,12 @@ If `--historical-data` is not provided in backtesting mode, the script tries:
 ## Data Format Requirements (Backtesting Mode)
 
 Required columns (case-insensitive):
+
 - `open`, `high`, `low`, `close`
 - Optional: `volume`, `datetime` (for indexing)
 
 Example CSV:
+
 ```csv
 datetime,open,high,low,close,volume
 2024-01-01 00:00:00,1.2650,1.2655,1.2648,1.2652,1000
@@ -196,6 +221,7 @@ datetime,open,high,low,close,volume
 ## Usage Examples
 
 ### Train with Backtesting Mode (Auto-locate Data)
+
 ```bash
 python rl/run_a3c_training.py \
   --pair eurusd \
@@ -206,6 +232,7 @@ python rl/run_a3c_training.py \
 ```
 
 ### Train with Backtesting Mode (Explicit Data Path)
+
 ```bash
 python rl/run_a3c_training.py \
   --pair gbpusd \
@@ -217,6 +244,7 @@ python rl/run_a3c_training.py \
 ```
 
 ### Compare Simulated vs Backtesting
+
 ```bash
 # Run 1: Simulated (stochastic)
 python rl/run_a3c_training.py \
@@ -234,13 +262,17 @@ python rl/run_a3c_training.py \
 ## Troubleshooting
 
 ### Error: "backtesting.py is required"
+
 **Solution:** Install the dependency
+
 ```bash
 pip install backtesting>=0.3.2
 ```
 
 ### Error: "Historical data not found"
+
 **Solution:** Provide explicit path or prepare data
+
 ```bash
 # Option 1: Specify path
 --historical-data /full/path/to/data.csv
@@ -250,7 +282,9 @@ python data/prepare_dataset.py --pairs gbpusd --t-in 120 --t-out 10
 ```
 
 ### Error: "Missing required OHLCV columns"
+
 **Solution:** Ensure CSV has open/high/low/close columns
+
 ```bash
 # Check available columns
 head -1 your_data.csv
@@ -262,12 +296,15 @@ head -1 your_data.csv
 ## Implementation Details
 
 ### File Structure
+
 - **`rl/run_a3c_training.py`**: Main CLI runner with environment selection
 - **`execution/backtesting_env.py`**: BacktestingRetailExecutionEnv wrapper
 - **`execution/simulated_retail_env.py`**: SimulatedRetailExecutionEnv (default)
 
 ### Environment Factory Pattern
+
 Both environments share the same gym-like interface:
+
 ```python
 def make_env():
     if args.env_mode == "simulated":
@@ -277,7 +314,9 @@ def make_env():
 ```
 
 ### Worker Compatibility
-All A3C workers create independent environment instances, so backtesting mode works seamlessly with multi-worker training.
+
+All A3C workers create independent environment instances, so backtesting mode works seamlessly with multi-worker
+training.
 
 ## Best Practices
 

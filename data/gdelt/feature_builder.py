@@ -8,7 +8,6 @@ from datetime import datetime
 
 import numpy as np
 import pandas as pd
-
 from gdelt.config import (
     COUNTS_OF_INTEREST,
     DEFAULT_MAX_COUNT_REF,
@@ -100,15 +99,15 @@ class GDELTTimeSeriesBuilder:
 
 class RegimeFeatureBuilder:
     def __init__(
-        self,
-        theme_cfg: GDELTThemeConfig | None = None,
-        max_count_ref: dict[str, float] | None = None,
+            self,
+            theme_cfg: GDELTThemeConfig | None = None,
+            max_count_ref: dict[str, float] | None = None,
     ) -> None:
         self.theme_cfg = theme_cfg or GDELTThemeConfig()
         self.max_count_ref = {**DEFAULT_MAX_COUNT_REF, **(max_count_ref or {})}
 
     def build_features(
-        self, records: Iterable[GDELTRecord], bucket_start: datetime, bucket_end: datetime
+            self, records: Iterable[GDELTRecord], bucket_start: datetime, bucket_end: datetime
     ) -> np.ndarray:
         relevant_records: list[GDELTRecord] = [
             r for r in records if bucket_start <= r.datetime < bucket_end

@@ -14,4 +14,3 @@ __all__ = [
     "download_histdata",
     "download_yfinance_pair",
 ]
-

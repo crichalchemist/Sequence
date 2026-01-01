@@ -50,4 +50,3 @@ def convert_to_utc_and_dedup(df: pd.DataFrame, datetime_col: str = "datetime") -
     # Preserve original order after deduplication.
     deduped = deduped.sort_values(datetime_col).reset_index(drop=True)
     return deduped
-

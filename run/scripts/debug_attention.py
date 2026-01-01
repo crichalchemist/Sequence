@@ -30,16 +30,17 @@ try:
     log.info(f"Output shape: {context.shape}")
     log.info(f"Weights shape: {weights.shape}")
     log.info(f"Expected: context=[{batch_size}, {input_dim}], weights=[{batch_size}, {seq_len}]")
-    
+
     if context.shape == (batch_size, input_dim):
         log.info("✓ FIXED OptimizedMultiHeadAttention shape is correct!")
     else:
         log.info(
             f"✗ FIXED OptimizedMultiHeadAttention shape is wrong: expected ({batch_size}, {input_dim}), got {context.shape}")
-        
+
 except Exception as e:
     log.info(f"✗ Error in FIXED OptimizedMultiHeadAttention: {e}")
     import traceback
+
     traceback.print_exc()
 
 # Test TemporalAttention for comparison
@@ -51,12 +52,12 @@ try:
     log.info(f"Output shape: {context.shape}")
     log.info(f"Weights shape: {weights.shape}")
     log.info(f"Expected: context=[{batch_size}, {input_dim}], weights=[{batch_size}, {seq_len}]")
-    
+
     if context.shape == (batch_size, input_dim):
         log.info("✓ TemporalAttention shape is correct!")
     else:
         log.info(f"✗ TemporalAttention shape is wrong: expected ({batch_size}, {input_dim}), got {context.shape}")
-        
+
 except Exception as e:
     log.info(f"✗ Error in TemporalAttention: {e}")
 
@@ -69,12 +70,12 @@ try:
     log.info(f"Output shape: {context.shape}")
     log.info(f"Weights shape: {weights.shape}")
     log.info(f"Expected: context=[{batch_size}, {input_dim}], weights=[{batch_size}, {seq_len}]")
-    
+
     if context.shape == (batch_size, input_dim):
         log.info("✓ FIXED AdaptiveAttention shape is correct!")
     else:
         log.info(f"✗ FIXED AdaptiveAttention shape is wrong: expected ({batch_size}, {input_dim}), got {context.shape}")
-        
+
 except Exception as e:
     log.info(f"✗ Error in FIXED AdaptiveAttention: {e}")
     import traceback
@@ -82,4 +83,4 @@ except Exception as e:
 from utils.logger import get_logger
 
 log = get_logger(__name__)
-    traceback.print_exc()
+traceback.print_exc()

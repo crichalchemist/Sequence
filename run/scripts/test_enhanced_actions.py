@@ -11,7 +11,7 @@ import sys
 import torch
 
 # Add parent directory to path
-sys.path.insert(0, "/Volumes/Containers/Sequence")
+sys.path.insert(0, "/")
 
 from config.config import PolicyConfig, SignalModelConfig
 from execution.limit_order_engine import LimitOrderConfig

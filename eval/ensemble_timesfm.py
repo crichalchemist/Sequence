@@ -64,8 +64,8 @@ def parse_args():
 
 
 def build_test_windows(
-    df,
-    agent: DataAgent,
+        df,
+        agent: DataAgent,
         feature_cols: list[str],
 ) -> tuple[np.ndarray, np.ndarray, list[np.ndarray]]:
     t_in, t_out = agent.cfg.t_in, agent.cfg.t_out

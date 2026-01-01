@@ -65,9 +65,9 @@ def download_all(args):
                     could_download_full_year = False
                     try:
                         result = download_hist_data(year=year,
-                                                  pair=pair,
-                                                  output_directory=output_folder,
-                                                  verbose=False)
+                                                    pair=pair,
+                                                    output_directory=output_folder,
+                                                    verbose=False)
                         print(f'- {year}: {result}')
                         could_download_full_year = True
                         total_downloads += 1
@@ -82,10 +82,10 @@ def download_all(args):
 
                             try:
                                 result = download_hist_data(year=str(year),
-                                                          month=str(month),
-                                                          pair=pair,
-                                                          output_directory=output_folder,
-                                                          verbose=False)
+                                                            month=str(month),
+                                                            pair=pair,
+                                                            output_directory=output_folder,
+                                                            verbose=False)
                                 print(f'- {year}-{month:02d}: {result}')
                                 total_downloads += 1
                             except Exception as e:

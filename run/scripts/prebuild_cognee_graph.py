@@ -49,15 +49,15 @@ logger = get_logger(__name__)
 
 
 def prebuild_for_pair_year(
-    pair: str,
-    year: int,
-    client: CogneeClient,
-    processor: CogneeDataProcessor,
-    include_gdelt: bool = True,
-    include_economic_indicators: bool = True,
-    include_price_narratives: bool = True,
-    data_root: Path = Path("data"),
-    cache_dir: Path = Path("data/cognee_cache")
+        pair: str,
+        year: int,
+        client: CogneeClient,
+        processor: CogneeDataProcessor,
+        include_gdelt: bool = True,
+        include_economic_indicators: bool = True,
+        include_price_narratives: bool = True,
+        data_root: Path = Path("data"),
+        cache_dir: Path = Path("data/cognee_cache")
 ) -> bool:
     """
     Pre-build knowledge graph for a specific currency pair and year.

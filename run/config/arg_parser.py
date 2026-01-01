@@ -155,7 +155,7 @@ def add_dataloader_args(parser: argparse.ArgumentParser) -> None:
 
 
 def add_checkpoint_args(
-    parser: argparse.ArgumentParser, include_signal_policy: bool = False
+        parser: argparse.ArgumentParser, include_signal_policy: bool = False
 ) -> None:
     """Add checkpoint path arguments.
 

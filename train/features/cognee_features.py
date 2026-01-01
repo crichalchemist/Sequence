@@ -45,7 +45,6 @@ from utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-
 # Entity names to track
 CENTRAL_BANKS = [
     "Federal Reserve", "Fed", "FOMC",
@@ -71,11 +70,11 @@ EVENT_TYPES = [
 
 
 def query_entity_mentions(
-    client: CogneeClient,
-    dataset_name: str,
-    entity: str,
-    start_time: pd.Timestamp,
-    end_time: pd.Timestamp
+        client: CogneeClient,
+        dataset_name: str,
+        entity: str,
+        start_time: pd.Timestamp,
+        end_time: pd.Timestamp
 ) -> int:
     """
     Count mentions of an entity within a time window.
@@ -122,11 +121,11 @@ def query_entity_mentions(
 
 
 def query_event_proximity(
-    client: CogneeClient,
-    dataset_name: str,
-    event_type: str,
-    timestamp: pd.Timestamp,
-    window_hours: int = 24
+        client: CogneeClient,
+        dataset_name: str,
+        event_type: str,
+        timestamp: pd.Timestamp,
+        window_hours: int = 24
 ) -> dict:
     """
     Find events of a specific type within X hours of a timestamp.
@@ -189,14 +188,14 @@ def query_event_proximity(
 
 
 def build_cognee_features(
-    client: CogneeClient,
-    price_df: pd.DataFrame,
-    pair: str,
-    dataset_name: str | None = None,
-    cache_dir: Path | None = None,
-    entity_window_hours: int = 24,
-    event_window_hours: int = 48,
-    use_cache: bool = True
+        client: CogneeClient,
+        price_df: pd.DataFrame,
+        pair: str,
+        dataset_name: str | None = None,
+        cache_dir: Path | None = None,
+        entity_window_hours: int = 24,
+        event_window_hours: int = 48,
+        use_cache: bool = True
 ) -> pd.DataFrame:
     """
     Extract Cognee knowledge graph features for each timestamp in price data.
@@ -310,15 +309,21 @@ def build_cognee_features(
             entity_features['gbp_mentions_24h'].append(gbp_count)
 
             if (i % (sample_interval * 10)) == 0:
-                logger.info(f"  Progress: {i}/{len(price_df)} ({i/len(price_df):.1%})")
+                logger.info(f"  Progress: {i}/{len(price_df)} ({i / len(price_df):.1%})")
         else:
             # Interpolate from last sampled value
-            entity_features['fed_mentions_24h'].append(entity_features['fed_mentions_24h'][-1] if entity_features['fed_mentions_24h'] else 0)
-            entity_features['ecb_mentions_24h'].append(entity_features['ecb_mentions_24h'][-1] if entity_features['ecb_mentions_24h'] else 0)
-            entity_features['boe_mentions_24h'].append(entity_features['boe_mentions_24h'][-1] if entity_features['boe_mentions_24h'] else 0)
-            entity_features['usd_mentions_24h'].append(entity_features['usd_mentions_24h'][-1] if entity_features['usd_mentions_24h'] else 0)
-            entity_features['eur_mentions_24h'].append(entity_features['eur_mentions_24h'][-1] if entity_features['eur_mentions_24h'] else 0)
-            entity_features['gbp_mentions_24h'].append(entity_features['gbp_mentions_24h'][-1] if entity_features['gbp_mentions_24h'] else 0)
+            entity_features['fed_mentions_24h'].append(
+                entity_features['fed_mentions_24h'][-1] if entity_features['fed_mentions_24h'] else 0)
+            entity_features['ecb_mentions_24h'].append(
+                entity_features['ecb_mentions_24h'][-1] if entity_features['ecb_mentions_24h'] else 0)
+            entity_features['boe_mentions_24h'].append(
+                entity_features['boe_mentions_24h'][-1] if entity_features['boe_mentions_24h'] else 0)
+            entity_features['usd_mentions_24h'].append(
+                entity_features['usd_mentions_24h'][-1] if entity_features['usd_mentions_24h'] else 0)
+            entity_features['eur_mentions_24h'].append(
+                entity_features['eur_mentions_24h'][-1] if entity_features['eur_mentions_24h'] else 0)
+            entity_features['gbp_mentions_24h'].append(
+                entity_features['gbp_mentions_24h'][-1] if entity_features['gbp_mentions_24h'] else 0)
 
     # Add entity features to DataFrame
     for feature_name, values in entity_features.items():
@@ -360,13 +365,17 @@ def build_cognee_features(
             event_features['event_sentiment_mean_48h'].append(mean_sentiment)
 
             if (i % (sample_interval * 10)) == 0:
-                logger.info(f"  Progress: {i}/{len(price_df)} ({i/len(price_df):.1%})")
+                logger.info(f"  Progress: {i}/{len(price_df)} ({i / len(price_df):.1%})")
         else:
             # Interpolate
-            event_features['rate_hike_events_48h'].append(event_features['rate_hike_events_48h'][-1] if event_features['rate_hike_events_48h'] else 0)
-            event_features['rate_cut_events_48h'].append(event_features['rate_cut_events_48h'][-1] if event_features['rate_cut_events_48h'] else 0)
-            event_features['cpi_events_48h'].append(event_features['cpi_events_48h'][-1] if event_features['cpi_events_48h'] else 0)
-            event_features['event_sentiment_mean_48h'].append(event_features['event_sentiment_mean_48h'][-1] if event_features['event_sentiment_mean_48h'] else 0.0)
+            event_features['rate_hike_events_48h'].append(
+                event_features['rate_hike_events_48h'][-1] if event_features['rate_hike_events_48h'] else 0)
+            event_features['rate_cut_events_48h'].append(
+                event_features['rate_cut_events_48h'][-1] if event_features['rate_cut_events_48h'] else 0)
+            event_features['cpi_events_48h'].append(
+                event_features['cpi_events_48h'][-1] if event_features['cpi_events_48h'] else 0)
+            event_features['event_sentiment_mean_48h'].append(
+                event_features['event_sentiment_mean_48h'][-1] if event_features['event_sentiment_mean_48h'] else 0.0)
 
     # Add event features
     for feature_name, values in event_features.items():
@@ -377,20 +386,20 @@ def build_cognee_features(
 
     # Entity density (total mentions / time window)
     features_df['entity_density_24h'] = (
-        features_df['fed_mentions_24h'] +
-        features_df['ecb_mentions_24h'] +
-        features_df['boe_mentions_24h'] +
-        features_df['usd_mentions_24h'] +
-        features_df['eur_mentions_24h'] +
-        features_df['gbp_mentions_24h']
-    ) / entity_window_hours
+                                                features_df['fed_mentions_24h'] +
+                                                features_df['ecb_mentions_24h'] +
+                                                features_df['boe_mentions_24h'] +
+                                                features_df['usd_mentions_24h'] +
+                                                features_df['eur_mentions_24h'] +
+                                                features_df['gbp_mentions_24h']
+                                        ) / entity_window_hours
 
     # Event density
     features_df['event_density_48h'] = (
-        features_df['rate_hike_events_48h'] +
-        features_df['rate_cut_events_48h'] +
-        features_df['cpi_events_48h']
-    ) / event_window_hours
+                                               features_df['rate_hike_events_48h'] +
+                                               features_df['rate_cut_events_48h'] +
+                                               features_df['cpi_events_48h']
+                                       ) / event_window_hours
 
     # Cache results
     if use_cache:

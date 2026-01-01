@@ -11,8 +11,8 @@ import numpy as np
 import pandas as pd
 import pytest
 import torch
-
 from config.config import DataConfig, FeatureConfig
+
 from data.iterable_dataset import IterableFXDataset
 
 
@@ -203,7 +203,8 @@ class TestIterableFXDataset:
                 assert len(samples_single) > 0
                 assert len(samples_worker0) >= 0  # May produce different amounts due to chunking
 
-    def test_memory_efficiency_vs_standard_dataset(self, iterable_config, feature_config, temp_dir, cached_feature_file):
+    def test_memory_efficiency_vs_standard_dataset(self, iterable_config, feature_config, temp_dir,
+                                                   cached_feature_file):
         """Test that IterableFXDataset uses less memory than standard dataset."""
         import os
 

@@ -44,3 +44,11 @@ models/*.pth
 *.log
 !/tests/__init__.py
 !/.editorconfig
+!/.env
+
+!/.jbeval/
+
+!/.claude/
+
+!/.github/
+

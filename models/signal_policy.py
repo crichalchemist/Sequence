@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
-
 from config.config import PolicyConfig, SignalModelConfig
+
 from models.agent_hybrid import SharedEncoder
 
 
@@ -110,12 +110,12 @@ class SignalPolicyAgent(nn.Module):
 
     @classmethod
     def load(
-        cls,
-        signal_cfg: SignalModelConfig,
-        policy_cfg: PolicyConfig,
-        signal_path: str,
-        policy_path: str,
-        device: torch.device,
+            cls,
+            signal_cfg: SignalModelConfig,
+            policy_cfg: PolicyConfig,
+            signal_path: str,
+            policy_path: str,
+            device: torch.device,
     ) -> "SignalPolicyAgent":
         signal_model = SignalModel(signal_cfg).to(device)
         policy = ExecutionPolicy(policy_cfg).to(device)

@@ -15,9 +15,8 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 import torch
-from torch.utils.data import Dataset
-
 from config.config import DataConfig
+from torch.utils.data import Dataset
 
 
 # ------------------------------------------------------------------
@@ -110,9 +109,9 @@ class SequenceDataset(Dataset):
             # Classification targets end with "_class" or are named "sell_now" or "primary"
             # Regression targets end with "_reg" or are price/return related
             is_classification = (
-                key.endswith("_class") or
-                key == "sell_now" or
-                (key == "primary" and target_type == "classification")
+                    key.endswith("_class") or
+                    key == "sell_now" or
+                    (key == "primary" and target_type == "classification")
             )
             dtype = torch.long if is_classification else torch.float32
             self.targets[key] = torch.as_tensor(value, dtype=dtype)
@@ -173,10 +172,10 @@ class BaseDataAgent:
     # Window building – used by both agents.
     # ------------------------------------------------------------------
     def _build_windows(
-        self,
-        df: pd.DataFrame,
+            self,
+            df: pd.DataFrame,
             feature_cols: list[str],
-        norm_stats: NormalizationStats,
+            norm_stats: NormalizationStats,
     ) -> tuple[np.ndarray, dict[str, np.ndarray]]:
         t_in, t_out = self.cfg.t_in, self.cfg.t_out
         lookahead = self.cfg.lookahead_window or t_out
@@ -185,8 +184,8 @@ class BaseDataAgent:
         features = norm_stats.apply(df[feature_cols].to_numpy(dtype=np.float32))
         # Future log‑return series.
         future_log_ret = (
-            np.log(df["close"].to_numpy()[t_out:])
-            - np.log(df["close"].to_numpy()[:-t_out])
+                np.log(df["close"].to_numpy()[t_out:])
+                - np.log(df["close"].to_numpy()[:-t_out])
         )
         # Pad to align indices with original df length.
         future_log_ret = np.concatenate([np.full(t_out, np.nan), future_log_ret])
@@ -202,14 +201,14 @@ class BaseDataAgent:
 
         last_idx = len(df) - max(t_out, lookahead)
         for idx in range(t_in - 1, last_idx):
-            seq = features[idx - t_in + 1 : idx + 1]
+            seq = features[idx - t_in + 1: idx + 1]
             target_ret = future_log_ret[idx]
             if not np.isfinite(target_ret):
                 continue
             primary_targets.append(self._create_primary_target(target_ret))
 
             # Auxiliary targets – unchanged from original implementation.
-            future_returns = log_close[idx + 1 : idx + lookahead + 1] - log_close[idx]
+            future_returns = log_close[idx + 1: idx + lookahead + 1] - log_close[idx]
             max_future_return = float(np.max(future_returns))
             sorted_returns = np.sort(future_returns)[::-1]
             topk = sorted_returns[:top_k]
@@ -237,7 +236,8 @@ class BaseDataAgent:
 
     def build_datasets(self, df: pd.DataFrame) -> dict[str, SequenceDataset]:
         # Determine feature columns (exclude datetime and source file).
-        feature_cols = self.cfg.feature_columns or [c for c in df.columns if c not in {self.cfg.datetime_column, "source_file"}]
+        feature_cols = self.cfg.feature_columns or [c for c in df.columns if
+                                                    c not in {self.cfg.datetime_column, "source_file"}]
         # Split and fit normalisation on the training split.
         splits = self.split_dataframe(df)
         train_df = splits["train"]
@@ -254,11 +254,11 @@ class BaseDataAgent:
     @staticmethod
     def build_dataloaders(
             datasets: dict[str, SequenceDataset],
-        batch_size: int,
-        num_workers: int = 0,
-        pin_memory: bool = False,
-        prefetch_factor: int | None = None,
-        persistent_workers: bool = False,
+            batch_size: int,
+            num_workers: int = 0,
+            pin_memory: bool = False,
+            prefetch_factor: int | None = None,
+            persistent_workers: bool = False,
     ) -> dict[str, torch.utils.data.DataLoader]:
         """Build PyTorch DataLoaders from datasets with performance optimizations.
 

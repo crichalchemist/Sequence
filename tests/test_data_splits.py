@@ -5,8 +5,8 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 import pytest
-
 from config.config import DataConfig
+
 from data.agents.single_task_agent import SingleTaskDataAgent
 
 
@@ -131,11 +131,11 @@ class TestDataSplits:
 
             # Test OHLC relationships (high >= all other prices, low <= all other prices)
             invalid_ohlc = (
-                (split_df["high"] < split_df["low"]) |
-                (split_df["high"] < split_df["open"]) |
-                (split_df["high"] < split_df["close"]) |
-                (split_df["low"] > split_df["open"]) |
-                (split_df["low"] > split_df["close"])
+                    (split_df["high"] < split_df["low"]) |
+                    (split_df["high"] < split_df["open"]) |
+                    (split_df["high"] < split_df["close"]) |
+                    (split_df["low"] > split_df["open"]) |
+                    (split_df["low"] > split_df["close"])
             )
             assert not invalid_ohlc.any(), \
                 f"Found {invalid_ohlc.sum()} invalid OHLC relationships in {split_name} split"

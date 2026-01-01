@@ -1,8 +1,7 @@
-
 import torch
+from config.config import MultiTaskLossWeights, TrainingConfig
 from torch.utils.data import DataLoader
 
-from config.config import MultiTaskLossWeights, TrainingConfig
 from models.agent_multitask import MultiHeadHybrid
 from risk.risk_manager import RiskManager
 from utils.tracing import get_tracer
@@ -18,7 +17,7 @@ def _to_device(batch, device):
 def _compute_losses(
         outputs: dict[str, torch.Tensor],
         targets: dict[str, torch.Tensor],
-    loss_weights: MultiTaskLossWeights,
+        loss_weights: MultiTaskLossWeights,
 ) -> tuple[torch.Tensor, dict[str, float]]:
     losses = {}
     ce = torch.nn.CrossEntropyLoss()
@@ -39,16 +38,16 @@ def _compute_losses(
         losses["sell_now"] = bce(outputs["sell_now"].squeeze(-1), targets["sell_now"].float())
 
     total = (
-        loss_weights.direction_cls * losses["direction"]
-        + loss_weights.vol_cls * losses["volatility"]
-        + loss_weights.trend_cls * losses["trend"]
-        + loss_weights.vol_regime_cls * losses["vol_regime"]
-        + loss_weights.candle_pattern_cls * losses["candle_pattern"]
-        + loss_weights.return_reg * losses["return"]
-        + loss_weights.next_close_reg * losses["next_close"]
-        + loss_weights.max_return_reg * losses["max_return"]
-        + loss_weights.topk_return_reg * losses["topk_returns"]
-        + loss_weights.topk_price_reg * losses["topk_prices"]
+            loss_weights.direction_cls * losses["direction"]
+            + loss_weights.vol_cls * losses["volatility"]
+            + loss_weights.trend_cls * losses["trend"]
+            + loss_weights.vol_regime_cls * losses["vol_regime"]
+            + loss_weights.candle_pattern_cls * losses["candle_pattern"]
+            + loss_weights.return_reg * losses["return"]
+            + loss_weights.next_close_reg * losses["next_close"]
+            + loss_weights.max_return_reg * losses["max_return"]
+            + loss_weights.topk_return_reg * losses["topk_returns"]
+            + loss_weights.topk_price_reg * losses["topk_prices"]
     )
     if "sell_now" in losses:
         total = total + loss_weights.sell_now_cls * losses["sell_now"]
@@ -67,11 +66,11 @@ def _rmse(preds: torch.Tensor, targets: torch.Tensor) -> float:
 
 
 def _evaluate(
-    model: MultiHeadHybrid,
-    loader: DataLoader,
-    loss_weights: MultiTaskLossWeights,
-    device,
-    risk_manager: RiskManager | None = None,
+        model: MultiHeadHybrid,
+        loader: DataLoader,
+        loss_weights: MultiTaskLossWeights,
+        device,
+        risk_manager: RiskManager | None = None,
 ) -> dict[str, float]:
     model.eval()
     totals = {
@@ -118,12 +117,12 @@ def _evaluate(
 
 
 def train_multitask(
-    model: MultiHeadHybrid,
-    train_loader: DataLoader,
-    val_loader: DataLoader,
-    cfg: TrainingConfig,
-    loss_weights: MultiTaskLossWeights,
-    risk_manager: RiskManager | None = None,
+        model: MultiHeadHybrid,
+        train_loader: DataLoader,
+        val_loader: DataLoader,
+        cfg: TrainingConfig,
+        loss_weights: MultiTaskLossWeights,
+        risk_manager: RiskManager | None = None,
 ) -> dict[str, list[float]]:
     # ------------------------------------------------------------------
     # Initialize tracing if enabled
@@ -192,7 +191,8 @@ def train_multitask(
                         outputs["direction_logits"], reasons = risk_manager.apply_classification_logits(
                             outputs["direction_logits"], context
                         )
-                        outputs["return"], ret_reasons = risk_manager.apply_regression_output(outputs["return"], context)
+                        outputs["return"], ret_reasons = risk_manager.apply_regression_output(outputs["return"],
+                                                                                              context)
                         outputs["next_close"], close_reasons = risk_manager.apply_regression_output(
                             outputs["next_close"], context
                         )

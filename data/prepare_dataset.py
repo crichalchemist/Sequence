@@ -57,7 +57,8 @@ def validate_dataframe(df: pd.DataFrame, required_cols: list[str]) -> pd.DataFra
         df = df[~dups].reset_index(drop=True)
 
     # Validate OHLC relationships
-    invalid_ohlc = (df["high"] < df["low"]) | (df["high"] < df["open"]) | (df["high"] < df["close"]) | (df["low"] > df["open"]) | (df["low"] > df["close"])
+    invalid_ohlc = (df["high"] < df["low"]) | (df["high"] < df["open"]) | (df["high"] < df["close"]) | (
+                df["low"] > df["open"]) | (df["low"] > df["close"])
     if invalid_ohlc.any():
         invalid_count = invalid_ohlc.sum()
         logger.warning(f"Removing {invalid_count} rows with invalid OHLC relationships")
@@ -73,13 +74,16 @@ def validate_dataframe(df: pd.DataFrame, required_cols: list[str]) -> pd.DataFra
 def parse_args():
     parser = argparse.ArgumentParser(description="Prepare datasets from Central-time HistData zips.")
     parser.add_argument("--pairs", default="gbpusd", help="Comma-separated pair codes (e.g., gbpusd,eurusd)")
-    parser.add_argument("--input-root", default="output_central", help="Root directory containing pair subfolders with zips")
-    parser.add_argument("--years", default=None, help="Comma-separated list of years to include (e.g., 2018,2019). Default: all")
+    parser.add_argument("--input-root", default="output_central",
+                        help="Root directory containing pair subfolders with zips")
+    parser.add_argument("--years", default=None,
+                        help="Comma-separated list of years to include (e.g., 2018,2019). Default: all")
     parser.add_argument("--t-in", type=int, default=120, help="Lookback window length")
     parser.add_argument("--t-out", type=int, default=10, help="Forecast horizon in minutes")
     parser.add_argument("--lookahead-window", type=int, default=None, help="Lookahead window for auxiliary targets")
     parser.add_argument("--top-k", type=int, default=3, help="Top-K future returns/prices to supervise")
-    parser.add_argument("--predict-sell-now", action="store_true", help="Whether to create a sell-now classification label")
+    parser.add_argument("--predict-sell-now", action="store_true",
+                        help="Whether to create a sell-now classification label")
     parser.add_argument("--target-type", choices=["classification", "regression"], default="classification")
     parser.add_argument("--flat-threshold", type=float, default=0.0001, help="Flat class threshold for log returns")
     parser.add_argument("--train-ratio", type=float, default=0.7, help="Train fraction (time-ordered)")
@@ -95,7 +99,8 @@ def parse_args():
     parser.add_argument("--short-vol-window", type=int, default=10, help="Short window for volatility clustering")
     parser.add_argument("--long-vol-window", type=int, default=50, help="Long window for volatility clustering")
     parser.add_argument("--spread-windows", default="20", help="Comma-separated windows for normalized spread stats")
-    parser.add_argument("--imbalance-smoothing", type=int, default=5, help="Rolling mean window for wick/body imbalance")
+    parser.add_argument("--imbalance-smoothing", type=int, default=5,
+                        help="Rolling mean window for wick/body imbalance")
     parser.add_argument(
         "--intrinsic-time",
         action="store_true",
@@ -225,7 +230,8 @@ def _compute_time_ranges(df: pd.DataFrame, train_ratio: float, val_ratio: float)
     val_start_ts = df["datetime"].iloc[train_end] if train_end < n else df["datetime"].iloc[-1]
     test_start_ts = df["datetime"].iloc[val_end] if val_end < n else df["datetime"].iloc[-1]
     train_range = (train_start_ts.isoformat(), df["datetime"].iloc[train_end - 1].isoformat())
-    val_range = (val_start_ts.isoformat(), df["datetime"].iloc[val_end - 1].isoformat() if val_end < n else df["datetime"].iloc[-1].isoformat())
+    val_range = (val_start_ts.isoformat(),
+                 df["datetime"].iloc[val_end - 1].isoformat() if val_end < n else df["datetime"].iloc[-1].isoformat())
     test_range = (test_start_ts.isoformat(), df["datetime"].iloc[-1].isoformat())
     return train_range, val_range, test_range
 
@@ -247,7 +253,8 @@ def process_pair(pair: str, args, batch_size: int | None = None):
     # ---------------------------------------------------------------------
     raw_df = convert_to_utc_and_dedup(raw_df, datetime_col="datetime")
 
-    include_groups = None if args.feature_groups.lower() == "all" else [g.strip() for g in args.feature_groups.split(",") if g.strip()]
+    include_groups = None if args.feature_groups.lower() == "all" else [g.strip() for g in
+                                                                        args.feature_groups.split(",") if g.strip()]
     exclude_groups = (
         [g.strip() for g in args.exclude_feature_groups.split(",") if g.strip()]
         if args.exclude_feature_groups

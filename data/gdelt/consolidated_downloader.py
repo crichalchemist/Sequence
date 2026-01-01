@@ -8,7 +8,6 @@ from pathlib import Path
 
 import pandas as pd
 import requests
-
 from gdelt.config import GDELT_TIME_DELTA_MINUTES
 
 logger = logging.getLogger(__name__)
@@ -27,11 +26,11 @@ class GDELTDownloader:
     """Enhanced GDELT downloader with mirror support and data processing."""
 
     def __init__(
-        self,
-        output_dir: Path | str = Path("data/gdelt_raw"),
+            self,
+            output_dir: Path | str = Path("data/gdelt_raw"),
             session: requests.Session | None = None,
-        timeout: int = 30,
-        use_mirrors: bool = True,
+            timeout: int = 30,
+            use_mirrors: bool = True,
     ) -> None:
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -42,11 +41,11 @@ class GDELTDownloader:
         self.current_mirror_idx = 0
 
     def download_daterange(
-        self,
-        start_date: datetime,
-        end_date: datetime,
+            self,
+            start_date: datetime,
+            end_date: datetime,
             countries: list[str] | None = None,
-        resolution: str = "daily",
+            resolution: str = "daily",
     ) -> pd.DataFrame:
         """Download and process GDELT data for a date range."""
         if resolution == "daily":

@@ -34,11 +34,13 @@ try:
     if context.shape == (batch_size, input_dim):
         print("✓ FIXED OptimizedMultiHeadAttention shape is correct!")
     else:
-        print(f"✗ FIXED OptimizedMultiHeadAttention shape is wrong: expected ({batch_size}, {input_dim}), got {context.shape}")
+        print(
+            f"✗ FIXED OptimizedMultiHeadAttention shape is wrong: expected ({batch_size}, {input_dim}), got {context.shape}")
 
 except Exception as e:
     print(f"✗ Error in FIXED OptimizedMultiHeadAttention: {e}")
     import traceback
+
     traceback.print_exc()
 
 # Test TemporalAttention for comparison
@@ -77,4 +79,5 @@ try:
 except Exception as e:
     print(f"✗ Error in FIXED AdaptiveAttention: {e}")
     import traceback
+
     traceback.print_exc()

@@ -7,7 +7,7 @@ from gdelt.config import GDELT_TIME_DELTA_MINUTES, get_gdelt_bucket_minutes
 
 
 def align_candle_to_regime(
-    candle_time: datetime, bucket_minutes: int | None = None
+        candle_time: datetime, bucket_minutes: int | None = None
 ) -> datetime:
     """Floor candle_time to the previous full regime bucket.
 
@@ -15,13 +15,15 @@ def align_candle_to_regime(
     so callers stay aligned with the ingestion cadence.
     """
     bucket_minutes = bucket_minutes or get_gdelt_bucket_minutes()
+
+
 def get_gdelt_bucket_minutes() -> int:
     """Return the default GDELT bucket size in minutes from configuration."""
     return GDELT_TIME_DELTA_MINUTES
 
 
 def align_candle_to_regime(
-    candle_time: datetime, bucket_minutes: int | None = None
+        candle_time: datetime, bucket_minutes: int | None = None
 ) -> datetime:
     """Floor candle_time to the previous full regime bucket using the configured default.
 
@@ -40,7 +42,7 @@ def align_candle_to_regime(
 
 
 def iter_gdelt_buckets(
-    start: datetime, end: datetime, bucket_minutes: int | None = None
+        start: datetime, end: datetime, bucket_minutes: int | None = None
 ) -> list[datetime]:
     """Generate regime bucket start times between start and end inclusive.
 

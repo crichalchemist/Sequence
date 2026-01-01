@@ -39,11 +39,11 @@ class AMPTrainer:
             logger.info("FP16 training enabled")
 
     def backward(
-        self,
-        loss: torch.Tensor,
-        optimizer: torch.optim.Optimizer,
-        max_grad_norm: float = None,
-        zero_grad_first: bool = False
+            self,
+            loss: torch.Tensor,
+            optimizer: torch.optim.Optimizer,
+            max_grad_norm: float = None,
+            zero_grad_first: bool = False
     ) -> None:
         """Perform backward pass with gradient scaling.
         

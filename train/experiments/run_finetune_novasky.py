@@ -106,18 +106,20 @@ FORMATTERS: dict[str, Callable[[dict], str | None]] = {
 
 
 def load_and_format_dataset(
-    name: str,
+        name: str,
         formatter: Callable[[dict], str | None],
-    split: str,
+        split: str,
         max_samples: int | None = None,
-    streaming: bool = False,
+        streaming: bool = False,
 ) -> Dataset:
     ds = load_dataset(name, split=split, streaming=streaming)
     if streaming and max_samples is not None:
         ds = ds.take(max_samples)
+
     def _map_fn(example):
         txt = formatter(example)
         return {"text": txt} if txt else {"text": None}
+
     ds = ds.map(_map_fn, remove_columns=[c for c in ds.column_names if c != "text"])
     ds = ds.filter(lambda ex: ex["text"] is not None)
     if not streaming:
@@ -130,7 +132,7 @@ def load_and_format_dataset(
 def build_dataset_list(
         dataset_names: list[str],
         max_samples: int | None,
-    streaming: bool,
+        streaming: bool,
 ) -> Dataset:
     prepared: list[Dataset] = []
     for name in dataset_names:
@@ -159,7 +161,8 @@ def build_dataset_list(
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Full finetune on finance datasets.")
-    parser.add_argument("--model-name-or-path", required=True, help="Base model path or HF id (e.g., local NovaSky checkpoint).")
+    parser.add_argument("--model-name-or-path", required=True,
+                        help="Base model path or HF id (e.g., local NovaSky checkpoint).")
     parser.add_argument("--output-dir", required=True, help="Where to save finetuned model.")
     parser.add_argument("--datasets", default=",".join(DEFAULT_DATASETS), help="Comma-separated list of HF datasets.")
     parser.add_argument("--max-samples", type=int, default=None, help="Cap total samples per split (after formatting).")

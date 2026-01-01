@@ -79,11 +79,11 @@ class MetaApiBackend:
     """Thin HTTP client for MetaApi or compatible trade gateways."""
 
     def __init__(
-        self,
-        endpoint: str,
-        token: str,
-        account_id: str,
-        timeout: int = 10,
+            self,
+            endpoint: str,
+            token: str,
+            account_id: str,
+            timeout: int = 10,
             session: requests.Session | None = None,
     ):
         self.endpoint = endpoint.rstrip("/")

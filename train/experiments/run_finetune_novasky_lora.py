@@ -106,11 +106,11 @@ FORMATTERS: dict[str, Callable[[dict], str | None]] = {
 
 
 def load_and_format_dataset(
-    name: str,
+        name: str,
         formatter: Callable[[dict], str | None],
-    split: str,
+        split: str,
         max_samples: int | None = None,
-    streaming: bool = False,
+        streaming: bool = False,
 ) -> Dataset:
     ds = load_dataset(name, split=split, streaming=streaming)
     if streaming and max_samples is not None:
@@ -132,7 +132,7 @@ def load_and_format_dataset(
 def build_dataset_list(
         dataset_names: list[str],
         max_samples: int | None,
-    streaming: bool,
+        streaming: bool,
 ) -> Dataset:
     prepared: list[Dataset] = []
     for name in dataset_names:
@@ -160,7 +160,8 @@ def build_dataset_list(
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="LoRA/QLoRA finetune on finance datasets.")
-    parser.add_argument("--model-name-or-path", required=True, help="Base model path or HF id (local NovaSky checkpoint).")
+    parser.add_argument("--model-name-or-path", required=True,
+                        help="Base model path or HF id (local NovaSky checkpoint).")
     parser.add_argument("--output-dir", required=True, help="Where to save LoRA adapter.")
     parser.add_argument("--datasets", default=",".join(DEFAULT_DATASETS), help="Comma-separated list of HF datasets.")
     parser.add_argument("--max-samples", type=int, default=None, help="Cap total samples per split (after formatting).")
@@ -185,7 +186,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--lora-r", type=int, default=64)
     parser.add_argument("--lora-alpha", type=int, default=128)
     parser.add_argument("--lora-dropout", type=float, default=0.05)
-    parser.add_argument("--lora-target-modules", default=",".join(DEFAULT_TARGET_MODULES), help="Comma-separated target modules.")
+    parser.add_argument("--lora-target-modules", default=",".join(DEFAULT_TARGET_MODULES),
+                        help="Comma-separated target modules.")
     parser.add_argument("--bnb-nf4", action="store_true", help="Use NF4 quantization (default).")
     parser.add_argument(
         "--trust-remote-code",

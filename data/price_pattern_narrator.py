@@ -40,12 +40,12 @@ logger = get_logger(__name__)
 
 
 def describe_candle(
-    open_price: float,
-    high: float,
-    low: float,
-    close: float,
-    prev_open: float | None = None,
-    prev_close: float | None = None
+        open_price: float,
+        high: float,
+        low: float,
+        close: float,
+        prev_open: float | None = None,
+        prev_close: float | None = None
 ) -> str:
     """
     Describe a single candlestick's characteristics.
@@ -108,8 +108,8 @@ def describe_candle(
 
         # Bullish engulfing
         if (close > open_price and prev_close < prev_open and
-            open_price < prev_close and close > prev_open and
-            body > prev_body * 1.2):
+                open_price < prev_close and close > prev_open and
+                body > prev_body * 1.2):
             descriptions.append("bullish engulfing pattern (reversal signal)")
 
         # Bearish engulfing
@@ -122,9 +122,9 @@ def describe_candle(
 
 
 def describe_price_movement(
-    df: pd.DataFrame,
-    window: int = 20,
-    pair: str = "PAIR"
+        df: pd.DataFrame,
+        window: int = 20,
+        pair: str = "PAIR"
 ) -> list[str]:
     """
     Generate descriptions for each bar based on price movement patterns.
@@ -161,8 +161,8 @@ def describe_price_movement(
                 desc_parts.append(f"{pair} {direction} {abs(return_pct):.1f}% to {row['close']:.5f}")
 
         # SMA crosses
-        if i > 0 and pd.notna(row['sma_20']) and pd.notna(df.iloc[i-1]['sma_20']):
-            prev_row = df.iloc[i-1]
+        if i > 0 and pd.notna(row['sma_20']) and pd.notna(df.iloc[i - 1]['sma_20']):
+            prev_row = df.iloc[i - 1]
 
             # Price crossed above SMA 20
             if prev_row['close'] < prev_row['sma_20'] and row['close'] > row['sma_20']:
@@ -173,8 +173,8 @@ def describe_price_movement(
                 desc_parts.append(f"broke below 20-day SMA at {row['sma_20']:.5f}, momentum turning negative")
 
         # Candlestick patterns
-        prev_open = df.iloc[i-1]['open'] if i > 0 else None
-        prev_close = df.iloc[i-1]['close'] if i > 0 else None
+        prev_open = df.iloc[i - 1]['open'] if i > 0 else None
+        prev_close = df.iloc[i - 1]['close'] if i > 0 else None
 
         candle_desc = describe_candle(
             row['open'], row['high'], row['low'], row['close'],
@@ -196,9 +196,9 @@ def describe_price_movement(
 
 
 def describe_volatility_regime(
-    df: pd.DataFrame,
-    window: int = 50,
-    pair: str = "PAIR"
+        df: pd.DataFrame,
+        window: int = 50,
+        pair: str = "PAIR"
 ) -> list[str]:
     """
     Generate volatility regime descriptions.
@@ -229,7 +229,8 @@ def describe_volatility_regime(
             atr_ratio = row['atr'] / row['atr_sma']
 
             if atr_ratio > 2.0:
-                descriptions.append(f"High volatility regime for {pair}: ATR {atr_ratio:.1f}x above {window}-day average")
+                descriptions.append(
+                    f"High volatility regime for {pair}: ATR {atr_ratio:.1f}x above {window}-day average")
             elif atr_ratio > 1.5:
                 descriptions.append(f"Elevated volatility for {pair}")
             elif atr_ratio < 0.5:
@@ -243,10 +244,10 @@ def describe_volatility_regime(
 
 
 def generate_pattern_text(
-    df: pd.DataFrame,
-    pair: str,
-    include_volatility: bool = True,
-    min_window: int = 50
+        df: pd.DataFrame,
+        pair: str,
+        include_volatility: bool = True,
+        min_window: int = 50
 ) -> pd.DataFrame:
     """
     Generate comprehensive pattern descriptions for price data.

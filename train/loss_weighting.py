@@ -27,10 +27,10 @@ class UncertaintyLossWeighting(nn.Module):
     """
 
     def __init__(
-        self,
+            self,
             task_names: list[str],
             initial_weights: dict[str, float] | None = None,
-        uncertainty_reg_strength: float = 0.1,
+            uncertainty_reg_strength: float = 0.1,
             log_variance_bounds: tuple[float, float] = (-5.0, 5.0)
     ):
         """Initialize uncertainty weighting module.
@@ -188,7 +188,7 @@ class UncertaintyLossWeighting(nn.Module):
 
 def create_uncertainty_weighting(
         loss_config: dict[str, any],
-    task_type: str = "multitask"
+        task_type: str = "multitask"
 ) -> UncertaintyLossWeighting:
     """Create uncertainty weighting module based on configuration.
     

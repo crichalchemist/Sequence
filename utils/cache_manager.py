@@ -24,8 +24,8 @@ class FeatureCacheManager:
     def __init__(
             self,
             cache_dir: str | Path,
-        max_cache_age_days: int = 30,
-        enabled: bool = True
+            max_cache_age_days: int = 30,
+            enabled: bool = True
     ):
         """Initialize the feature cache manager.
         
@@ -77,9 +77,9 @@ class FeatureCacheManager:
     def _compute_content_hash(
             self,
             raw_data: pd.DataFrame,
-        feature_config: Any,
-        intrinsic_time: bool = False,
-        pair_name: str = ""
+            feature_config: Any,
+            intrinsic_time: bool = False,
+            pair_name: str = ""
     ) -> str:
         """Compute a robust content hash for cache key generation.
         
@@ -153,7 +153,7 @@ class FeatureCacheManager:
 
             # Compare size and modification time
             if (expected_stat.st_size != cached_stat.get('size') or
-                expected_stat.st_mtime != cached_stat.get('mtime')):
+                    expected_stat.st_mtime != cached_stat.get('mtime')):
                 logger.debug(f"Cache file {cache_path} metadata mismatch")
                 return False
 
@@ -170,11 +170,11 @@ class FeatureCacheManager:
         self._save_metadata()
 
     def get_cached_features(
-        self,
-        raw_data: pd.DataFrame,
-        feature_config: Any,
-        intrinsic_time: bool = False,
-        pair_name: str = ""
+            self,
+            raw_data: pd.DataFrame,
+            feature_config: Any,
+            intrinsic_time: bool = False,
+            pair_name: str = ""
     ) -> pd.DataFrame | None:
         """Retrieve cached features if available.
         
@@ -217,10 +217,10 @@ class FeatureCacheManager:
         return None
 
     def save_features_to_cache(
-        self,
-        feature_df: pd.DataFrame,
-        cache_key: str,
-        pair_name: str
+            self,
+            feature_df: pd.DataFrame,
+            cache_key: str,
+            pair_name: str
     ) -> None:
         """Save computed features to cache.
         

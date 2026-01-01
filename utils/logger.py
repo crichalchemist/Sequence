@@ -73,4 +73,3 @@ def get_logger(name: str) -> logging.Logger:
     logger = logging.getLogger(name)
     _LOGGER_CACHE[name] = logger
     return logger
-

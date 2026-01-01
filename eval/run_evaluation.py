@@ -41,12 +41,17 @@ def parse_args():
     add_intrinsic_time_args(parser)
     parser.add_argument("--batch-size", type=int, default=64)
     parser.add_argument("--checkpoint-path", default="models/best_model.pt", help="Path to model checkpoint")
-    parser.add_argument("--signal-checkpoint-path", default=None, help="Optional path to signal checkpoint (format string {pair} supported)")
-    parser.add_argument("--policy-checkpoint-path", default=None, help="Optional path to policy checkpoint (format string {pair} supported)")
-    parser.add_argument("--use-policy", action="store_true", help="Load the execution policy head on top of the signal model")
+    parser.add_argument("--signal-checkpoint-path", default=None,
+                        help="Optional path to signal checkpoint (format string {pair} supported)")
+    parser.add_argument("--policy-checkpoint-path", default=None,
+                        help="Optional path to policy checkpoint (format string {pair} supported)")
+    parser.add_argument("--use-policy", action="store_true",
+                        help="Load the execution policy head on top of the signal model")
     parser.add_argument("--device", default="cuda")
     add_risk_args(parser)
     return parser.parse_args()
+
+
 def main():
     args = parse_args()
     pairs = [p.strip().lower() for p in args.pairs.split(",") if p.strip()]

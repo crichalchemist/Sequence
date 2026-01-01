@@ -31,6 +31,7 @@ try:
     from opentelemetry.instrumentation.torch import TorchInstrumentor
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import BatchSpanProcessor
+
     OTEL_AVAILABLE = True
 except ImportError:
     # OpenTelemetry not installed - use no-op implementations
@@ -64,9 +65,9 @@ class NoOpSpan:
 
 
 def setup_tracing(
-    service_name: str = "sequence",
-    otlp_endpoint: str = "http://localhost:4318",
-    environment: str = "development",
+        service_name: str = "sequence",
+        otlp_endpoint: str = "http://localhost:4318",
+        environment: str = "development",
 ) -> TracerProvider | None:
     """
     Initialize OpenTelemetry tracing for the application.
@@ -183,6 +184,7 @@ def trace_function(tracer: Any | None, func_name: str = None):
         ... def my_function(x, y):
         ...     return x + y
     """
+
     def decorator(func):
         def wrapper(*args, **kwargs):
             span_name = func_name or func.__name__
@@ -196,7 +198,9 @@ def trace_function(tracer: Any | None, func_name: str = None):
                     span.set_attribute("error.type", type(e).__name__)
                     span.set_attribute("error.message", str(e))
                     raise
+
         return wrapper
+
     return decorator
 
 

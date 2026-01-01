@@ -8,6 +8,7 @@ log‑return).
 from __future__ import annotations
 
 from config.config import DataConfig
+
 from .base_agent import BaseDataAgent
 
 

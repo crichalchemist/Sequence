@@ -84,9 +84,9 @@ def order_flow_toxicity(df: pd.DataFrame, window: int = 20) -> pd.Series:
 
     # Combine: all scaled to [0, 1]
     toxicity = (
-        0.4 * np.clip(range_ratio / range_ratio.rolling(window).mean(), 0, 1) +
-        0.4 * np.clip(volume_surge / volume_surge.rolling(window).mean(), 0, 1) +
-        0.2 * intrabar_move
+            0.4 * np.clip(range_ratio / range_ratio.rolling(window).mean(), 0, 1) +
+            0.4 * np.clip(volume_surge / volume_surge.rolling(window).mean(), 0, 1) +
+            0.2 * intrabar_move
     )
 
     return toxicity

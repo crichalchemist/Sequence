@@ -134,7 +134,7 @@ class TrainingConfig:
 
     # Advanced training optimizations
     use_amp: bool = False  # Enable Automatic Mixed Precision
-    fp16: bool = False     # Use FP16 instead of FP32
+    fp16: bool = False  # Use FP16 instead of FP32
     grad_scaler: str | None = None  # 'grad_scaler' or None for AMP
 
     # Asynchronous checkpoint saving
@@ -225,7 +225,7 @@ class MultiTaskDataConfig:
     val_range: tuple[str, str] | None = None
     test_range: tuple[str, str] | None = None
     flat_threshold: float = 0.0001
-    vol_min_change: float = 0.0     # minimal vol delta to call it "up"
+    vol_min_change: float = 0.0  # minimal vol delta to call it "up"
 
 
 @dataclass

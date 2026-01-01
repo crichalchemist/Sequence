@@ -28,9 +28,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import torch
+from config.config import DataConfig, FeatureConfig
 from torch.utils.data import IterableDataset, get_worker_info
 
-from config.config import DataConfig, FeatureConfig
 from data.agents.base_agent import BaseDataAgent, _label_from_return
 
 
@@ -63,13 +63,13 @@ class IterableFXDataset(IterableDataset):
     """
 
     def __init__(
-        self,
-        pair: str,
-        data_cfg: DataConfig,
-        feature_cfg: FeatureConfig,
-        input_root: Path,
-        cache_dir: Path | None = None,
-        chunksize: int = 20_000,
+            self,
+            pair: str,
+            data_cfg: DataConfig,
+            feature_cfg: FeatureConfig,
+            input_root: Path,
+            cache_dir: Path | None = None,
+            chunksize: int = 20_000,
     ) -> None:
         super().__init__()
         self.pair = pair.lower()
@@ -173,7 +173,7 @@ class IterableFXDataset(IterableDataset):
             # Generate sliding windows
             for idx in range(t_in - 1, len(chunk) - max(t_out, lookahead)):
                 # Extract sequence window
-                seq = norm_features[idx - t_in + 1 : idx + 1]
+                seq = norm_features[idx - t_in + 1: idx + 1]
 
                 # Compute primary target (future return)
                 future_idx = idx + t_out
@@ -191,7 +191,7 @@ class IterableFXDataset(IterableDataset):
                     primary_target = float(target_ret)
 
                 # Compute auxiliary targets (max_return, topk)
-                future_returns = log_close[idx + 1 : idx + lookahead + 1] - log_close[idx]
+                future_returns = log_close[idx + 1: idx + lookahead + 1] - log_close[idx]
                 if len(future_returns) < lookahead or np.isnan(future_returns).any():
                     continue
 
