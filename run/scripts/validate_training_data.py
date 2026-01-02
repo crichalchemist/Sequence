@@ -19,6 +19,9 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+# Also add run/ for config.config imports (needed for Colab compatibility)
+if str(ROOT / "run") not in sys.path:
+    sys.path.insert(0, str(ROOT / "run"))
 
 from train.features.alpha_factors import build_alpha_feature_frame
 from train.features.fx_patterns import build_fx_feature_frame

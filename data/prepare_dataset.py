@@ -15,6 +15,9 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+# Also add run/ for config.config imports (needed for Colab compatibility)
+if str(ROOT / "run") not in sys.path:
+    sys.path.insert(0, str(ROOT / "run"))
 
 # Local utilities – imported after ensuring the repository root is on ``sys.path``.
 from utils.datetime_utils import convert_to_utc_and_dedup
@@ -578,6 +581,46 @@ def process_pair(pair: str, args, batch_size: int | None = None):
         loader = loaders[split]
         logger.info("%s: %s windows (batch_size=%s)", split, f"{len(ds):,}", loader.batch_size)
     logger.info("Dataloaders ready (train/val/test).")
+
+    # ---------------------------------------------------------------------
+    # 6️⃣  Save prepared data for downstream consumption (RL, evaluation, etc.)
+    # ---------------------------------------------------------------------
+    output_dir = input_root / pair
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Save as NPY for fast loading (30-50x faster than CSV for large datasets)
+    prepared_npy_path = output_dir / f"{pair}_prepared.npy"
+    np.save(prepared_npy_path, feature_df[feature_cols].to_numpy(dtype=np.float32))
+
+    # Save datetime index separately as NPY
+    datetime_npy_path = output_dir / f"{pair}_prepared_datetime.npy"
+    np.save(datetime_npy_path, feature_df['datetime'].to_numpy())
+
+    # Save metadata as JSON (safer than pickle)
+    metadata = {
+        'feature_columns': feature_cols,
+        'train_range': list(train_range) if train_range else None,
+        'val_range': list(val_range) if val_range else None,
+        'test_range': list(test_range) if test_range else None,
+        't_in': args.t_in,
+        't_out': args.t_out,
+        'target_type': args.target_type,
+        'num_rows': len(feature_df),
+    }
+    metadata_path = output_dir / f"{pair}_prepared_metadata.json"
+    import json
+    with open(metadata_path, 'w') as f:
+        json.dump(metadata, f, indent=2)
+
+    # Also save CSV for compatibility with existing code
+    prepared_csv_path = output_dir / f"{pair}_prepared.csv"
+    feature_df.to_csv(prepared_csv_path, index=False)
+
+    logger.info("[output] Saved prepared data:")
+    logger.info("  NPY (fast): %s (%.1f MB)", prepared_npy_path, prepared_npy_path.stat().st_size / 1e6)
+    logger.info("  CSV (compat): %s (%.1f MB)", prepared_csv_path, prepared_csv_path.stat().st_size / 1e6)
+    logger.info("  Metadata: %s", metadata_path)
+
     return pair, loaders
 
 

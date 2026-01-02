@@ -20,6 +20,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+# Also add run/ for config.config imports (needed for Colab compatibility)
+if str(ROOT / "run") not in sys.path:
+    sys.path.insert(0, str(ROOT / "run"))
 
 from config.config import RLTrainingConfig
 from execution.simulated_retail_env import ExecutionConfig

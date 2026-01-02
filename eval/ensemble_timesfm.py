@@ -26,6 +26,9 @@ import torch
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+# Also add run/ for config.config imports (needed for Colab compatibility)
+if str(ROOT / "run") not in sys.path:
+    sys.path.insert(0, str(ROOT / "run"))
 
 from timesfm.timesfm_2p5 import timesfm_2p5_torch
 

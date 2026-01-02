@@ -22,6 +22,9 @@ import torch.nn.functional as F
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+# Also add run/ for config.config imports (needed for Colab compatibility)
+if str(ROOT / "run") not in sys.path:
+    sys.path.insert(0, str(ROOT / "run"))
 
 from config.config import ModelConfig  # noqa: E402
 from models.agent_hybrid import DignityModel, build_model  # noqa: E402

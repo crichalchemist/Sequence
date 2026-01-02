@@ -27,6 +27,9 @@ import torch
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+# Also add run/ for config.config imports (needed for Colab compatibility)
+if str(ROOT / "run") not in sys.path:
+    sys.path.insert(0, str(ROOT / "run"))
 
 from config.config import ModelConfig, TrainingConfig  # noqa: E402
 from data.prepare_dataset import process_pair  # noqa: E402
@@ -573,7 +576,37 @@ def run_rl_training(pair: str, args, prepared_data_path: Path) -> None:
             return
 
         log.info(f"RL: Loading historical data from {prepared_data_path}")
-        price_df = pd.read_csv(prepared_data_path)
+
+        # Try NPY format first (30-50x faster), fall back to CSV
+        npy_path = prepared_data_path.with_suffix('.npy')
+        datetime_npy_path = prepared_data_path.parent / f"{prepared_data_path.stem}_datetime.npy"
+        metadata_path = prepared_data_path.parent / f"{prepared_data_path.stem}_metadata.json"
+
+        if npy_path.exists() and datetime_npy_path.exists() and metadata_path.exists():
+            import time
+            import json
+            start = time.perf_counter()
+
+            # Load metadata
+            with open(metadata_path, 'r') as f:
+                metadata = json.load(f)
+
+            # Load feature data and datetime
+            features = np.load(npy_path)
+            datetime_arr = np.load(datetime_npy_path)
+
+            # Reconstruct DataFrame
+            price_df = pd.DataFrame(features, columns=metadata['feature_columns'])
+            price_df['datetime'] = pd.to_datetime(datetime_arr)
+
+            elapsed = time.perf_counter() - start
+            log.info(f"RL: Loaded NPY format ({len(price_df):,} rows) in {elapsed:.2f}s")
+        else:
+            import time
+            start = time.perf_counter()
+            price_df = pd.read_csv(prepared_data_path)
+            elapsed = time.perf_counter() - start
+            log.info(f"RL: Loaded CSV format ({len(price_df):,} rows) in {elapsed:.2f}s")
 
         # Ensure datetime column and required OHLCV columns
         if "datetime" in price_df.columns:
