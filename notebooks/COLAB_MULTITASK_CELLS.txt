@@ -1,0 +1,58 @@
+GOOGLE COLAB MULTITASK NOTEBOOK - COMPLETE CELLS
+Copy each numbered cell into Google Colab in order.
+================================================
+
+CELL 1: Mount Google Drive
+---------------------------
+from google.colab import drive
+drive.mount('/content/drive')
+print("✓ Google Drive mounted!")
+
+
+CELL 2: Extract Repository
+---------------------------
+import zipfile
+from pathlib import Path
+
+zip_path = Path('/content/drive/MyDrive/Sequence.zip')
+extract_to = Path('/content/Sequence')
+
+if not zip_path.exists():
+    print(f"❌ ERROR: {zip_path} not found")
+else:
+    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+        zip_ref.extractall('/content')
+    extracted = [d for d in Path('/content').iterdir() if d.is_dir() and 'Sequence' in d.name]
+    if extracted and extracted[0] != extract_to:
+        extracted[0].rename(extract_to)
+    print("✓ Repository extracted!")
+
+
+CELL 3: Setup Paths
+--------------------
+import sys
+from pathlib import Path
+
+ROOT = Path('/content/Sequence')
+sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / 'run'))
+
+(ROOT / 'data' / 'data').mkdir(parents=True, exist_ok=True)
+(ROOT / 'data' / 'raw').mkdir(parents=True, exist_ok=True)
+(ROOT / 'models' / 'checkpoints').mkdir(parents=True, exist_ok=True)
+
+print(f"✓ Root: {ROOT}")
+
+
+CELL 4: Install Dependencies
+-----------------------------
+!pip install -q torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+!pip install -q numpy pandas matplotlib seaborn scikit-learn tqdm
+!pip install -q transformers backtesting ta histdata yfinance
+print("✓ All dependencies installed!")
+
+
+See the full file at:
+/Volumes/Containers/Sequence/notebooks/COLAB_MULTITASK_CELLS.txt
+
+This file contains all 17 cells needed for the multitask notebook.
