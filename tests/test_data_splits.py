@@ -5,8 +5,8 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 import pytest
-from config.config import DataConfig
 
+from config.config import DataConfig
 from data.agents.single_task_agent import SingleTaskDataAgent
 
 

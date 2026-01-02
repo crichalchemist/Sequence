@@ -15,8 +15,9 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 import torch
-from config.config import DataConfig
 from torch.utils.data import Dataset
+
+from config.config import DataConfig
 
 
 # ------------------------------------------------------------------

@@ -3,8 +3,8 @@ from __future__ import annotations
 
 import torch
 import torch.nn as nn
-from config.config import ModelConfig
 
+from config.config import ModelConfig
 from models.agent_hybrid import PriceSequenceEncoder
 from models.regime_encoder import RegimeEncoder
 

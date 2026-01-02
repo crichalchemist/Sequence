@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+
 from config.config import MultiTaskDataConfig
 
 from .base_agent import BaseDataAgent, _label_from_return

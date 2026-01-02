@@ -345,7 +345,7 @@ if __name__ == "__main__":
     logger.info(f"Date range: {combined['date'].min()} to {combined['date'].max()}")
 
     if len(combined) > 0:
-        logger.info(f"\nSample records:")
+        logger.info("\nSample records:")
         print(combined[['date', 'title', 'full_text']].head(10))
 
     # Save if requested

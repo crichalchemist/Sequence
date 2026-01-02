@@ -7,7 +7,6 @@ fredapi>=0.5.1
 histdata>=1.1
 yfinance>=0.2.50
 datasets>=2.19.0
--e ./models/timesFM
 transformers>=4.38.0
 peft>=0.13.2
 bitsandbytes>=0.42.0
@@ -18,7 +17,6 @@ backtesting>=0.3.2
 jinja2>=3.1
 streamlit>=1.28.0
 plotly>=5.17.0
-python-mcp>=1.0.1o
 psutil>=5.9.0
 flask>=2.3.0
 flask-cors>=4.0.0

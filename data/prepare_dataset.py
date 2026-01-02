@@ -23,11 +23,11 @@ from utils.seed import set_seed
 
 logger = get_logger(__name__)
 
-from config.config import DataConfig, FeatureConfig
+from config.config import AssetConfig, DataConfig
 from data.gdelt_ingest import load_gdelt_gkg
-from features.agent_features import build_feature_frame
-from features.agent_sentiment import aggregate_sentiment, attach_sentiment_features
-from features.intrinsic_time import build_intrinsic_time_bars
+from train.features.agent_features import build_feature_frame
+from train.features.agent_sentiment import aggregate_sentiment, attach_sentiment_features
+from train.features.intrinsic_time import build_intrinsic_time_bars
 
 
 def validate_dataframe(df: pd.DataFrame, required_cols: list[str]) -> pd.DataFrame:
@@ -253,6 +253,47 @@ def process_pair(pair: str, args, batch_size: int | None = None):
     # ---------------------------------------------------------------------
     raw_df = convert_to_utc_and_dedup(raw_df, datetime_col="datetime")
 
+    # ---------------------------------------------------------------------
+    # 🎯 Asset-Class Aware Configuration
+    # ---------------------------------------------------------------------
+    # Detect asset class from pair name and get appropriate defaults
+    asset_class = AssetConfig.detect_from_pair(pair)
+    asset_cfg = AssetConfig(asset_class=asset_class)
+    logger.info(f"[asset-detection] Pair '{pair}' detected as {asset_class.value}")
+
+    # Get asset-specific feature configuration
+    feature_cfg = asset_cfg.get_feature_config()
+
+    # Override with CLI args if explicitly provided (check if different from default)
+    default_sma = "10,20,50"  # FX default
+    if args.sma_windows and args.sma_windows != default_sma:
+        feature_cfg.sma_windows = [int(x) for x in args.sma_windows.split(",") if x.strip()]
+        logger.info(f"[override] SMA windows: {feature_cfg.sma_windows}")
+
+    default_ema = "10,20,50"  # FX default
+    if args.ema_windows and args.ema_windows != default_ema:
+        feature_cfg.ema_windows = [int(x) for x in args.ema_windows.split(",") if x.strip()]
+        logger.info(f"[override] EMA windows: {feature_cfg.ema_windows}")
+
+    if args.rsi_window and args.rsi_window != 14:  # FX default
+        feature_cfg.rsi_window = args.rsi_window
+        logger.info(f"[override] RSI window: {feature_cfg.rsi_window}")
+
+    if args.bollinger_window and args.bollinger_window != 20:  # FX default
+        feature_cfg.bollinger_window = args.bollinger_window
+        logger.info(f"[override] Bollinger window: {feature_cfg.bollinger_window}")
+
+    feature_cfg.bollinger_num_std = args.bollinger_num_std
+
+    if args.atr_window and args.atr_window != 14:  # FX default
+        feature_cfg.atr_window = args.atr_window
+        logger.info(f"[override] ATR window: {feature_cfg.atr_window}")
+
+    feature_cfg.short_vol_window = args.short_vol_window
+    feature_cfg.long_vol_window = args.long_vol_window
+    feature_cfg.spread_windows = [int(x) for x in args.spread_windows.split(",") if x.strip()]
+    feature_cfg.imbalance_smoothing = args.imbalance_smoothing
+
     include_groups = None if args.feature_groups.lower() == "all" else [g.strip() for g in
                                                                         args.feature_groups.split(",") if g.strip()]
     exclude_groups = (
@@ -260,20 +301,12 @@ def process_pair(pair: str, args, batch_size: int | None = None):
         if args.exclude_feature_groups
         else None
     )
-    feature_cfg = FeatureConfig(
-        sma_windows=[int(x) for x in args.sma_windows.split(",") if x.strip()],
-        ema_windows=[int(x) for x in args.ema_windows.split(",") if x.strip()],
-        rsi_window=args.rsi_window,
-        bollinger_window=args.bollinger_window,
-        bollinger_num_std=args.bollinger_num_std,
-        atr_window=args.atr_window,
-        short_vol_window=args.short_vol_window,
-        long_vol_window=args.long_vol_window,
-        spread_windows=[int(x) for x in args.spread_windows.split(",") if x.strip()],
-        imbalance_smoothing=args.imbalance_smoothing,
-        include_groups=include_groups,
-        exclude_groups=exclude_groups,
-    )
+    feature_cfg.include_groups = include_groups
+    feature_cfg.exclude_groups = exclude_groups
+
+    logger.info(f"[feature-config] Using config: SMA{feature_cfg.sma_windows}, "
+                f"EMA{feature_cfg.ema_windows}, RSI({feature_cfg.rsi_window}), "
+                f"BB({feature_cfg.bollinger_window}), ATR({feature_cfg.atr_window})")
     df_for_features = raw_df
     if args.intrinsic_time:
         df_for_features = build_intrinsic_time_bars(
@@ -327,7 +360,7 @@ def process_pair(pair: str, args, batch_size: int | None = None):
         if args.use_bigquery_gdelt:
             # Use BigQuery to fetch GDELT data (recommended for Colab)
             try:
-                from data.gdelt_bigquery import query_gdelt_for_date_range, FINANCIAL_THEMES
+                from data.gdelt_bigquery import FINANCIAL_THEMES, query_gdelt_for_date_range
 
                 logger.info("[sentiment] querying GDELT data from BigQuery...")
 
@@ -399,6 +432,7 @@ def process_pair(pair: str, args, batch_size: int | None = None):
 
         try:
             import os
+
             from data.cognee_client import CogneeClient
             from data.cognee_processor import CogneeDataProcessor
             from features.cognee_features import build_cognee_features
@@ -429,7 +463,9 @@ def process_pair(pair: str, args, batch_size: int | None = None):
                     if args.include_economic_indicators:
                         logger.info("[cognee] Downloading and ingesting economic indicators...")
                         try:
-                            from data.downloaders.economic_indicators import download_forex_fred_bundle
+                            from data.downloaders.economic_indicators import (
+                                download_forex_fred_bundle,
+                            )
 
                             start_dt = feature_df['datetime'].min()
                             end_dt = feature_df['datetime'].max()

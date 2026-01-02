@@ -13,7 +13,7 @@ Features Extracted:
 
 Usage:
     from data.cognee_client import CogneeClient
-    from features.cognee_features import build_cognee_features
+    from train.features.cognee_features import build_cognee_features
 
     client = CogneeClient(api_key=os.getenv("COGNEE_API_KEY"))
 

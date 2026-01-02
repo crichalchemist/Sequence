@@ -479,9 +479,10 @@ def load_rl_modules():
     """Lazy load RL modules to avoid import overhead when not needed."""
     global A3CAgent, A3CConfig, SimulatedRetailExecutionEnv, BacktestingRetailExecutionEnv, ExecutionConfig
     if A3CAgent is None:
-        from rl.agents.a3c_agent import A3CAgent as A3C, A3CConfig as A3CCfg  # noqa: E402
-        from execution.simulated_retail_env import SimulatedRetailExecutionEnv as SimEnv, \
-            ExecutionConfig as ExecCfg  # noqa: E402
+        from execution.simulated_retail_env import ExecutionConfig as ExecCfg  # noqa: E402
+        from execution.simulated_retail_env import SimulatedRetailExecutionEnv as SimEnv
+        from rl.agents.a3c_agent import A3CAgent as A3C  # noqa: E402
+        from rl.agents.a3c_agent import A3CConfig as A3CCfg
         A3CAgent = A3C
         A3CConfig = A3CCfg
         SimulatedRetailExecutionEnv = SimEnv
@@ -490,7 +491,9 @@ def load_rl_modules():
         # Backtesting environment is optional
         if BacktestingRetailExecutionEnv is None:
             try:
-                from execution.backtesting_env import BacktestingRetailExecutionEnv as BTEnv  # noqa: E402
+                from execution.backtesting_env import (
+                    BacktestingRetailExecutionEnv as BTEnv,  # noqa: E402
+                )
                 BacktestingRetailExecutionEnv = BTEnv
             except ImportError:
                 pass  # Backtesting mode will fail gracefully if selected
@@ -555,7 +558,7 @@ def run_rl_training(pair: str, args, prepared_data_path: Path) -> None:
                 initial_balance=args.rl_initial_balance,
             )
 
-        log.info(f"RL: Using SimulatedRetailExecutionEnv (stochastic)")
+        log.info("RL: Using SimulatedRetailExecutionEnv (stochastic)")
 
     else:  # backtesting mode
         if BacktestingRetailExecutionEnv is None:
@@ -566,7 +569,7 @@ def run_rl_training(pair: str, args, prepared_data_path: Path) -> None:
         # Load historical OHLCV data
         if not prepared_data_path.exists():
             log.error(f"Prepared data not found: {prepared_data_path}")
-            log.error(f"Cannot run backtesting mode without historical data")
+            log.error("Cannot run backtesting mode without historical data")
             return
 
         log.info(f"RL: Loading historical data from {prepared_data_path}")
@@ -582,7 +585,7 @@ def run_rl_training(pair: str, args, prepared_data_path: Path) -> None:
         if not required_cols.issubset(available_cols):
             missing = required_cols - available_cols
             log.error(f"Missing required OHLCV columns: {missing}")
-            log.error(f"Cannot run backtesting mode")
+            log.error("Cannot run backtesting mode")
             return
 
         log.info(f"RL: Loaded {len(price_df)} bars for backtesting")
@@ -594,11 +597,11 @@ def run_rl_training(pair: str, args, prepared_data_path: Path) -> None:
                 config=exec_cfg,
             )
 
-        log.info(f"RL: Using BacktestingRetailExecutionEnv (deterministic historical)")
+        log.info("RL: Using BacktestingRetailExecutionEnv (deterministic historical)")
 
     # Create and train agent
     try:
-        log.info(f"RL: Initializing A3C agent...")
+        log.info("RL: Initializing A3C agent...")
         agent = A3CAgent(
             model_cfg=model_cfg,
             a3c_cfg=a3c_cfg,
@@ -606,7 +609,7 @@ def run_rl_training(pair: str, args, prepared_data_path: Path) -> None:
             env_factory=make_env,
         )
 
-        log.info(f"RL: Starting training...")
+        log.info("RL: Starting training...")
         agent.train()
 
         log.info(f"RL: Training complete! Checkpoint saved to: {rl_ckpt_path}")

@@ -21,22 +21,22 @@ from train.core.env_based_rl_training import ActionConverter
 
 # Phase 2: Feature Engineering (optional - simplified for testing)
 try:
-    from features.fx_patterns import (
+    from train.features.fx_patterns import (
         add_adx_features,
         add_forex_session_features,
         add_price_action_patterns,
         add_support_resistance_features,
     )
-    from features.intrinsic_time import add_intrinsic_time_features
-    from features.microstructure import build_microstructure_features
-    from features.regime_detection import RegimeDetector
+    from train.features.intrinsic_time import add_intrinsic_time_features
+    from train.features.microstructure import build_microstructure_features
+    from train.features.regime_detection import RegimeDetector
 
     FEATURES_AVAILABLE = True
 except ImportError:
     FEATURES_AVAILABLE = False
 
 # Phase 3: Execution Environment with Advanced Features
-from execution.simulated_retail_env import (
+from train.execution.simulated_retail_env import (
     ExecutionConfig,
     SimulatedRetailExecutionEnv,
 )

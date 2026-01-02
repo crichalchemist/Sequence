@@ -3,9 +3,9 @@
 import torch
 
 from utils.attention_optimization import (
-    OptimizedMultiHeadAttention,
     AdaptiveAttention,
-    TemporalAttention
+    OptimizedMultiHeadAttention,
+    TemporalAttention,
 )
 
 # Create test input

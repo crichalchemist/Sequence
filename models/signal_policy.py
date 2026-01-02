@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
-from config.config import PolicyConfig, SignalModelConfig
 
+from config.config import PolicyConfig, SignalModelConfig
 from models.agent_hybrid import SharedEncoder
 
 

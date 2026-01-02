@@ -28,9 +28,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import torch
-from config.config import DataConfig, FeatureConfig
 from torch.utils.data import IterableDataset, get_worker_info
 
+from config.config import DataConfig, FeatureConfig
 from data.agents.base_agent import BaseDataAgent, _label_from_return
 
 

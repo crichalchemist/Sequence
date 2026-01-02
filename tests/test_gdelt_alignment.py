@@ -18,12 +18,12 @@ def _load_module(name: str, path: Path):
 ROOT = Path(__file__).resolve().parents[1]
 
 gdelt_pkg = types.ModuleType("gdelt")
-gdelt_pkg.__path__ = [str(ROOT / "gdelt")]
+gdelt_pkg.__path__ = [str(ROOT / "data" / "gdelt")]
 sys.modules.setdefault("gdelt", gdelt_pkg)
 
-config = _load_module("gdelt.config", ROOT / "gdelt" / "config.py")
+config = _load_module("gdelt.config", ROOT / "data" / "gdelt" / "config.py")
 sys.modules["gdelt"].config = config
-alignment = _load_module("gdelt.alignment", ROOT / "gdelt" / "alignment.py")
+alignment = _load_module("gdelt.alignment", ROOT / "data" / "gdelt" / "alignment.py")
 
 align_candle_to_regime = alignment.align_candle_to_regime
 iter_gdelt_buckets = alignment.iter_gdelt_buckets

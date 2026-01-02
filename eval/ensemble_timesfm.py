@@ -32,8 +32,8 @@ from timesfm.timesfm_2p5 import timesfm_2p5_torch
 from config.config import DataConfig, FeatureConfig, ModelConfig
 from data.agents.single_task_agent import SingleTaskDataAgent as DataAgent
 from data.prepare_dataset import _compute_time_ranges, _load_pair_data
-from features.agent_features import build_feature_frame
 from models.agent_hybrid import build_model
+from train.features.agent_features import build_feature_frame
 
 
 def parse_args():

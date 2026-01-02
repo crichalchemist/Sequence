@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from config.config import ModelConfig
 
+from config.config import ModelConfig
 from utils.attention_optimization import (
     MultiHeadTemporalAttention,
     TemporalAttention,

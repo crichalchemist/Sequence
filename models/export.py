@@ -1,6 +1,6 @@
 import torch
-from config.config import ExportConfig
 
+from config.config import ExportConfig
 from models.agent_hybrid import DignityModel
 from models.signal_policy import SignalPolicyAgent
 

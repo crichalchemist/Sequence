@@ -7,9 +7,11 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+if str(ROOT / "run") not in sys.path:
+    sys.path.insert(0, str(ROOT / "run"))
 
 from config.config import FeatureConfig
-from features.agent_features import build_feature_frame
+from train.features.agent_features import build_feature_frame
 
 
 def _sample_df(length: int = 40) -> pd.DataFrame:

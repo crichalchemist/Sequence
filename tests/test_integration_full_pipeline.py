@@ -7,8 +7,8 @@ import numpy as np
 import pandas as pd
 import pytest
 import torch
-from config.config import DataConfig, ModelConfig, TrainingConfig
 
+from config.config import DataConfig, ModelConfig, TrainingConfig
 from data.agents.single_task_agent import SingleTaskDataAgent
 from models.agent_hybrid import build_model
 from train.core.agent_train import train_model

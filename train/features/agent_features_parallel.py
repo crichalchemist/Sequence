@@ -6,7 +6,7 @@ using ``concurrent.futures``. The behaviour matches
 handling) while enabling concurrent execution for CPU-bound groups.
 
 Usage:
-    from features.agent_features_parallel import build_feature_frame_parallel
+    from train.features.agent_features_parallel import build_feature_frame_parallel
 
     # Always parallelise
     df = build_feature_frame_parallel(raw_df, config, parallel=True)
@@ -21,8 +21,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Literal
 
 import pandas as pd
+
 from config.config import FeatureConfig
-from features.agent_features import (
+from train.features.agent_features import (
     _should_add,
     add_base_features,
     average_true_range,

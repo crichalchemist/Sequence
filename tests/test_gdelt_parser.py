@@ -5,7 +5,7 @@ import zipfile
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-PARSER_PATH = PROJECT_ROOT / "gdelt" / "parser.py"
+PARSER_PATH = PROJECT_ROOT / "data" / "gdelt" / "parser.py"
 
 spec = importlib.util.spec_from_file_location("gdelt_parser", PARSER_PATH)
 assert spec and spec.loader

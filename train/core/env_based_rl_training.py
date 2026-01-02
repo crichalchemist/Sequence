@@ -24,15 +24,17 @@ import torch.nn.functional as F
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+if str(ROOT / "run") not in sys.path:
+    sys.path.insert(0, str(ROOT / "run"))
 
 from config.config import PolicyConfig, RLTrainingConfig, SignalModelConfig
-from execution.simulated_retail_env import (
+from models.signal_policy import ExecutionPolicy, SignalModel
+from train.core.target_network import TargetNetwork
+from train.execution.simulated_retail_env import (
     ExecutionConfig,
     OrderAction,
     SimulatedRetailExecutionEnv,
 )
-from models.signal_policy import ExecutionPolicy, SignalModel
-from train.core.target_network import TargetNetwork
 from utils.logger import get_logger
 from utils.seed import set_seed
 

@@ -1,10 +1,19 @@
 """Dynamic loss weighting using learnable uncertainty parameters.
 
-Based on "Multi-Task Learning Using Uncertainty to Weigh Losses for Scene 
+Based on "Multi-Task Learning Using Uncertainty to Weigh Losses for Scene
 Geometry and Semantics" by Kendall, Gal, and Cipolla (2018).
 """
 
 from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+if str(ROOT / "run") not in sys.path:
+    sys.path.insert(0, str(ROOT / "run"))
 
 import logging
 

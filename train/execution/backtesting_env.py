@@ -33,7 +33,7 @@ except ImportError as exc:  # pragma: no cover - handled at runtime
         "Install with `pip install backtesting>=0.3.2`."
     ) from exc
 
-from execution.simulated_retail_env import ExecutionConfig, OrderAction
+from train.execution.simulated_retail_env import ExecutionConfig, OrderAction
 
 
 @dataclass

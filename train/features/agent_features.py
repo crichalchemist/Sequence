@@ -4,6 +4,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+
 from config.config import FeatureConfig, ResearchConfig
 
 
@@ -211,18 +212,18 @@ def build_feature_frame(df: pd.DataFrame, config: FeatureConfig | None = None) -
         feature_df = pd.concat([feature_df, imbalance_df], axis=1)
 
     if _should_add("microstructure", config):
-        from features.microstructure import build_microstructure_features
+        from train.features.microstructure import build_microstructure_features
         feature_df = build_microstructure_features(
             feature_df,
             windows=config.microstructure_windows
         )
 
     if _should_add("regime", config):
-        from features.regime_detection import integrate_regime_features
+        from train.features.regime_detection import integrate_regime_features
         feature_df = integrate_regime_features(feature_df, raw_df)
 
     if _should_add("intrinsic_time", config):
-        from features.intrinsic_time import add_intrinsic_time_features
+        from train.features.intrinsic_time import add_intrinsic_time_features
         feature_df = add_intrinsic_time_features(
             feature_df,
             price_col="close",

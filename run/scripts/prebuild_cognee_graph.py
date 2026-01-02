@@ -118,7 +118,7 @@ def prebuild_for_pair_year(
     if include_gdelt:
         logger.info(f"[{dataset_name}] Downloading GDELT news for {year}...")
         try:
-            from data.gdelt_bigquery import query_gdelt_sentiment, FINANCIAL_THEMES
+            from data.gdelt_bigquery import FINANCIAL_THEMES, query_gdelt_sentiment
 
             start_date = f"{year}-01-01"
             end_date = f"{year}-12-31"
@@ -295,7 +295,7 @@ def main():
     logger.info("=" * 80)
     logger.info(f"Pairs: {', '.join(pairs)}")
     logger.info(f"Years: {args.start_year}-{args.end_year}")
-    logger.info(f"Features:")
+    logger.info("Features:")
     logger.info(f"  - GDELT News: {include_gdelt}")
     logger.info(f"  - Economic Indicators: {include_economic_indicators}")
     logger.info(f"  - Price Narratives: {include_price_narratives}")
@@ -356,7 +356,7 @@ def main():
     logger.info(f"Failed: {len(failed_datasets)}")
 
     if failed_datasets:
-        logger.warning(f"\nFailed datasets:")
+        logger.warning("\nFailed datasets:")
         for dataset in failed_datasets:
             logger.warning(f"  - {dataset}")
 

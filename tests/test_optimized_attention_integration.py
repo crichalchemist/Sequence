@@ -1,8 +1,8 @@
 """Test optimized attention integration with model architecture."""
 
 import torch
-from config.config import ModelConfig
 
+from config.config import ModelConfig
 from models.agent_hybrid import DignityModel, PriceSequenceEncoder, build_model
 
 

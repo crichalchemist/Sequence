@@ -1,7 +1,7 @@
 import torch
-from config.config import MultiTaskLossWeights, TrainingConfig
 from torch.utils.data import DataLoader
 
+from config.config import MultiTaskLossWeights, TrainingConfig
 from models.agent_multitask import MultiHeadHybrid
 from risk.risk_manager import RiskManager
 from utils.tracing import get_tracer

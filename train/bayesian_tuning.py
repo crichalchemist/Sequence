@@ -11,9 +11,17 @@ Key advantages over grid/random search:
 - Supports parallel evaluation and early stopping
 """
 
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+if str(ROOT / "run") not in sys.path:
+    sys.path.insert(0, str(ROOT / "run"))
+
 import json
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any
 
 import numpy as np

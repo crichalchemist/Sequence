@@ -12,9 +12,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import psutil
-from config.config import DataConfig, FeatureConfig
 from torch.utils.data import DataLoader
 
+from config.config import DataConfig, FeatureConfig
 from data.agents.single_task_agent import SingleTaskDataAgent
 from data.iterable_dataset import IterableFXDataset
 

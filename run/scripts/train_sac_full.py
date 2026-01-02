@@ -21,13 +21,13 @@ import numpy as np
 
 sys.path.insert(0, "/")
 
+# Import directly from module to bypass __init__.py with Python version issues
+import importlib.util
+
 from config.config import SignalModelConfig
 from execution.limit_order_engine import LimitOrderConfig
 from execution.simulated_retail_env import ExecutionConfig
 from models.signal_policy import SignalModel
-
-# Import directly from module to bypass __init__.py with Python version issues
-import importlib.util
 
 spec = importlib.util.spec_from_file_location("sac_training", "/Volumes/Containers/Sequence/train/core/sac_training.py")
 sac_training = importlib.util.module_from_spec(spec)

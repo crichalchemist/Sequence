@@ -1,8 +1,17 @@
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+if str(ROOT / "run") not in sys.path:
+    sys.path.insert(0, str(ROOT / "run"))
+
 import torch
 import torch.nn.functional as F
-from config.config import RLTrainingConfig, TrainingConfig
 from torch.utils.data import DataLoader
 
+from config.config import RLTrainingConfig, TrainingConfig
 from models.agent_hybrid import DignityModel
 from models.signal_policy import ExecutionPolicy, SignalModel
 from risk.risk_manager import RiskManager

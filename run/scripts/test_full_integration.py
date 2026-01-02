@@ -18,13 +18,13 @@ import torch
 
 sys.path.insert(0, "/")
 
+# Import directly from module to bypass __init__.py with Python version issues
+import importlib.util
+
 from config.config import SignalModelConfig
 from execution.limit_order_engine import LimitOrderConfig
 from execution.simulated_retail_env import ExecutionConfig
 from models.signal_policy import SignalModel
-
-# Import directly from module to bypass __init__.py with Python version issues
-import importlib.util
 
 spec = importlib.util.spec_from_file_location("sac_training", "/Volumes/Containers/Sequence/train/core/sac_training.py")
 sac_training = importlib.util.module_from_spec(spec)
@@ -77,7 +77,7 @@ def test_full_integration():
     with torch.no_grad():
         signal_output = signal_model(price_tensor)
 
-    print(f"✓ Signal model forward pass:")
+    print("✓ Signal model forward pass:")
     print(f"  - Input shape: {price_tensor.shape}")
     print(f"  - Embedding shape: {signal_output['embedding'].shape}")
     print(f"  - Embedding dim: {signal_model.signal_dim}")
@@ -106,7 +106,7 @@ def test_full_integration():
         use_prioritized_replay=False,  # Start with uniform replay
     )
 
-    print(f"✓ SAC configuration:")
+    print("✓ SAC configuration:")
     print(f"  - Buffer size: {sac_config.buffer_size}")
     print(f"  - Batch size: {sac_config.batch_size}")
     print(f"  - Updates/step: {sac_config.updates_per_step}")
@@ -126,7 +126,7 @@ def test_full_integration():
         initial_cash=50_000.0,
     )
 
-    print(f"✓ Execution environment:")
+    print("✓ Execution environment:")
     print(f"  - Limit orders: {env_config.use_limit_order_engine}")
     print(f"  - Base aggressiveness: {env_config.limit_order_config.base_aggressiveness}")
     print(f"  - Initial cash: ${env_config.initial_cash:,.0f}")

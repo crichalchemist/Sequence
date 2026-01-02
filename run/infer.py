@@ -24,8 +24,8 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from config.config import ModelConfig  # noqa: E402
-from features.agent_features import build_feature_frame  # noqa: E402
 from models.agent_hybrid import DignityModel, build_model  # noqa: E402
+from train.features.agent_features import build_feature_frame  # noqa: E402
 
 ACTION_NAMES = ["sell", "hold", "buy"]
 

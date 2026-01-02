@@ -7,11 +7,11 @@ Modules:
     simulated_retail_env: Stochastic retail execution simulation
 """
 
-from execution.simulated_retail_env import SimulatedRetailExecutionEnv
+from train.execution.simulated_retail_env import SimulatedRetailExecutionEnv
 
 # Optional import for backtesting environment (requires backtesting library)
 try:
-    from execution.backtesting_env import BacktestingRetailExecutionEnv
+    from train.execution.backtesting_env import BacktestingRetailExecutionEnv
 
     __all__ = [
         "BacktestingRetailExecutionEnv",

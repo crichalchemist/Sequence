@@ -20,9 +20,9 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from features.alpha_factors import build_alpha_feature_frame
-from features.fx_patterns import build_fx_feature_frame
-from features.multi_timeframe import add_daily_patterns, add_multi_timeframe_features
+from train.features.alpha_factors import build_alpha_feature_frame
+from train.features.fx_patterns import build_fx_feature_frame
+from train.features.multi_timeframe import add_daily_patterns, add_multi_timeframe_features
 from utils.logger import get_logger
 
 logger = get_logger(__name__)

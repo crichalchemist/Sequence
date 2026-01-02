@@ -12,7 +12,10 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from config.config import ModelConfig  # noqa: E402
-from execution.simulated_retail_env import SimulatedRetailExecutionEnv, ExecutionConfig  # noqa: E402
+from execution.simulated_retail_env import (  # noqa: E402
+    ExecutionConfig,
+    SimulatedRetailExecutionEnv,
+)
 from rl.agents.a3c_agent import A3CAgent, A3CConfig  # noqa: E402
 
 
@@ -94,9 +97,9 @@ def main():
         # Import backtesting environment (lazy to avoid hard dependency)
         try:
             from execution.backtesting_env import BacktestingRetailExecutionEnv  # noqa: F401
-        except ImportError as exc:
-            log.error(f"backtesting.py is required for --env-mode=backtesting")
-            log.error(f"Install with: pip install backtesting>=0.3.2")
+        except ImportError:
+            log.error("backtesting.py is required for --env-mode=backtesting")
+            log.error("Install with: pip install backtesting>=0.3.2")
             sys.exit(1)
 
         # Locate historical data
@@ -124,7 +127,7 @@ def main():
 
         log.info(f"[a3c] Using historical data: {data_path}")
 
-    log.info(f"[a3c] Training configuration:")
+    log.info("[a3c] Training configuration:")
     log.info(f"  - Pair: {args.pair}")
     log.info(f"  - Environment mode: {args.env_mode}")
     log.info(f"  - Workers: {args.num_workers}")
@@ -171,7 +174,7 @@ def main():
                 initial_balance=args.initial_balance,
             )
 
-        log.info(f"[a3c] Environment: SimulatedRetailExecutionEnv (stochastic)")
+        log.info("[a3c] Environment: SimulatedRetailExecutionEnv (stochastic)")
 
     else:  # backtesting mode
         # Deterministic historical replay with backtesting.py
@@ -211,10 +214,10 @@ def make_env():
     )
 
 
-log.info(f"[a3c] Environment: BacktestingRetailExecutionEnv (deterministic historical)")
+log.info("[a3c] Environment: BacktestingRetailExecutionEnv (deterministic historical)")
 
 # Create and train agent
-log.info(f"\n[a3c] Initializing agent...")
+log.info("\n[a3c] Initializing agent...")
 agent = A3CAgent(
     model_cfg=model_cfg,
     a3c_cfg=a3c_cfg,

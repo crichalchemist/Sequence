@@ -27,6 +27,7 @@ from zipfile import ZipFile
 import pandas as pd
 
 from utils.datetime_utils import convert_to_utc_and_dedup
+
 # Local utilities
 from utils.logger import get_logger
 from utils.seed import set_seed
@@ -40,9 +41,9 @@ if str(ROOT) not in sys.path:
 from config.config import FeatureConfig, MultiTaskDataConfig
 from data.agents.multitask_agent import MultiTaskDataAgent
 from data.gdelt_ingest import load_gdelt_gkg
-from features.agent_features import build_feature_frame
-from features.agent_sentiment import aggregate_sentiment, attach_sentiment_features
-from features.intrinsic_time import build_intrinsic_time_bars
+from train.features.agent_features import build_feature_frame
+from train.features.agent_sentiment import aggregate_sentiment, attach_sentiment_features
+from train.features.intrinsic_time import build_intrinsic_time_bars
 
 
 def validate_dataframe(df: pd.DataFrame, required_cols: list[str]) -> pd.DataFrame:
@@ -334,7 +335,7 @@ def process_pair(pair: str, args):
         if args.use_bigquery_gdelt:
             # Use BigQuery to fetch GDELT data (recommended for Colab)
             try:
-                from data.gdelt_bigquery import query_gdelt_for_date_range, FINANCIAL_THEMES
+                from data.gdelt_bigquery import FINANCIAL_THEMES, query_gdelt_for_date_range
 
                 logger.info("[sentiment] querying GDELT data from BigQuery...")
 
@@ -406,6 +407,7 @@ def process_pair(pair: str, args):
 
         try:
             import os
+
             from data.cognee_client import CogneeClient
             from data.cognee_processor import CogneeDataProcessor
             from features.cognee_features import build_cognee_features
@@ -436,7 +438,9 @@ def process_pair(pair: str, args):
                     if args.include_economic_indicators:
                         logger.info("[cognee] Downloading and ingesting economic indicators...")
                         try:
-                            from data.downloaders.economic_indicators import download_forex_fred_bundle
+                            from data.downloaders.economic_indicators import (
+                                download_forex_fred_bundle,
+                            )
 
                             start_dt = feature_df['datetime'].min()
                             end_dt = feature_df['datetime'].max()

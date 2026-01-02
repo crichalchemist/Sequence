@@ -10,16 +10,24 @@ Features:
 - Results tracking and visualization
 """
 
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+if str(ROOT / "run") not in sys.path:
+    sys.path.insert(0, str(ROOT / "run"))
+
 import itertools
 import json
 import random
 from dataclasses import asdict, dataclass, field
-from pathlib import Path
 from typing import Any
 
 import numpy as np
-from config.config import RLTrainingConfig
 
+from config.config import RLTrainingConfig
 from execution.simulated_retail_env import ExecutionConfig, SimulatedRetailExecutionEnv
 from train.core.env_based_rl_training import ActionConverter
 from utils.logger import get_logger

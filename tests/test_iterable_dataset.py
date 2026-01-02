@@ -11,8 +11,8 @@ import numpy as np
 import pandas as pd
 import pytest
 import torch
-from config.config import DataConfig, FeatureConfig
 
+from config.config import DataConfig, FeatureConfig
 from data.iterable_dataset import IterableFXDataset
 
 

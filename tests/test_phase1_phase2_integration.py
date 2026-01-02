@@ -18,11 +18,14 @@ import pandas as pd
 
 # Add project root to path
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+if str(ROOT / "run") not in sys.path:
+    sys.path.insert(0, str(ROOT / "run"))
 
 from config.config import FeatureConfig
-from features.agent_features import build_feature_frame
-from features.fx_patterns import build_fx_feature_frame
+from train.features.agent_features import build_feature_frame
+from train.features.fx_patterns import build_fx_feature_frame
 
 
 def create_sample_data(n_bars: int = 500) -> pd.DataFrame:

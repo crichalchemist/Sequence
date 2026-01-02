@@ -13,9 +13,11 @@ import torch.nn.functional as F
 from torch import optim
 from torch.distributions import Categorical
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+if str(ROOT / "run") not in sys.path:
+    sys.path.insert(0, str(ROOT / "run"))
 
 from config.config import ModelConfig  # noqa: E402
 from models.agent_hybrid import TemporalAttention  # noqa: E402
@@ -37,7 +39,7 @@ class A3CConfig:
     total_steps: int = 100_000
     log_interval: int = 1000
     checkpoint_path: str = "models/a3c_agent.pt"
-    device: str = "cpu"
+    device: str = "cuda"
 
 
 class HybridFeatureExtractor(nn.Module):
@@ -138,10 +140,16 @@ class A3CAgent:
         self.device = torch.device(
             a3c_cfg.device if a3c_cfg.device != "cuda" or torch.cuda.is_available() else "cpu"
         )
-        self.shared_device = torch.device("cpu")
+        # Use GPU for global model if available
+        self.shared_device = self.device
 
         self.global_model = ActorCriticNetwork(model_cfg, action_dim).to(self.shared_device)
-        self.global_model.share_memory()
+        # Share memory ONLY if on CPU (required for multiprocessing)
+        if self.shared_device.type == "cpu":
+            self.global_model.share_memory()
+            print("A3C using CPU with shared memory")
+        else:
+            print(f"A3C using GPU: {self.shared_device}")
         self.optimizer = SharedAdam(
             self.global_model.parameters(),
             lr=a3c_cfg.learning_rate,
@@ -192,6 +200,17 @@ class A3CAgent:
             p.join()
 
         self.save_checkpoint()
+
+    def _sync_gradients(self, local_model: nn.Module, global_model: nn.Module) -> None:
+        """Sync gradients from local to global model (device-aware)."""
+        for local_param, global_param in zip(local_model.parameters(), global_model.parameters()):
+            if local_param.grad is not None:
+                # Transfer gradient to global device
+                grad = local_param.grad.detach().to(self.shared_device)
+                if global_param.grad is None:
+                    global_param.grad = grad
+                else:
+                    global_param.grad.copy_(grad)
 
     def worker_process(self, worker_id: int) -> None:
         env = self.env_factory()
@@ -252,12 +271,7 @@ class A3CAgent:
                 if self.cfg.max_grad_norm:
                     torch.nn.utils.clip_grad_norm_(local_model.parameters(), self.cfg.max_grad_norm)
 
-                for global_param, local_param in zip(self.global_model.parameters(), local_model.parameters()):
-                    local_grad = None if local_param.grad is None else local_param.grad.detach().to(self.shared_device)
-                    if global_param.grad is None:
-                        global_param.grad = local_grad
-                    else:
-                        global_param.grad.copy_(local_grad)
+                self._sync_gradients(local_model, self.global_model)
 
                 self.optimizer.step()
                 local_model.load_state_dict(self.global_model.state_dict())

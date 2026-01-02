@@ -8,8 +8,8 @@ import numpy as np
 import pandas as pd
 import pytest
 import torch
-from config.config import DataConfig, MultiTaskDataConfig
 
+from config.config import DataConfig, MultiTaskDataConfig
 from data.agents.base_agent import BaseDataAgent, SequenceDataset
 from data.agents.multitask_agent import MultiTaskDataAgent
 from data.agents.single_task_agent import SingleTaskDataAgent

@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from enum import Enum
 
 from risk.risk_manager import RiskConfig
 
@@ -22,6 +23,101 @@ class FeatureConfig:
     dc_threshold_down: float | None = None  # Defaults to dc_threshold_up if not specified
     include_groups: list[str] | None = None
     exclude_groups: list[str] | None = None
+
+
+class AssetClass(str, Enum):
+    """Asset class enumeration for pair classification."""
+    FX = "fx"
+    CRYPTO = "crypto"
+    COMMODITY = "commodity"
+
+
+@dataclass
+class AssetConfig:
+    """Asset-class specific configuration for preprocessing.
+
+    Different asset classes require different indicator windows due to varying
+    volatility profiles and market dynamics:
+    - FX: Lower volatility, standard indicators
+    - Crypto: 10x more volatile, needs faster/shorter indicators
+    - Commodity: Similar to FX with commodity-specific patterns
+    """
+    asset_class: AssetClass = AssetClass.FX
+
+    # Volatility windows (crypto uses shorter due to 10x volatility)
+    sma_windows_fx: list[int] = field(default_factory=lambda: [10, 20, 50])
+    sma_windows_crypto: list[int] = field(default_factory=lambda: [5, 10, 20])
+
+    ema_windows_fx: list[int] = field(default_factory=lambda: [10, 20, 50])
+    ema_windows_crypto: list[int] = field(default_factory=lambda: [5, 10, 20])
+
+    # RSI windows
+    rsi_window_fx: int = 14
+    rsi_window_crypto: int = 7  # Faster for crypto
+
+    # Bollinger bands
+    bollinger_window_fx: int = 20
+    bollinger_window_crypto: int = 10
+
+    # ATR windows
+    atr_window_fx: int = 14
+    atr_window_crypto: int = 7
+
+    # Directional change thresholds
+    dc_threshold_fx: float = 0.0005  # 5 pips for FX
+    dc_threshold_crypto: float = 0.005  # 0.5% for crypto (10x more volatile)
+
+    # Market hours (for timezone handling)
+    market_24_7: bool = False  # True for crypto
+
+    def get_feature_config(self) -> FeatureConfig:
+        """Get FeatureConfig appropriate for asset class."""
+        if self.asset_class == AssetClass.CRYPTO:
+            return FeatureConfig(
+                sma_windows=self.sma_windows_crypto,
+                ema_windows=self.ema_windows_crypto,
+                rsi_window=self.rsi_window_crypto,
+                bollinger_window=self.bollinger_window_crypto,
+                atr_window=self.atr_window_crypto,
+                dc_threshold_up=self.dc_threshold_crypto,
+            )
+        else:  # FX and commodities use similar params
+            return FeatureConfig(
+                sma_windows=self.sma_windows_fx,
+                ema_windows=self.ema_windows_fx,
+                rsi_window=self.rsi_window_fx,
+                bollinger_window=self.bollinger_window_fx,
+                atr_window=self.atr_window_fx,
+                dc_threshold_up=self.dc_threshold_fx,
+            )
+
+    @staticmethod
+    def detect_from_pair(pair: str) -> AssetClass:
+        """Detect asset class from pair name.
+
+        Examples:
+            >>> AssetConfig.detect_from_pair("gbpusd")
+            AssetClass.FX
+            >>> AssetConfig.detect_from_pair("btcusd")
+            AssetClass.CRYPTO
+            >>> AssetConfig.detect_from_pair("xauusd")
+            AssetClass.COMMODITY
+        """
+        pair_upper = pair.upper()
+
+        # Crypto pairs contain common crypto symbols
+        crypto_bases = {
+            'BTC', 'ETH', 'SOL', 'ADA', 'XRP', 'DOGE', 'LTC',
+            'LINK', 'MATIC', 'AVAX', 'BNB', 'DOT'
+        }
+        if any(base in pair_upper for base in crypto_bases):
+            return AssetClass.CRYPTO
+
+        # Commodities (gold, silver, etc.)
+        if 'XAU' in pair_upper or 'XAG' in pair_upper or 'GC=' in pair_upper:
+            return AssetClass.COMMODITY
+
+        return AssetClass.FX
 
 
 @dataclass
@@ -136,6 +232,9 @@ class TrainingConfig:
     use_amp: bool = False  # Enable Automatic Mixed Precision
     fp16: bool = False  # Use FP16 instead of FP32
     grad_scaler: str | None = None  # 'grad_scaler' or None for AMP
+
+    # Multi-GPU training
+    device_ids: list[int] | None = None  # GPU IDs to use (None = all available)
 
     # Asynchronous checkpoint saving
     async_checkpoint: bool = False

@@ -16,14 +16,16 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
+ROOT = Path(__file__).parent.parent
+sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "run"))
 
-from execution.simulated_retail_env import (
+from train.core.env_based_rl_training import ActionConverter
+from train.execution.simulated_retail_env import (
     ExecutionConfig,
     OrderAction,
     SimulatedRetailExecutionEnv,
 )
-from train.core.env_based_rl_training import ActionConverter
 
 
 class TestTransactionCosts:

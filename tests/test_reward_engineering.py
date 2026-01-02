@@ -7,9 +7,20 @@ This module validates that different reward functions produce expected behavior:
 - cost_aware: PnL with explicit cost penalties
 """
 
+import sys
+from pathlib import Path
+
 import pytest
 
-from execution.simulated_retail_env import ExecutionConfig, OrderAction, SimulatedRetailExecutionEnv
+ROOT = Path(__file__).parent.parent
+sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "run"))
+
+from train.execution.simulated_retail_env import (
+    ExecutionConfig,
+    OrderAction,
+    SimulatedRetailExecutionEnv,
+)
 
 
 class TestRewardFunctions:
