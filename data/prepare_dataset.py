@@ -167,54 +167,104 @@ def parse_args():
 
 
 def _load_pair_data(pair: str, input_root: Path, years: list[str] | None) -> pd.DataFrame:
+    """
+    Load pair data from multiple sources (HistData, TwelveData, etc.).
+
+    Checks both primary input_root and additional sources (data/twelvedata).
+    Merges data from all available sources.
+
+    Args:
+        pair: Trading pair code
+        input_root: Primary data directory (e.g., output_central or data/histdata)
+        years: Optional list of years to filter
+
+    Returns:
+        DataFrame with merged data from all sources
+    """
+    # Check primary source (input_root)
     pair_dir = input_root / pair
-    if not pair_dir.exists():
-        raise FileNotFoundError(f"No data folder for pair {pair} under {input_root}")
 
-    zips = sorted(pair_dir.glob("*.zip"))
-    csvs = sorted(pair_dir.glob("*.csv"))
-    if years:
-        zips = [z for z in zips if any(y in z.name for y in years)]
-        csvs = [c for c in csvs if any(y in c.name for y in years)]
-    if not zips and not csvs:
-        raise FileNotFoundError(f"No data files found for pair {pair} with years={years}")
+    # Also check TwelveData directory as supplementary source
+    root = input_root.parents[0] if "histdata" in str(input_root) else input_root.parent
+    twelvedata_dir = root / "twelvedata" / pair
 
-    frames = []
-    for zpath in zips:
-        with ZipFile(zpath) as zf:
-            csv_names = [n for n in zf.namelist() if n.lower().endswith(".csv")]
-            if not csv_names:
-                continue
-            with zf.open(csv_names[0]) as f:
-                df = pd.read_csv(
-                    f,
-                    sep=";",
-                    header=None,
-                    names=["datetime", "open", "high", "low", "close", "volume"],
-                )
-                df["source_file"] = zpath.name
+    # Collect all source directories
+    source_dirs = []
+    if pair_dir.exists():
+        source_dirs.append(("primary", pair_dir))
+    if twelvedata_dir.exists():
+        source_dirs.append(("twelvedata", twelvedata_dir))
+
+    if not source_dirs:
+        raise FileNotFoundError(
+            f"No data folder for pair {pair} under {input_root} or {twelvedata_dir}"
+        )
+
+    all_frames = []
+
+    # Load data from each source directory
+    for source_name, source_dir in source_dirs:
+        zips = sorted(source_dir.glob("*.zip"))
+        csvs = sorted(source_dir.glob("*.csv"))
+
+        if years:
+            zips = [z for z in zips if any(y in z.name for y in years)]
+            csvs = [c for c in csvs if any(y in c.name for y in years)]
+
+        frames = []
+        for zpath in zips:
+            with ZipFile(zpath) as zf:
+                csv_names = [n for n in zf.namelist() if n.lower().endswith(".csv")]
+                if not csv_names:
+                    continue
+                with zf.open(csv_names[0]) as f:
+                    df = pd.read_csv(
+                        f,
+                        sep=";",
+                        header=None,
+                        names=["datetime", "open", "high", "low", "close", "volume"],
+                    )
+                    df["source_file"] = f"{source_name}:{zpath.name}"
+                    frames.append(df)
+
+        for cpath in csvs:
+            try:
+                df = pd.read_csv(cpath, sep=";", header=None,
+                                names=["datetime", "open", "high", "low", "close", "volume"])
+                df["source_file"] = f"{source_name}:{cpath.name}"
                 frames.append(df)
-    for cpath in csvs:
-        try:
-            df = pd.read_csv(cpath)
-            if {"datetime", "open", "high", "low", "close", "volume"}.issubset(df.columns):
-                df = df[["datetime", "open", "high", "low", "close", "volume"]]
-            else:
-                # Fallback to legacy format without header; assume comma-delimited.
-                df = pd.read_csv(
-                    cpath,
-                    header=None,
-                    names=["datetime", "open", "high", "low", "close", "volume"],
-                )
-            df["source_file"] = cpath.name
-            frames.append(df)
-        except Exception as exc:
-            logger.warning("[warn] failed to load CSV %s: %s", cpath, exc)
-    if not frames:
+            except Exception:
+                # Try with header and column detection
+                try:
+                    df = pd.read_csv(cpath)
+                    if {"datetime", "open", "high", "low", "close", "volume"}.issubset(df.columns):
+                        df = df[["datetime", "open", "high", "low", "close", "volume"]]
+                    else:
+                        # Fallback to legacy format without header
+                        df = pd.read_csv(
+                            cpath,
+                            header=None,
+                            names=["datetime", "open", "high", "low", "close", "volume"],
+                        )
+                    df["source_file"] = f"{source_name}:{cpath.name}"
+                    frames.append(df)
+                except Exception as exc:
+                    logger.warning("[warn] failed to load CSV %s: %s", cpath, exc)
+
+        if frames:
+            logger.info(f"Loaded {len(frames)} files from {source_name} for {pair}")
+            all_frames.extend(frames)
+
+    if not all_frames:
         raise RuntimeError("No CSV data loaded; check zip contents.")
 
-    full_df = pd.concat(frames, ignore_index=True)
+    full_df = pd.concat(all_frames, ignore_index=True)
     full_df["datetime"] = pd.to_datetime(full_df["datetime"], format="%Y%m%d %H%M%S")
+
+    # Remove duplicates (prefer primary source over twelvedata if same timestamp)
+    full_df = full_df.sort_values(["datetime", "source_file"]).drop_duplicates(
+        subset=["datetime"], keep="first"
+    )
     full_df = full_df.sort_values("datetime").reset_index(drop=True)
 
     # Validate the data after loading

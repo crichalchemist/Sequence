@@ -30,6 +30,7 @@ class AssetClass(str, Enum):
     FX = "fx"
     CRYPTO = "crypto"
     COMMODITY = "commodity"
+    LOTTERY = "lottery"
 
 
 @dataclass
@@ -102,8 +103,15 @@ class AssetConfig:
             AssetClass.CRYPTO
             >>> AssetConfig.detect_from_pair("xauusd")
             AssetClass.COMMODITY
+            >>> AssetConfig.detect_from_pair("powerball")
+            AssetClass.LOTTERY
         """
         pair_upper = pair.upper()
+
+        # Lottery data (for control experiments)
+        lottery_keywords = {'POWERBALL', 'LOTTERY', 'BALL1', 'BALL2', 'BALL3', 'BALL4', 'BALL5', 'BONUS'}
+        if any(kw in pair_upper for kw in lottery_keywords):
+            return AssetClass.LOTTERY
 
         # Crypto pairs contain common crypto symbols
         crypto_bases = {
@@ -137,6 +145,34 @@ class CogneeConfig:
         "event_proximity",
         "causal_chains",
         "pattern_similarity"
+    ])
+
+
+@dataclass
+class TwelveDataConfig:
+    """Configuration for TwelveData API integration.
+
+    TwelveData provides historical and real-time market data for FX, stocks,
+    crypto, and commodities. Free tier: 800 API calls, 5000 datapoints per call.
+    """
+    api_key: str | None = None
+    max_calls: int = 800  # Free tier limit
+    max_datapoints_per_call: int = 5000  # Free tier limit
+    default_interval: str = "1day"  # Largest interval for max coverage
+    convert_to_pips: bool = True  # Convert FX prices to pips (×10,000)
+    calls_per_minute: int = 8  # Free tier rate limit
+    output_dir: str = "data/twelvedata"  # Where to store downloaded data
+
+    # Priority tiers for download (when using auto-detect)
+    high_priority_pairs: list[str] = field(default_factory=lambda: [
+        "usdjpy", "usdcad", "usdchf", "audusd", "nzdusd"  # Major USD pairs
+    ])
+    medium_priority_pairs: list[str] = field(default_factory=lambda: [
+        "gbpaud", "gbpnzd", "audjpy", "audcad", "audchf",
+        "audnzd", "nzdjpy", "nzdcad", "nzdchf"  # AUD/NZD crosses
+    ])
+    low_priority_pairs: list[str] = field(default_factory=lambda: [
+        "usdbrl", "usdrub", "usdinr", "usdcny", "usdzar", "usdtry"  # Emerging markets
     ])
 
 

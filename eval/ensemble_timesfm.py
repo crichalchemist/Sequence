@@ -30,9 +30,8 @@ if str(ROOT) not in sys.path:
 if str(ROOT / "run") not in sys.path:
     sys.path.insert(0, str(ROOT / "run"))
 
-from timesfm.timesfm_2p5 import timesfm_2p5_torch
-
 from config.config import DataConfig, FeatureConfig, ModelConfig
+from eval.timesfm_wrapper import TimesFMWrapper
 from data.agents.single_task_agent import SingleTaskDataAgent as DataAgent
 from data.prepare_dataset import _compute_time_ranges, _load_pair_data
 from models.agent_hybrid import build_model
@@ -120,10 +119,8 @@ def main():
         device = "cpu"
     device = torch.device(device)
 
-    # Load TimesFM once.
-    tfm_model = timesfm_2p5_torch.TimesFM_2p5_200M_torch.from_pretrained(
-        "google/timesfm-2.5-200m-pytorch"
-    )
+    # Load TimesFM wrapper (uses separate environment)
+    tfm_model = TimesFMWrapper(timesfm_env_path=".venvx_timesfm")
 
     results = {}
     for pair in pairs:
