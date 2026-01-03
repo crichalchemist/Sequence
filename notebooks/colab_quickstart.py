@@ -31,6 +31,32 @@ def setup_colab_environment():
 
     print(f"\n✅ Found repository root: {ROOT}")
 
+    # Fix NumPy compatibility (common Colab issue)
+    print("\n" + "="*60)
+    print("Checking NumPy compatibility...")
+    print("="*60)
+
+    try:
+        import numpy as np
+        # Try importing a compiled extension to test compatibility
+        from numpy.random import RandomState  # noqa: F401
+        print("✅ NumPy compatibility check passed")
+    except ValueError as e:
+        if "numpy.dtype size changed" in str(e):
+            print("⚠️  NumPy binary incompatibility detected!")
+            print("   This is a common Colab issue when packages were compiled")
+            print("   against a different NumPy version.\n")
+            print("🔧 SOLUTION:")
+            print("   1. Run: !pip install --upgrade numpy pandas scikit-learn scipy --quiet")
+            print("   2. Restart runtime: Runtime → Restart runtime")
+            print("   3. Re-run this setup script\n")
+            print("❌ Setup cannot continue until NumPy is fixed.")
+            return False
+        else:
+            raise
+    except ImportError:
+        print("⚠️  NumPy not installed. Run: !pip install -r requirements.txt")
+
     # Setup Python path
     paths_to_add = [str(ROOT), str(ROOT / "run")]
     for path in paths_to_add:
