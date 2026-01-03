@@ -9,7 +9,6 @@ import json
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Any
 
 import numpy as np
 
@@ -74,7 +73,7 @@ class TimesFMWrapper:
             )
 
             # Deserialize outputs
-            with open(output_file, "r") as f:
+            with open(output_file) as f:
                 result = json.load(f)
 
             forecasts = [
@@ -103,8 +102,22 @@ def _call_timesfm_subprocess(
     Raises:
         RuntimeError: If subprocess execution fails
     """
-    # TODO(human): Implement subprocess call to TimesFM environment
     # Construct command: [python_path, script_path, "--input", input_file, "--output", output_file]
+    command = [
+        str(timesfm_env_path),
+        str(script_path),
+        "--input",
+        str(input_file),
+        "--output",
+        str(output_file),
+    ]
+
     # Use subprocess.run() with capture_output=True
+    result = subprocess.run(command, capture_output=True, text=True)
+
     # Check returncode and raise RuntimeError with stderr if non-zero
-    pass
+    if result.returncode != 0:
+        error_msg = f"TimesFM subprocess failed with exit code {result.returncode}"
+        if result.stderr:
+            error_msg += f": {result.stderr}"
+        raise RuntimeError(error_msg)
