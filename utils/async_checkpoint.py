@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import builtins
+import contextlib
 import logging
 import queue
 import threading
@@ -25,7 +27,7 @@ class AsyncCheckpointManager:
             top_n_checkpoints: int = 3
     ):
         """Initialize asynchronous checkpoint manager.
-        
+
         Parameters
         ----------
         save_dir : Path
@@ -173,7 +175,7 @@ class AsyncCheckpointManager:
             blocking: bool = False
     ) -> bool:
         """Queue a checkpoint for asynchronous saving.
-        
+
         Parameters
         ----------
         state_dict : dict
@@ -188,7 +190,7 @@ class AsyncCheckpointManager:
             Callback function to call after saving.
         blocking : bool
             Whether to wait for save to complete.
-            
+
         Returns
         -------
         bool
@@ -231,7 +233,7 @@ class AsyncCheckpointManager:
 
     def get_best_checkpoint(self) -> Path | None:
         """Get the path to the best checkpoint.
-        
+
         Returns
         -------
         Optional[Path]
@@ -246,7 +248,7 @@ class AsyncCheckpointManager:
 
     def get_statistics(self) -> dict:
         """Get checkpoint manager statistics.
-        
+
         Returns
         -------
         dict
@@ -268,12 +270,12 @@ class AsyncCheckpointManager:
 
     def wait_for_completion(self, timeout: float | None = None) -> bool:
         """Wait for all queued checkpoints to be processed.
-        
+
         Parameters
         ----------
         timeout : Optional[float]
             Maximum time to wait in seconds.
-            
+
         Returns
         -------
         bool
@@ -287,7 +289,7 @@ class AsyncCheckpointManager:
 
     def shutdown(self, timeout: float = 30.0):
         """Shutdown the checkpoint manager and clean up resources.
-        
+
         Parameters
         ----------
         timeout : float
@@ -324,10 +326,8 @@ class AsyncCheckpointManager:
 
     def __del__(self):
         """Destructor to ensure proper shutdown."""
-        try:
+        with contextlib.suppress(builtins.BaseException):
             self.shutdown(timeout=5.0)
-        except:
-            pass
 
 
 def create_async_checkpoint_manager(
@@ -335,14 +335,14 @@ def create_async_checkpoint_manager(
         training_config
 ) -> AsyncCheckpointManager:
     """Create async checkpoint manager from training configuration.
-    
+
     Parameters
     ----------
     save_dir : Path
         Directory to save checkpoints.
     training_config
         Training configuration with async settings.
-        
+
     Returns
     -------
     AsyncCheckpointManager
@@ -361,7 +361,7 @@ class CheckpointCallback:
 
     def __init__(self, callback_fn: Callable | None = None):
         """Initialize callback handler.
-        
+
         Parameters
         ----------
         callback_fn : Optional[Callable]
@@ -372,7 +372,7 @@ class CheckpointCallback:
 
     def __call__(self, checkpoint_path: Path, score: float, epoch: int):
         """Handle checkpoint event.
-        
+
         Parameters
         ----------
         checkpoint_path : Path

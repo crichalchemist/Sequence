@@ -74,10 +74,7 @@ class RiskManager:
         if not timestamp or not self.cfg.no_trade_hours:
             return False
         hour = timestamp.hour
-        for start, end in self.cfg.no_trade_hours:
-            if start <= hour <= end:
-                return True
-        return False
+        return any(start <= hour <= end for start, end in self.cfg.no_trade_hours)
 
     def _drawdown_exceeded(self) -> bool:
         if self.current_equity is None or self.peak_equity is None:

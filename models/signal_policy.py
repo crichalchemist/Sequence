@@ -7,7 +7,7 @@ from models.agent_hybrid import SharedEncoder
 
 class SignalBackbone(SharedEncoder):
     """CNN + LSTM + attention encoder reused by both signal heads and the policy.
-    
+
     Inherits from SharedEncoder for consistency with price sequence encoding.
     Signal backbones typically use unidirectional LSTM for causal processing.
     """

@@ -390,7 +390,7 @@ def update_policy_a2c(
     # Compute target values for stable bootstrapping (if target network provided)
     target_values = None
     if target_network is not None:
-        target_values = [v for v in episode.values]  # Use stored values as approximation
+        target_values = list(episode.values)  # Use stored values as approximation
         # In a full implementation, we'd recompute from states through target network
 
     # Compute advantages and returns
@@ -465,7 +465,7 @@ def update_policy_ppo(
     # Compute target values for stable bootstrapping (if target network provided)
     target_values = None
     if target_network is not None:
-        target_values = [v for v in episode.values]  # Use stored values as approximation
+        target_values = list(episode.values)  # Use stored values as approximation
         # In a full implementation, we'd recompute from states through target network
 
     # Compute advantages and returns
@@ -480,10 +480,10 @@ def update_policy_ppo(
     old_log_probs = torch.stack(episode.log_probs).detach()  # Detach for old policy
     old_values = torch.stack(episode.values).detach()
     policy_logits = torch.stack(episode.policy_logits)
-    actions = torch.tensor([a for a in episode.actions], dtype=torch.long)
+    actions = torch.tensor(list(episode.actions), dtype=torch.long)
 
     # Store states for recomputing policy during PPO epochs
-    states = torch.stack([torch.from_numpy(s).float() for s in episode.states])
+    torch.stack([torch.from_numpy(s).float() for s in episode.states])
 
     # PPO epochs: Optimize same data multiple times
     total_policy_loss = 0.0
@@ -494,7 +494,7 @@ def update_policy_ppo(
     num_updates = 0
     early_stopped = False
 
-    for ppo_epoch in range(cfg.ppo_epochs):
+    for _ppo_epoch in range(cfg.ppo_epochs):
         # Recompute policy outputs for current policy
         # Note: In full implementation, we'd recompute from states through signal model
         # For now, use stored policy_logits and recompute action probs

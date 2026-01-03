@@ -158,12 +158,11 @@ class CogneeClient:
                     raise CogneeAPIError(429, "Rate limit exceeded", response.json())
 
             # Handle server errors with retry
-            if response.status_code >= 500:
-                if retry_count < self.max_retries:
-                    wait_time = 2 ** retry_count  # Exponential backoff
-                    logger.warning(f"[cognee] Server error, retrying in {wait_time}s")
-                    time.sleep(wait_time)
-                    return self._request(method, endpoint, json_data, params, retry_count + 1)
+            if response.status_code >= 500 and retry_count < self.max_retries:
+                wait_time = 2 ** retry_count  # Exponential backoff
+                logger.warning(f"[cognee] Server error, retrying in {wait_time}s")
+                time.sleep(wait_time)
+                return self._request(method, endpoint, json_data, params, retry_count + 1)
 
             # Raise for other errors
             response.raise_for_status()
@@ -239,7 +238,7 @@ class CogneeClient:
             raise ValueError("texts and metadatas must have same length")
 
         doc_ids = []
-        for text, metadata in zip(texts, metadatas):
+        for text, metadata in zip(texts, metadatas, strict=False):
             doc_id = self.add_text(dataset_name, text, metadata)
             doc_ids.append(doc_id)
 

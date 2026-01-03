@@ -158,9 +158,7 @@ def add_base_features(df: pd.DataFrame, spread_windows: list[int] | None = None)
 def _should_add(group: str, config: FeatureConfig) -> bool:
     if config.include_groups and group not in config.include_groups:
         return False
-    if config.exclude_groups and group in config.exclude_groups:
-        return False
-    return True
+    return not (config.exclude_groups and group in config.exclude_groups)
 
 
 def build_feature_frame(df: pd.DataFrame, config: FeatureConfig | None = None) -> pd.DataFrame:

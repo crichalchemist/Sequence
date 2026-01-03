@@ -203,7 +203,7 @@ class A3CAgent:
 
     def _sync_gradients(self, local_model: nn.Module, global_model: nn.Module) -> None:
         """Sync gradients from local to global model (device-aware)."""
-        for local_param, global_param in zip(local_model.parameters(), global_model.parameters()):
+        for local_param, global_param in zip(local_model.parameters(), global_model.parameters(), strict=False):
             if local_param.grad is not None:
                 # Transfer gradient to global device
                 grad = local_param.grad.detach().to(self.shared_device)

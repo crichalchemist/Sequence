@@ -141,10 +141,10 @@ class TestOptimizedAttentionIntegration:
         encoder = PriceSequenceEncoder(cfg)
 
         # Verify configuration is preserved
-        assert encoder.cfg.use_optimized_attention == True
+        assert encoder.cfg.use_optimized_attention
         assert encoder.cfg.max_seq_length == 2048
         assert encoder.cfg.chunk_size == 256
-        assert encoder.cfg.use_adaptive_attention == True
+        assert encoder.cfg.use_adaptive_attention
         assert encoder.cfg.complexity_threshold == 0.7
         assert encoder.cfg.n_attention_heads == 8
 

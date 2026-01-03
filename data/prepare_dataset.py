@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 from zipfile import ZipFile
 
+import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -317,14 +318,13 @@ def process_pair(pair: str, args, batch_size: int | None = None):
             up_threshold=args.dc_threshold_up,
             down_threshold=args.dc_threshold_down or args.dc_threshold_up,
         )
-    logger = get_logger(__name__)
-    logger.info(
-        "[intrinsic] reduced %d -> %d bars using DC thresholds up=%s, down=%s",
-        len(raw_df),
-        len(df_for_features),
-        args.dc_threshold_up,
-        args.dc_threshold_down or args.dc_threshold_up,
-    )
+        logger.info(
+            "[intrinsic] reduced %d -> %d bars using DC thresholds up=%s, down=%s",
+            len(raw_df),
+            len(df_for_features),
+            args.dc_threshold_up,
+            args.dc_threshold_down or args.dc_threshold_up,
+        )
 
     # ---------------------------------------------------------------------
     # 2️⃣  Cache heavy feature computation to avoid re‑running on every call.

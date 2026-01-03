@@ -11,10 +11,10 @@ import torch
 @dataclass
 class EarlyStopping:
     """Early stopping handler to halt training when validation score plateaus.
-    
+
     Monitors a metric (e.g., validation loss) and stops training if it doesn't
     improve for `patience` consecutive checks.
-    
+
     Parameters
     ----------
     patience : int
@@ -36,12 +36,12 @@ class EarlyStopping:
 
     def __call__(self, score: float) -> bool:
         """Check if training should stop.
-        
+
         Parameters
         ----------
         score : float
             Current metric value to compare.
-            
+
         Returns
         -------
         bool
@@ -80,10 +80,10 @@ class EarlyStopping:
 
 class CheckpointManager:
     """Manages checkpoint saving with top-N retention policy.
-    
+
     Automatically saves checkpoints and keeps only the top N by score,
     deleting older checkpoints to avoid disk bloat.
-    
+
     Parameters
     ----------
     save_dir : Path or str
@@ -103,7 +103,7 @@ class CheckpointManager:
 
     def save(self, state_dict: dict, score: float, epoch: int, suffix: str = '') -> Path:
         """Save a checkpoint and manage retention.
-        
+
         Parameters
         ----------
         state_dict : dict
@@ -114,7 +114,7 @@ class CheckpointManager:
             Current epoch number for naming.
         suffix : str, optional
             Additional suffix for checkpoint filename. Default: ''.
-            
+
         Returns
         -------
         Path
@@ -139,7 +139,7 @@ class CheckpointManager:
 
     def load_best(self) -> dict | None:
         """Load the best checkpoint found so far.
-        
+
         Returns
         -------
         dict or None
@@ -152,7 +152,7 @@ class CheckpointManager:
 
     def best_checkpoint_path(self) -> Path | None:
         """Get path to the best checkpoint.
-        
+
         Returns
         -------
         Path or None

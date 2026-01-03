@@ -222,7 +222,7 @@ def add_intrinsic_time_features(
     # Mark DC event rows and propagate features forward
     event_indices = events["idx"].to_list()
 
-    for i, (idx, row) in enumerate(events.iterrows()):
+    for i, (_idx, row) in enumerate(events.iterrows()):
         event_idx = row["idx"]
 
         # Mark this row as DC event

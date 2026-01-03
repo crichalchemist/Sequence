@@ -26,7 +26,7 @@ def set_seed(seed: int | None = None) -> int:
         Optional integer seed.  If ``None`` the function reads the
         ``SEQ_GLOBAL_SEED`` environment variable; if that is also unset a
         deterministic default of ``42`` is used.
-        
+
     Returns
     -------
     int

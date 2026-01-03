@@ -125,7 +125,7 @@ class TargetNetwork:
         """
         for target_param, main_param in zip(
                 self.target_network.parameters(),
-                self.main_network.parameters()
+                self.main_network.parameters(), strict=False
         ):
             target_param.data.copy_(
                 self.tau * main_param.data + (1.0 - self.tau) * target_param.data

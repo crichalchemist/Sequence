@@ -116,9 +116,9 @@ class TestIntegrationPipeline:
         state3 = {"layer1.weight": torch.randn(10, 10)}
 
         # Save checkpoints with different scores
-        path1 = manager.save(state1, score=0.5, epoch=1)
-        path2 = manager.save(state2, score=0.3, epoch=2)
-        path3 = manager.save(state3, score=0.4, epoch=3)
+        manager.save(state1, score=0.5, epoch=1)
+        manager.save(state2, score=0.3, epoch=2)
+        manager.save(state3, score=0.4, epoch=3)
 
         # Verify only top 2 remain
         assert len(manager.checkpoints) == 2
@@ -139,9 +139,8 @@ class TestIntegrationPipeline:
                 assert not should_stop  # First 2 improve
             elif i == 2:
                 assert not should_stop  # Improvement
-            elif i >= 3:
-                if i >= 5:  # After patience exceeded
-                    assert should_stop
+            elif i >= 3 and i >= 5:  # After patience exceeded
+                assert should_stop
 
     def test_model_inference_shapes(self):
         """Test model output shapes match expected dimensions."""

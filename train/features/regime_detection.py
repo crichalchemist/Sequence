@@ -33,7 +33,7 @@ class RegimeConfig:
 class RegimeDetector:
     """
     Gaussian Mixture Model-based regime detector.
-    
+
     Identifies 4 market regimes:
       0: UPTREND - positive drift, low volatility
       1: DOWNTREND - negative drift, low volatility
@@ -52,7 +52,7 @@ class RegimeDetector:
     def _compute_features(self, df: pd.DataFrame) -> np.ndarray:
         """
         Compute features for regime classification.
-        
+
         Features:
           1. returns: log returns
           2. volatility: rolling std of returns
@@ -89,7 +89,7 @@ class RegimeDetector:
     def fit(self, df: pd.DataFrame) -> "RegimeDetector":
         """
         Fit GMM to historical price data.
-        
+
         Args:
             df: DataFrame with columns [datetime, open, high, low, close, volume]
         """
@@ -115,10 +115,10 @@ class RegimeDetector:
     def predict(self, df: pd.DataFrame) -> np.ndarray:
         """
         Predict regime labels for each row.
-        
+
         Args:
             df: DataFrame with price data
-        
+
         Returns:
             regimes: array of regime labels [0, 1, 2, 3]
         """
@@ -141,7 +141,7 @@ class RegimeDetector:
     def predict_proba(self, df: pd.DataFrame) -> np.ndarray:
         """
         Get soft regime probabilities (confidence for each regime).
-        
+
         Returns:
             proba: shape (n_samples, n_regimes), probabilities for each regime
         """
@@ -156,7 +156,7 @@ class RegimeDetector:
     def attach_regime_features(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Attach regime labels and one-hot encoded regime features to dataframe.
-        
+
         Returns:
             df: DataFrame with added columns:
               - regime: regime label
@@ -180,11 +180,11 @@ class RegimeDetector:
 def integrate_regime_features(feature_df: pd.DataFrame, price_df: pd.DataFrame) -> pd.DataFrame:
     """
     Convenience function to attach regime features to a feature dataframe.
-    
+
     Args:
         feature_df: Feature dataframe with technical indicators
         price_df: Original price dataframe used for regime detection
-    
+
     Returns:
         feature_df with regime columns appended
     """

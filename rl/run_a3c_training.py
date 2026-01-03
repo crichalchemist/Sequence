@@ -20,6 +20,9 @@ from execution.simulated_retail_env import (  # noqa: E402
     SimulatedRetailExecutionEnv,
 )
 from rl.agents.a3c_agent import A3CAgent, A3CConfig  # noqa: E402
+from utils.logger import get_logger  # noqa: E402
+
+log = get_logger(__name__)
 
 
 def parse_args() -> argparse.Namespace:
@@ -181,57 +184,50 @@ def main():
 
     else:  # backtesting mode
         # Deterministic historical replay with backtesting.py
-        pass
+        from execution.backtesting_env import BacktestingRetailExecutionEnv
 
+        # Load historical data once (shared across workers)
+        log.info(f"[a3c] Loading historical OHLCV data from {data_path}...")
+        price_df = pd.read_csv(data_path)
 
-from utils.logger import get_logger
+        # Ensure datetime column exists and is parsed
+        if "datetime" in price_df.columns:
+            price_df["datetime"] = pd.to_datetime(price_df["datetime"])
+            price_df = price_df.set_index("datetime")
 
-log = get_logger(__name__)
+        # Validate required columns
+        required_cols = {"open", "high", "low", "close"}
+        available_cols = {c.lower() for c in price_df.columns}
+        if not required_cols.issubset(available_cols):
+            missing = required_cols - available_cols
+            log.error(f"Missing required OHLCV columns: {missing}")
+            log.error(f"Available columns: {list(price_df.columns)}")
+            sys.exit(1)
 
-# Load historical data once (shared across workers)
-log.info(f"[a3c] Loading historical OHLCV data from {data_path}...")
-price_df = pd.read_csv(data_path)
+        log.info(f"[a3c] Loaded {len(price_df)} bars for backtesting")
 
-# Ensure datetime column exists and is parsed
-if "datetime" in price_df.columns:
-    price_df["datetime"] = pd.to_datetime(price_df["datetime"])
-    price_df = price_df.set_index("datetime")
+        def make_env():
+            exec_cfg = ExecutionConfig(initial_cash=args.initial_balance)
+            return BacktestingRetailExecutionEnv(
+                price_df=price_df.copy(),
+                config=exec_cfg,
+            )
 
-# Validate required columns
-required_cols = {"open", "high", "low", "close"}
-available_cols = {c.lower() for c in price_df.columns}
-if not required_cols.issubset(available_cols):
-    missing = required_cols - available_cols
-    log.error(f"Missing required OHLCV columns: {missing}")
-    log.error(f"Available columns: {list(price_df.columns)}")
-    sys.exit(1)
+        log.info("[a3c] Environment: BacktestingRetailExecutionEnv (deterministic historical)")
 
-log.info(f"[a3c] Loaded {len(price_df)} bars for backtesting")
-
-
-def make_env():
-    exec_cfg = ExecutionConfig(initial_cash=args.initial_balance)
-    return BacktestingRetailExecutionEnv(
-        price_df=price_df.copy(),
-        config=exec_cfg,
+    # Create and train agent
+    log.info("\n[a3c] Initializing agent...")
+    agent = A3CAgent(
+        model_cfg=model_cfg,
+        a3c_cfg=a3c_cfg,
+        action_dim=3,  # hold, buy, sell
+        env_factory=make_env,
     )
 
+    log.info(f"[a3c] Starting training ({args.num_workers} workers)...")
+    agent.train()
 
-log.info("[a3c] Environment: BacktestingRetailExecutionEnv (deterministic historical)")
-
-# Create and train agent
-log.info("\n[a3c] Initializing agent...")
-agent = A3CAgent(
-    model_cfg=model_cfg,
-    a3c_cfg=a3c_cfg,
-    action_dim=3,  # hold, buy, sell
-    env_factory=make_env,
-)
-
-log.info(f"[a3c] Starting training ({args.num_workers} workers)...")
-agent.train()
-
-log.info(f"[a3c] Training complete! Checkpoint saved to: {args.checkpoint_path}")
+    log.info(f"[a3c] Training complete! Checkpoint saved to: {args.checkpoint_path}")
 
 if __name__ == "__main__":
     main()

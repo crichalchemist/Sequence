@@ -39,6 +39,20 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 # Scripts can have uppercase constants in function scope
 "scripts/**/*.py" = ["N806"]
 
+# E402: Module imports after sys.path manipulation (intentional pattern for Colab compatibility)
+"data/**/*.py" = ["E402"]
+"train/**/*.py" = ["E402"]
+"eval/**/*.py" = ["E402"]
+"rl/**/*.py" = ["E402"]
+"run/**/*.py" = ["E402"]
+"notebooks/**/*.py" = ["E402"]
+
+# N812: Allow PyTorch convention (torch.nn.functional as F)
+"models/**/*.py" = ["N812"]
+
+# N806: Allow uppercase class names in GDELT downloader
+"data/downloaders/gdelt.py" = ["N806"]
+
 [tool.ruff.lint.isort]
 # Import sorting configuration
 known-first-party = ["config", "features", "models", "train", "execution", "risk", "utils"]

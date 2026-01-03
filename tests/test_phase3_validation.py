@@ -269,15 +269,13 @@ class TestRiskManagement:
         assert initial_inventory > 0
 
         # Run steps until stop-loss triggers or timeout
-        stop_loss_triggered = False
-        for step in range(100):
+        for _step in range(100):
             # Let price drift down
             action = OrderAction(action_type="hold", side="buy", size=0.0)
             obs, reward, done, info = env.step(action)
 
             # Check if stop-loss triggered (inventory closed out)
             if env._stop_loss_triggered > 0:
-                stop_loss_triggered = True
                 assert env.inventory < initial_inventory  # Position should be reduced/closed
                 break
 
@@ -306,13 +304,11 @@ class TestRiskManagement:
         initial_inventory = env.inventory
 
         # Run steps until take-profit triggers or timeout
-        take_profit_triggered = False
-        for step in range(100):
+        for _step in range(100):
             action = OrderAction(action_type="hold", side="buy", size=0.0)
             obs, reward, done, info = env.step(action)
 
             if env._take_profit_triggered > 0:
-                take_profit_triggered = True
                 assert env.inventory < initial_inventory
                 break
 

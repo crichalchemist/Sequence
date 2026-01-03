@@ -1,7 +1,7 @@
 """
 Advanced order flow and microstructure features extracted from OHLCV data.
 
-These features estimate market microstructure signals without needing access to 
+These features estimate market microstructure signals without needing access to
 order book data (LOB). They leverage candle patterns and volume to infer order flow.
 
 References:
@@ -16,11 +16,11 @@ import pandas as pd
 def high_low_imbalance(df: pd.DataFrame, window: int = 20) -> pd.Series:
     """
     High-Low Imbalance: Estimate directional order flow from close position.
-    
+
     Intuition:
       - If close is near high: buying pressure (asks hit)
       - If close is near low: selling pressure (bids hit)
-    
+
     Returns:
       imbalance: -1 (strong sell pressure) to +1 (strong buy pressure)
     """
@@ -35,12 +35,12 @@ def high_low_imbalance(df: pd.DataFrame, window: int = 20) -> pd.Series:
 def volume_direction_score(df: pd.DataFrame, window: int = 20) -> pd.Series:
     """
     Volume-Weighted Direction Score.
-    
+
     Combines volume and direction: if volume high AND close near top -> strong buy signal.
-    
+
     Formula:
       score = high_low_imbalance * (volume / volume_ma)
-    
+
     Returns:
       score: Directional volume strength
     """
@@ -54,13 +54,13 @@ def volume_direction_score(df: pd.DataFrame, window: int = 20) -> pd.Series:
 def order_flow_toxicity(df: pd.DataFrame, window: int = 20) -> pd.Series:
     """
     Order Flow Toxicity: Adverse selection costs proxy.
-    
+
     High toxicity = high likelihood that new orders will execute at worse prices
     (adverse selection). Estimated from:
       - Range expansion (more market orders)
       - High volume with poor execution (larger spreads)
       - Sudden reversals (stops hit, reversals common)
-    
+
     Returns:
       toxicity: 0 (low toxicity) to 1 (high toxicity)
     """
@@ -95,10 +95,10 @@ def order_flow_toxicity(df: pd.DataFrame, window: int = 20) -> pd.Series:
 def bid_ask_spread_proxy(df: pd.DataFrame, window: int = 20) -> pd.Series:
     """
     Estimate bid-ask spread from high-low range.
-    
+
     Intuition: Spread ≈ (high - low) / (2 * close)
     This is a crude estimate but useful for spread-aware execution.
-    
+
     Returns:
       spread_pct: Spread as % of closing price
     """
@@ -108,10 +108,10 @@ def bid_ask_spread_proxy(df: pd.DataFrame, window: int = 20) -> pd.Series:
 def depth_proxy(df: pd.DataFrame, window: int = 20) -> pd.Series:
     """
     Proxy for market depth from volume concentration.
-    
+
     Higher volume with less range = deeper market (can absorb orders).
     Lower volume with large range = shallow market (orders move price).
-    
+
     Returns:
       depth: Market depth indicator (higher = deeper)
     """
@@ -127,12 +127,12 @@ def depth_proxy(df: pd.DataFrame, window: int = 20) -> pd.Series:
 def vwap_deviation(df: pd.DataFrame, window: int = 20) -> pd.Series:
     """
     Volume-Weighted Average Price deviation.
-    
+
     VWAP = cumsum(price * volume) / cumsum(volume)
     Deviation = (close - VWAP) / VWAP
-    
+
     Useful for detecting mean reversion or momentum opportunities.
-    
+
     Returns:
       vwap_dev: Current price deviation from VWAP (%)
     """
@@ -147,14 +147,14 @@ def vwap_deviation(df: pd.DataFrame, window: int = 20) -> pd.Series:
 def momentum_imbalance(df: pd.DataFrame, window: int = 20) -> pd.Series:
     """
     Buy-Sell Momentum Imbalance.
-    
+
     Estimates whether momentum is skewed to buys or sells.
-    
+
     Formula:
       buy_volume = volume where close > open
       sell_volume = volume where close < open
       imbalance = (buy_vol - sell_vol) / (buy_vol + sell_vol)
-    
+
     Returns:
       imbalance: -1 (sell pressure) to +1 (buy pressure)
     """
@@ -171,10 +171,10 @@ def momentum_imbalance(df: pd.DataFrame, window: int = 20) -> pd.Series:
 def price_impact_proxy(df: pd.DataFrame, window: int = 20) -> pd.Series:
     """
     Estimate price impact from order book pressure.
-    
+
     If volume increases significantly but close moves away from buy/sell pressure,
     there's likely strong opposing liquidity (deep book).
-    
+
     Returns:
       impact: Price impact indicator (higher = worse execution)
     """
@@ -194,11 +194,11 @@ def price_impact_proxy(df: pd.DataFrame, window: int = 20) -> pd.Series:
 def build_microstructure_features(df: pd.DataFrame, windows: list = None) -> pd.DataFrame:
     """
     Build complete microstructure feature set.
-    
+
     Args:
         df: OHLCV dataframe
         windows: List of rolling windows to use (default: [5, 10, 20])
-    
+
     Returns:
         feature_df: Original df with all microstructure features appended
     """

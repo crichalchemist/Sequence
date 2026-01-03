@@ -297,7 +297,7 @@ class SACAgent:
             target: Target network to update
         """
         for target_param, source_param in zip(
-                target.parameters(), source.parameters()
+                target.parameters(), source.parameters(), strict=False
         ):
             target_param.data.copy_(
                 self.tau * source_param.data + (1 - self.tau) * target_param.data
@@ -442,7 +442,7 @@ if __name__ == "__main__":
     alpha_values = []
     q_losses = []
 
-    for i in range(10):
+    for _i in range(10):
         metrics = agent.update(replay_buffer, batch_size=256)
         alpha_values.append(metrics["alpha"])
         q_losses.append((metrics["q1_loss"] + metrics["q2_loss"]) / 2)

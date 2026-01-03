@@ -3,23 +3,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from gdelt.config import GDELT_TIME_DELTA_MINUTES, get_gdelt_bucket_minutes
-
-
-def align_candle_to_regime(
-        candle_time: datetime, bucket_minutes: int | None = None
-) -> datetime:
-    """Floor candle_time to the previous full regime bucket.
-
-    By default, the bucket size is derived from :data:`gdelt.config.GDELT_TIME_DELTA_MINUTES`
-    so callers stay aligned with the ingestion cadence.
-    """
-    bucket_minutes = bucket_minutes or get_gdelt_bucket_minutes()
-
-
-def get_gdelt_bucket_minutes() -> int:
-    """Return the default GDELT bucket size in minutes from configuration."""
-    return GDELT_TIME_DELTA_MINUTES
+from gdelt.config import get_gdelt_bucket_minutes
 
 
 def align_candle_to_regime(

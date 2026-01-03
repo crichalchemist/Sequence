@@ -334,11 +334,11 @@ class BaseDataAgent:
 def ensure_utc_timezone(df: pd.DataFrame, datetime_col: str = "datetime",
                         assumed_tz: str = "America/Chicago") -> pd.DataFrame:
     """Ensure datetime column is timezone-aware UTC.
-    
+
     HistData CSVs typically use Central Time without explicit timezone info.
     This function localizes naive datetimes to the assumed timezone, then
     converts to UTC for consistency across all data.
-    
+
     Parameters
     ----------
     df : pd.DataFrame
@@ -347,7 +347,7 @@ def ensure_utc_timezone(df: pd.DataFrame, datetime_col: str = "datetime",
         Name of the datetime column. Default: 'datetime'.
     assumed_tz : str, optional
         Timezone to assume for naive datetimes. Default: 'America/Chicago'.
-        
+
     Returns
     -------
     pd.DataFrame
@@ -368,7 +368,7 @@ def ensure_utc_timezone(df: pd.DataFrame, datetime_col: str = "datetime",
 def deduplicate_on_datetime(df: pd.DataFrame, datetime_col: str = "datetime",
                             keep: str = "first", logger_func=None) -> pd.DataFrame:
     """Remove duplicate timestamps, keeping the first occurrence.
-    
+
     Parameters
     ----------
     df : pd.DataFrame
@@ -379,7 +379,7 @@ def deduplicate_on_datetime(df: pd.DataFrame, datetime_col: str = "datetime",
         Which duplicate to keep. Default: 'first'.
     logger_func : callable, optional
         Logger function to report duplicates. Default: None.
-        
+
     Returns
     -------
     pd.DataFrame

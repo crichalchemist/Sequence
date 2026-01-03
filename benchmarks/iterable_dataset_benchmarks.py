@@ -141,7 +141,7 @@ class DatasetBenchmark:
 
         # Measure data loading time
         def load_batch():
-            for i, batch in enumerate(dataloader['train']):
+            for i, _batch in enumerate(dataloader['train']):
                 if i >= 10:  # Load first 10 batches
                     break
             return True
@@ -176,7 +176,7 @@ class DatasetBenchmark:
             # Measure iteration time
             def iterate_dataset():
                 count = 0
-                for sample in dataset:
+                for _sample in dataset:
                     count += 1
                     if count >= 100:  # Iterate first 100 samples
                         break
@@ -267,7 +267,7 @@ class DatasetBenchmark:
                     )
                     # Iterate through all samples
                     count = 0
-                    for sample in dataset:
+                    for _sample in dataset:
                         count += 1
                     return count
 

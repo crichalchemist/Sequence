@@ -61,7 +61,7 @@ def load_pair_data(data_dir: Path, pair: str, interval: str) -> pd.DataFrame | N
     return df
 
 
-def compute_returns(df: pd.DataFrame, periods: list[int] = [1, 5, 20]) -> pd.DataFrame:
+def compute_returns(df: pd.DataFrame, periods: list[int] = None) -> pd.DataFrame:
     """Compute log returns over multiple periods.
 
     Parameters
@@ -76,6 +76,8 @@ def compute_returns(df: pd.DataFrame, periods: list[int] = [1, 5, 20]) -> pd.Dat
     pd.DataFrame
         Returns for each period as columns: ret_1, ret_5, ret_20, etc.
     """
+    if periods is None:
+        periods = [1, 5, 20]
     results = {}
     close = df["close"] if "close" in df.columns else df.iloc[:, 3]  # Assume 4th col is close
 

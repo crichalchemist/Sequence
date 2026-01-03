@@ -4,7 +4,6 @@ Provides wrappers for DataParallel and utilities for managing
 multi-GPU training setups.
 """
 
-from typing import Optional
 
 import torch
 import torch.nn as nn
@@ -13,7 +12,7 @@ import torch.nn as nn
 def setup_multi_gpu(
     model: nn.Module,
     device: str = "cuda",
-    device_ids: Optional[list[int]] = None
+    device_ids: list[int] | None = None
 ) -> tuple[nn.Module, str]:
     """Setup model for multi-GPU training.
 

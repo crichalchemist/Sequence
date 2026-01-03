@@ -15,7 +15,7 @@ class EarlyStopping:
 
     def __init__(self, patience: int, min_delta: float = 0.0):
         """Initialize early stopping.
-        
+
         Parameters
         ----------
         patience : int
@@ -31,12 +31,12 @@ class EarlyStopping:
 
     def __call__(self, score: float) -> bool:
         """Check if training should stop based on the score.
-        
+
         Parameters
         ----------
         score : float
             Validation score to monitor (higher is better for accuracy, lower for loss).
-            
+
         Returns
         -------
         bool
@@ -70,7 +70,7 @@ class CheckpointManager:
 
     def __init__(self, save_dir: Path, top_n: int = 3):
         """Initialize checkpoint manager.
-        
+
         Parameters
         ----------
         save_dir : Path
@@ -85,7 +85,7 @@ class CheckpointManager:
 
     def save(self, state_dict: dict, score: float, epoch: int, model_name: str = "model") -> None:
         """Save checkpoint and manage retention policy.
-        
+
         Parameters
         ----------
         state_dict : Dict
@@ -123,7 +123,7 @@ class CheckpointManager:
 
     def get_best_checkpoint(self) -> Path | None:
         """Get the path to the best checkpoint.
-        
+
         Returns
         -------
         Optional[Path]
@@ -147,7 +147,7 @@ class MetricComparator:
 
     def __init__(self, task_type: str = "classification"):
         """Initialize metric comparator.
-        
+
         Parameters
         ----------
         task_type : str
@@ -157,14 +157,14 @@ class MetricComparator:
 
     def is_better(self, current: float, best: float) -> bool:
         """Check if current metric is better than best.
-        
+
         Parameters
         ----------
         current : float
             Current metric value.
         best : float
             Best metric value so far.
-            
+
         Returns
         -------
         bool
@@ -177,7 +177,7 @@ class MetricComparator:
 
     def initialize_best(self) -> float:
         """Initialize best metric value.
-        
+
         Returns
         -------
         float

@@ -398,7 +398,7 @@ def main():
     all_data = data_loader.load_all()
 
     # Create configurations
-    signal_config = SignalModelConfig(
+    SignalModelConfig(
         num_features=11,
         # inventory, cash, portfolio_value, mid_price, open, high, low, close, volume, returns, log_returns
         hidden_size_lstm=64,

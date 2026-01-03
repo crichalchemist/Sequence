@@ -216,7 +216,7 @@ class TestIterableFXDataset:
         memory_before = process.memory_info().rss / 1024 / 1024  # MB
 
         with patch.object(IterableFXDataset, '_find_cached_features', return_value=cached_feature_file):
-            dataset = IterableFXDataset(
+            IterableFXDataset(
                 pair="gbpusd",
                 data_cfg=iterable_config,
                 feature_cfg=feature_config,

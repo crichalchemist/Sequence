@@ -82,7 +82,7 @@ def create_realistic_ohlcv_data(n_bars: int = 1000, seed: int = 42) -> pd.DataFr
     regime_lengths = [200, 150, 300, 150, 200]
     regimes = ['trend_up', 'range', 'trend_down', 'volatile', 'range']
 
-    for regime_type, length in zip(regimes, regime_lengths):
+    for regime_type, length in zip(regimes, regime_lengths, strict=False):
         for _ in range(min(length, n_bars - len(prices))):
             if regime_type == 'trend_up':
                 drift = 0.0001
