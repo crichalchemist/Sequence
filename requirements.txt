@@ -1,22 +1,37 @@
-torch>=2.0.0
-pandas>=1.5.0
-numpy>=1.24,<2.0
+# Core ML/Data Science (Colab-compatible versions)
+# Constrained to work with Colab's pre-installed packages (tensorflow, numba, opencv)
+torch>=2.1.0
+pandas==2.2.2  # Match google-colab exact requirement
+numpy>=1.26.0,<2.1  # Satisfy numba's most restrictive constraint
+scikit-learn>=1.3.0
+
+# Data fetching and processing
 requests>=2.31.0
 beautifulsoup4>=4.12.0
 fredapi>=0.5.1
 histdata>=1.1
 yfinance>=0.2.50
+
+# ML and NLP
 datasets>=2.19.0
-transformers>=4.38.0
+transformers>=4.40.0
 peft>=0.13.2
-bitsandbytes>=0.42.0
+bitsandbytes>=0.44.0
+
+# Testing and code quality
 pytest>=7.4.0
 testcontainers>=4.6.0
-ruff>=0.1.0
+ruff>=0.6.0
+
+# Trading and backtesting
 backtesting>=0.3.2
+
+# Web and visualization
 jinja2>=3.1
 streamlit>=1.28.0
 plotly>=5.17.0
-psutil>=5.9.0
-flask>=2.3.0
+flask>=3.0.0
 flask-cors>=4.0.0
+
+# System utilities
+psutil>=5.9.0
