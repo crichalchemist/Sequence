@@ -182,7 +182,7 @@ def train_with_sac(
         episode_start_idx = np.random.randint(0, max_start_idx)
         current_idx = episode_start_idx
 
-        for step in range(max_steps_per_episode):
+        for _step in range(max_steps_per_episode):
             # Extract price sequence from train_data
             # [sequence_length, num_features]
             price_sequence = train_data[current_idx: current_idx + sequence_length]
@@ -264,7 +264,7 @@ def train_with_sac(
             # Update SAC agent
             if len(replay_buffer) > sac_config.batch_size and total_steps >= sac_config.warmup_steps:
                 for _ in range(sac_config.updates_per_step):
-                    metrics = agent.update(replay_buffer, sac_config.batch_size)
+                    agent.update(replay_buffer, sac_config.batch_size)
 
             if done:
                 break

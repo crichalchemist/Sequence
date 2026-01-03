@@ -30,8 +30,8 @@ from typing import Any
 import numpy as np
 
 try:
-    from skopt import dump, gp_minimize, load
-    from skopt.plots import plot_convergence, plot_objective
+    from skopt import dump, gp_minimize
+    from skopt.plots import plot_convergence
     from skopt.space import Categorical, Integer, Real
     from skopt.utils import use_named_args
 
@@ -236,7 +236,7 @@ class BayesianHyperparameterTuner:
 
         # Extract best configuration
         best_params_list = self.optimization_result.x
-        best_params = dict(zip(param_names, best_params_list))
+        best_params = dict(zip(param_names, best_params_list, strict=False))
 
         # Convert log-scale parameters
         best_params['learning_rate'] = 10 ** best_params.pop('learning_rate_log')
@@ -304,7 +304,7 @@ class BayesianHyperparameterTuner:
 
         try:
             import matplotlib.pyplot as plt
-            ax = plot_convergence(self.optimization_result)
+            plot_convergence(self.optimization_result)
             plt.ylabel("Negative Sharpe Ratio (minimize)")
 
             if save_path:
@@ -380,7 +380,7 @@ def main():
     tuner = BayesianHyperparameterTuner(base_exec_config, base_rl_config)
 
     # Run optimization
-    result = tuner.optimize(
+    tuner.optimize(
         search_space=search_space,
         n_calls=30,  # Total optimization iterations
         n_episodes=5,  # Episodes per config

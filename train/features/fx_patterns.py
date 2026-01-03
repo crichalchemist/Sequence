@@ -15,16 +15,16 @@ import pandas as pd
 def add_fx_session_features(df: pd.DataFrame) -> pd.DataFrame:
     """
     Add FX trading session indicators based on UTC time.
-    
+
     Sessions have different characteristics:
     - Tokyo (23:00-08:00 UTC): Lower volatility, range-bound
     - London (07:00-16:00 UTC): High volatility, trending
     - New York (12:00-21:00 UTC): High volume
     - London/NY overlap (12:00-16:00 UTC): Highest liquidity
-    
+
     Args:
         df: DataFrame with 'datetime' column
-        
+
     Returns:
         DataFrame with session indicator columns
     """
@@ -53,15 +53,15 @@ def add_support_resistance_features(
 ) -> pd.DataFrame:
     """
     Detect support and resistance levels using rolling highs/lows.
-    
+
     Key insight: Prices tend to reverse or consolidate near recent extremes.
     Proximity to these levels can be predictive of price action.
-    
+
     Args:
         df: DataFrame with OHLC data
         lookback: Bars to look back for high/low detection
         proximity_threshold: Distance threshold to consider "near" a level (fraction, e.g., 0.001 = 0.1%)
-        
+
     Returns:
         DataFrame with S/R feature columns
     """
@@ -89,15 +89,15 @@ def add_support_resistance_features(
 def add_price_action_patterns(df: pd.DataFrame) -> pd.DataFrame:
     """
     Detect classic FX price action patterns.
-    
+
     Patterns implemented:
     - Engulfing candles (reversal signals)
     - Pin bars / hammers (rejection wicks)
     - Inside bars (consolidation)
-    
+
     Args:
         df: DataFrame with OHLC data
-        
+
     Returns:
         DataFrame with pattern detection columns
     """
@@ -160,35 +160,35 @@ def add_price_action_patterns(df: pd.DataFrame) -> pd.DataFrame:
 def add_trend_strength_features(df: pd.DataFrame, window: int = 14) -> pd.DataFrame:
     """
     Add Average Directional Index (ADX) for trend strength detection.
-    
+
     ADX measures how strongly the market is trending (not direction, just strength):
     - ADX > 25: Strong trend (good for trend-following strategies)
     - ADX < 20: Weak trend / ranging market (good for mean-reversion)
-    
+
     The ADX is calculated from:
     1. Directional movement (+DM and -DM)
     2. True range (TR)
     3. Directional indicators (+DI and -DI)
     4. Directional index (DX)
     5. ADX (smoothed DX)
-    
+
     Context: I've set up the structure and calculated the initial directional movement.
     Your task is to complete the ADX calculation logic.
-    
+
     Your Task: In this function, implement the ADX calculation following these steps:
     1. Calculate +DI and -DI from the smoothed +DM, -DM, and ATR
     2. Calculate DX from the difference between +DI and -DI
     3. Calculate ADX as the smoothed DX
     4. Add binary features for strong_trend (ADX > 25) and weak_trend (ADX < 20)
-    
+
     Guidance: The key tradeoff is smoothing window size - larger windows give smoother signals
     but slower reaction to regime changes. Consider how responsive you want the trend detection
     to be. The standard window is 14 periods, but FX traders sometimes use 10 or 20.
-    
+
     Args:
         df: DataFrame with OHLC data
         window: Smoothing window for ADX calculation (default: 14)
-        
+
     Returns:
         DataFrame with ADX, +DI, -DI, and trend strength flags
     """
@@ -259,10 +259,10 @@ def build_fx_feature_frame(
 ) -> pd.DataFrame:
     """
     Add FX-specific signals to feature frame.
-    
+
     This is the main entry point for adding forex-specific features to the
     standard technical indicator set.
-    
+
     Args:
         df: DataFrame with OHLC data and datetime
         include_sessions: Add trading session features
@@ -271,7 +271,7 @@ def build_fx_feature_frame(
         include_trend_strength: Add ADX/trend features
         trend_strength_window: Window for ADX calculation
         include_patterns: Add price action patterns
-        
+
     Returns:
         DataFrame with additional FX features
     """

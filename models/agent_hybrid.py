@@ -12,13 +12,13 @@ from utils.attention_optimization import (
 
 class SharedEncoder(nn.Module):
     """Unified CNN + LSTM + Attention encoder base class for all model variants.
-    
+
     Encapsulates the core pattern: temporal local features (CNN) + sequential
     dependencies (LSTM) + context aggregation (attention) → single embedding.
-    
+
     All model encoders (price sequences, signals, regimes) inherit this base,
     ensuring consistent architecture and reducing code duplication.
-    
+
     Parameters
     ----------
     num_features : int
@@ -112,12 +112,12 @@ class SharedEncoder(nn.Module):
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """Forward pass: CNN + LSTM fusion → Attention → Embedding.
-        
+
         Parameters
         ----------
         x : torch.Tensor
             Input sequences [B, T, num_features].
-            
+
         Returns
         -------
         tuple[torch.Tensor, torch.Tensor]
@@ -142,7 +142,7 @@ class SharedEncoder(nn.Module):
 
 class PriceSequenceEncoder(SharedEncoder):
     """CNN + (bi)LSTM + temporal attention encoder returning a single embedding.
-    
+
     Backward-compatible wrapper around SharedEncoder for price sequence encoding.
     """
 

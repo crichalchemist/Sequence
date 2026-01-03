@@ -7,6 +7,9 @@ from utils.attention_optimization import (
     OptimizedMultiHeadAttention,
     TemporalAttention,
 )
+from utils.logger import get_logger
+
+log = get_logger(__name__)
 
 # Create test input
 batch_size, seq_len, input_dim = 4, 120, 160

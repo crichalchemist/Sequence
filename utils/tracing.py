@@ -6,13 +6,13 @@ feature engineering, model training, and evaluation.
 
 Usage:
     from utils.tracing import setup_tracing, get_tracer
-    
+
     # Setup tracing once at app startup
     setup_tracing(service_name="sequence-training")
-    
+
     # Get tracer for your module
     tracer = get_tracer(__name__)
-    
+
     # Use in your code
     with tracer.start_as_current_span("training_epoch") as span:
         span.set_attribute("epoch", epoch_num)
@@ -142,7 +142,7 @@ class TracingContext:
     def __init__(self, tracer: Any | None, span_name: str, attributes: dict | None = None):
         """
         Initialize tracing context. Works gracefully with None tracer.
-        
+
         Args:
             tracer: Tracer instance (or None to skip tracing)
             span_name: Name of the span
@@ -173,11 +173,11 @@ class TracingContext:
 def trace_function(tracer: Any | None, func_name: str = None):
     """
     Decorator to automatically trace a function's execution.
-    
+
     Args:
         tracer: Tracer instance
         func_name: Optional custom span name (defaults to function name)
-    
+
     Example:
         >>> tracer = get_tracer(__name__)
         >>> @trace_function(tracer)

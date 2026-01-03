@@ -345,7 +345,7 @@ class SimulatedRetailExecutionEnv:
                 and action.aggressiveness is not None
         ):
             # Use limit order engine to compute optimal limit price
-            half_spread = self._get_current_spread() / 2.0
+            self._get_current_spread() / 2.0
             limit_price, fill_prob, expected_savings = self.limit_order_engine.place_limit_order(
                 side=action.side,
                 mid_price=self.mid_price,

@@ -28,13 +28,13 @@ logger = logging.getLogger(__name__)
 
 class UncertaintyLossWeighting(nn.Module):
     """Learnable uncertainty parameters for dynamic loss weighting.
-    
+
     This module implements the homoscedastic uncertainty approach from Kendall et al. (2018)
     to automatically learn optimal loss weights for multi-task learning scenarios.
-    
+
     Each task i has a learnable uncertainty parameter σ_i that is used to weight the loss:
     L_weighted_i = (1/σ_i²) * L_i + log(σ_i)
-    
+
     The log(σ_i) term acts as regularization to prevent unbounded growth of σ_i.
     """
 
@@ -46,7 +46,7 @@ class UncertaintyLossWeighting(nn.Module):
             log_variance_bounds: tuple[float, float] = (-5.0, 5.0)
     ):
         """Initialize uncertainty weighting module.
-        
+
         Parameters
         ----------
         task_names : List[str]
@@ -85,7 +85,7 @@ class UncertaintyLossWeighting(nn.Module):
 
     def get_uncertainty_values(self) -> dict[str, float]:
         """Get current uncertainty values (σ_i) for all tasks.
-        
+
         Returns
         -------
         Dict[str, float]
@@ -98,7 +98,7 @@ class UncertaintyLossWeighting(nn.Module):
 
     def get_log_variance_values(self) -> dict[str, float]:
         """Get current log variance values for all tasks.
-        
+
         Returns
         -------
         Dict[str, float]
@@ -108,12 +108,12 @@ class UncertaintyLossWeighting(nn.Module):
 
     def forward(self, losses: dict[str, torch.Tensor]) -> tuple[dict[str, torch.Tensor], dict[str, float]]:
         """Apply uncertainty weighting to losses.
-        
+
         Parameters
         ----------
         losses : Dict[str, torch.Tensor]
             Dictionary of task losses with keys matching self.task_names.
-            
+
         Returns
         -------
         Tuple[Dict[str, torch.Tensor], Dict[str, float]]
@@ -145,7 +145,7 @@ class UncertaintyLossWeighting(nn.Module):
 
     def get_reg_loss(self) -> torch.Tensor:
         """Get regularization loss for uncertainty parameters.
-        
+
         Returns
         -------
         torch.Tensor
@@ -177,12 +177,12 @@ class UncertaintyLossWeighting(nn.Module):
     def get_total_weighted_loss(self, losses: dict[str, torch.Tensor]) -> tuple[
         torch.Tensor, dict[str, float], torch.Tensor]:
         """Get total weighted loss including regularization.
-        
+
         Parameters
         ----------
         losses : Dict[str, torch.Tensor]
             Dictionary of task losses.
-            
+
         Returns
         -------
         Tuple[torch.Tensor, Dict[str, float], torch.Tensor]
@@ -203,14 +203,14 @@ def create_uncertainty_weighting(
         task_type: str = "multitask"
 ) -> UncertaintyLossWeighting:
     """Create uncertainty weighting module based on configuration.
-    
+
     Parameters
     ----------
     loss_config : Dict[str, any]
         Loss configuration dictionary.
     task_type : str, default="multitask"
         Type of task ("multitask", "single_classification", "single_regression").
-        
+
     Returns
     -------
     UncertaintyLossWeighting

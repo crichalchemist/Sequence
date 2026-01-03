@@ -289,7 +289,7 @@ def build_cognee_features(
         'gbp_mentions_24h': []
     }
 
-    for i, (idx, row) in enumerate(price_df.iterrows()):
+    for i, (_idx, row) in enumerate(price_df.iterrows()):
         timestamp = row['datetime']
         start_time = timestamp - pd.Timedelta(hours=entity_window_hours)
 
@@ -342,7 +342,7 @@ def build_cognee_features(
         'event_sentiment_mean_48h': []
     }
 
-    for i, (idx, row) in enumerate(price_df.iterrows()):
+    for i, (_idx, row) in enumerate(price_df.iterrows()):
         timestamp = row['datetime']
 
         if i % sample_interval == 0:

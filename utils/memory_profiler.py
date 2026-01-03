@@ -99,7 +99,7 @@ class MemoryProfiler:
         self.start_monitoring()
 
         try:
-            result = func(*args, **kwargs)
+            func(*args, **kwargs)
         finally:
             # Stop monitoring
             samples = self.stop_monitoring()
@@ -110,7 +110,7 @@ class MemoryProfiler:
         # Find peak memory usage
         peak_stats = start_stats
         if samples:
-            peak_rss = max(s.rss_mb for s in samples)
+            max(s.rss_mb for s in samples)
             peak_stats = max(samples, key=lambda s: s.rss_mb)
 
         return ProfileResult(
@@ -128,7 +128,7 @@ class MemoryProfiler:
 
         def iterate():
             count = 0
-            for sample in dataset:
+            for _sample in dataset:
                 count += 1
                 if count >= max_samples:
                     break
@@ -241,7 +241,6 @@ class DataLoaderProfiler:
 
     def profile_dataloader_batches(self, dataloader, num_batches: int = 10) -> dict[str, Any]:
         """Profile DataLoader batch processing."""
-        batch_stats = []
 
         def process_batches():
             batch_times = []
@@ -258,7 +257,7 @@ class DataLoaderProfiler:
                     sequences, targets = batch[0], batch[1]
                     # Perform some tensor operations to simulate model processing
                     _ = sequences.sum()
-                    for key, target in targets.items():
+                    for _key, target in targets.items():
                         if hasattr(target, 'sum'):
                             _ = target.sum()
 

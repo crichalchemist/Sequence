@@ -19,7 +19,7 @@ def test_deterministic_runs():
     logger.info("Testing deterministic runs...")
 
     # Set seed multiple times and verify consistency
-    seed1 = set_seed(42)
+    set_seed(42)
     np.random.seed(42)
     arr1 = np.random.randn(100)
 
@@ -69,7 +69,7 @@ def test_checkpoint_manager():
         scores = [0.7, 0.8, 0.6]  # Best, better, worst
 
         # Save checkpoints
-        for i, (state, score) in enumerate(zip(state_dicts, scores), 1):
+        for i, (state, score) in enumerate(zip(state_dicts, scores, strict=False), 1):
             checkpoint_manager.save(state, score, i, "test_model")
 
         # Should only keep top 2
@@ -178,7 +178,7 @@ def test_integration_all_components():
 
         # 1. Test deterministic runs
         set_seed(42)
-        test_data = np.random.randn(50)
+        np.random.randn(50)
 
         # 2. Test checkpoint manager
         checkpoint_manager = CheckpointManager(tmpdir / "checkpoints", top_n=3)

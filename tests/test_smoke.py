@@ -45,8 +45,7 @@ def test_training_pipeline_help(tmp_path: Path):
     result = subprocess.run(
         [sys.executable, "run/training_pipeline.py", "--help"],
         cwd=Path(__file__).resolve().parents[1],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         text=True,
         check=True,
     )

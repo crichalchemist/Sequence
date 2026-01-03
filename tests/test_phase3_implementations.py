@@ -119,9 +119,9 @@ def test_training_config_amp():
         checkpoint_queue_size=15
     )
 
-    assert cfg.use_amp == True
-    assert cfg.fp16 == True
-    assert cfg.async_checkpoint == True
+    assert cfg.use_amp
+    assert cfg.fp16
+    assert cfg.async_checkpoint
     assert cfg.checkpoint_workers == 3
     assert cfg.checkpoint_queue_size == 15
 

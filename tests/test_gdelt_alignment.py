@@ -53,7 +53,7 @@ def test_iter_gdelt_buckets_matches_alignment():
     assert buckets[0] == align_candle_to_regime(start, bucket_minutes=bucket)
     assert buckets[-1] == datetime(2024, 1, 1, 10, 45, tzinfo=timezone.utc)
     assert all(
-        b2 - b1 == timedelta(minutes=bucket) for b1, b2 in zip(buckets, buckets[1:])
+        b2 - b1 == timedelta(minutes=bucket) for b1, b2 in zip(buckets, buckets[1:], strict=False)
     )
     assert bucket == GDELT_TIME_DELTA_MINUTES
 

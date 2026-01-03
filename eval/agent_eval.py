@@ -41,7 +41,7 @@ def classification_metrics(logits: np.ndarray, targets: np.ndarray) -> dict[str,
 
     num_classes = logits.shape[1]
     confusion = np.zeros((num_classes, num_classes), dtype=int)
-    for t, p in zip(targets, pred_labels):
+    for t, p in zip(targets, pred_labels, strict=False):
         confusion[int(t), int(p)] += 1
 
     precision_list = []
@@ -126,7 +126,7 @@ def evaluate_a3c_agent(
         agent, env_factory, num_episodes: int = 100, device: str = "cpu"
 ) -> dict[str, float]:
     """Evaluate trained A3C agent on simulated execution environment.
-    
+
     Parameters
     ----------
     agent : A3CAgent
@@ -137,7 +137,7 @@ def evaluate_a3c_agent(
         Number of episodes to run. Default: 100.
     device : str
         Device for inference. Default: 'cpu'.
-        
+
     Returns
     -------
     Dict[str, float]

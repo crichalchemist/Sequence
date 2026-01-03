@@ -20,8 +20,9 @@ import sys
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional
 
+import numpy as np
+import pandas as pd
 import torch
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -37,6 +38,9 @@ from eval.agent_eval import evaluate_model  # noqa: E402
 from models.agent_hybrid import build_model  # noqa: E402
 from risk.risk_manager import RiskManager  # noqa: E402
 from train.core.agent_train import train_model  # noqa: E402
+from utils.logger import get_logger  # noqa: E402
+
+log = get_logger(__name__)
 
 # Optional RL imports (lazy loaded)
 A3CAgent = None
@@ -46,15 +50,15 @@ BacktestingRetailExecutionEnv = None
 ExecutionConfig = None
 
 
-def parse_pairs(pairs: str, pairs_file: Optional[Path]) -> List[str]:
-    seeds: List[str] = []
+def parse_pairs(pairs: str, pairs_file: Path | None) -> list[str]:
+    seeds: list[str] = []
     if pairs:
         seeds.extend([p.strip().lower() for p in pairs.split(",") if p.strip()])
     if pairs_file:
         seeds.extend([line.strip().lower() for line in pairs_file.read_text().splitlines() if line.strip()])
     # Preserve order, drop duplicates.
     seen = set()
-    ordered: List[str] = []
+    ordered: list[str] = []
     for p in seeds:
         if p not in seen:
             seen.add(p)
@@ -271,7 +275,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def maybe_prompt_for_more(queue: List[str]) -> List[str]:
+def maybe_prompt_for_more(queue: list[str]) -> list[str]:
     try:
         extra = input("Add more pairs (comma-separated) or press Enter to continue: ").strip()
     except EOFError:
@@ -284,7 +288,7 @@ def maybe_prompt_for_more(queue: List[str]) -> List[str]:
     return queue
 
 
-def cleanup_pair_zips(pair: str, input_root: Path, years: Optional[str]) -> None:
+def cleanup_pair_zips(pair: str, input_root: Path, years: str | None) -> None:
     root = Path(input_root)
     target_dir = root / pair
     if not target_dir.exists():
@@ -305,7 +309,7 @@ def cleanup_pair_zips(pair: str, input_root: Path, years: Optional[str]) -> None
         log.info(f"deleted {removed} zip(s) for {pair} under {target_dir}")
 
 
-def has_local_data(pair: str, input_root: Path, years: Optional[str]) -> bool:
+def has_local_data(pair: str, input_root: Path, years: str | None) -> bool:
     pair_dir = Path(input_root) / pair
     if not pair_dir.exists():
         return False
@@ -409,7 +413,7 @@ def run_histdata_download(args) -> None:
             pairs_csv = ROOT / "pairs.csv"
             if pairs_csv.exists():
                 tmp_csv = Path(env.get("TMPDIR", "/tmp")) / "pairs_filtered.csv"
-                with open(pairs_csv, "r") as src, open(tmp_csv, "w") as dst:
+                with open(pairs_csv) as src, open(tmp_csv, "w") as dst:
                     for i, line in enumerate(src):
                         if i == 0:
                             dst.write(line)
@@ -504,7 +508,6 @@ def load_rl_modules():
 
 def run_rl_training(pair: str, args, prepared_data_path: Path) -> None:
     """Run A3C RL training for a single pair."""
-    import pandas as pd
 
     load_rl_modules()
 
@@ -583,12 +586,12 @@ def run_rl_training(pair: str, args, prepared_data_path: Path) -> None:
         metadata_path = prepared_data_path.parent / f"{prepared_data_path.stem}_metadata.json"
 
         if npy_path.exists() and datetime_npy_path.exists() and metadata_path.exists():
-            import time
             import json
+            import time
             start = time.perf_counter()
 
             # Load metadata
-            with open(metadata_path, 'r') as f:
+            with open(metadata_path) as f:
                 metadata = json.load(f)
 
             # Load feature data and datetime

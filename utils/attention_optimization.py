@@ -24,7 +24,7 @@ class OptimizedMultiHeadAttention(nn.Module):
             chunk_size: int = 512
     ):
         """Initialize optimized multi-head attention.
-        
+
         Parameters
         ----------
         input_dim : int
@@ -135,14 +135,14 @@ class OptimizedMultiHeadAttention(nn.Module):
             attention_mask: torch.Tensor | None = None
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """Forward pass with memory optimization.
-        
+
         Parameters
         ----------
         x : torch.Tensor
             Input sequence [batch_size, seq_len, input_dim].
         attention_mask : torch.Tensor, optional
             Attention mask [batch_size, seq_len, seq_len].
-            
+
         Returns
         -------
         Tuple[torch.Tensor, torch.Tensor]
@@ -237,7 +237,7 @@ class SlidingWindowAttention(nn.Module):
             step_size: int = 256
     ):
         """Initialize sliding window attention.
-        
+
         Parameters
         ----------
         input_dim : int
@@ -267,14 +267,14 @@ class SlidingWindowAttention(nn.Module):
             global_context: torch.Tensor | None = None
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """Forward pass with sliding window attention.
-        
+
         Parameters
         ----------
         x : torch.Tensor
             Input sequence [batch_size, seq_len, input_dim].
         global_context : torch.Tensor, optional
             Global context to attend to across windows.
-            
+
         Returns
         -------
         Tuple[torch.Tensor, torch.Tensor]
@@ -290,7 +290,7 @@ class SlidingWindowAttention(nn.Module):
 
             # Extract window
             window = x[:, start_idx:end_idx, :]  # [B, window_len, D]
-            window_len = end_idx - start_idx
+            end_idx - start_idx
 
             # Apply attention within window
             q = self.query_proj(window)
@@ -348,7 +348,7 @@ class AdaptiveAttention(nn.Module):
             complexity_threshold: float = 0.5
     ):
         """Initialize adaptive attention.
-        
+
         Parameters
         ----------
         input_dim : int
@@ -379,12 +379,12 @@ class AdaptiveAttention(nn.Module):
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """Forward pass with adaptive computation.
-        
+
         Parameters
         ----------
         x : torch.Tensor
             Input sequence [batch_size, seq_len, input_dim].
-            
+
         Returns
         -------
         Tuple[torch.Tensor, torch.Tensor]
@@ -423,7 +423,7 @@ class AdaptiveAttention(nn.Module):
 
             # Aggregate sequence to single context vector
             avg_weights = weight_matrix  # [B, seq_len]
-            context = torch.bmm(avg_weights.unsqueeze(1), output).squeeze(1)  # [B, input_dim]
+            torch.bmm(avg_weights.unsqueeze(1), output).squeeze(1)  # [B, input_dim]
 
             # Combine attention weights
             weights = weight_matrix * simple_weights + (1 - weight_matrix) * standard_weights
@@ -459,7 +459,7 @@ def create_optimized_attention(
         use_adaptive: bool = True
 ) -> nn.Module:
     """Factory function to create optimized attention layer.
-    
+
     Parameters
     ----------
     input_dim : int
@@ -472,7 +472,7 @@ def create_optimized_attention(
         Maximum expected sequence length.
     use_adaptive : bool
         Whether to use adaptive attention.
-        
+
     Returns
     -------
     nn.Module

@@ -21,7 +21,7 @@ def setup_colab_environment():
 
     # Get repository root
     ROOT = Path.cwd()
-    while not (ROOT / "CLAUDE.md").exists() and ROOT != ROOT.parent:
+    while not (ROOT / "CLAUDE.md").exists() and ROOT.parent != ROOT:
         ROOT = ROOT.parent
 
     if not (ROOT / "CLAUDE.md").exists():
@@ -48,21 +48,21 @@ def setup_colab_environment():
     print("="*60)
 
     try:
-        from config.config import ModelConfig, DataConfig, TrainingConfig
+        from config.config import DataConfig, ModelConfig, TrainingConfig  # noqa: F401
         print("✅ config.config imports successful")
     except ImportError as e:
         print(f"❌ config.config import failed: {e}")
         return False
 
     try:
-        from utils.logger import get_logger
+        from utils.logger import get_logger  # noqa: F401
         print("✅ utils.logger imports successful")
     except ImportError as e:
         print(f"❌ utils.logger import failed: {e}")
         return False
 
     try:
-        from train.features.agent_features import build_feature_frame
+        from train.features.agent_features import build_feature_frame  # noqa: F401
         print("✅ train.features imports successful")
     except ImportError as e:
         print(f"❌ train.features import failed: {e}")

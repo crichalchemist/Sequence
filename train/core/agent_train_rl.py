@@ -2,7 +2,7 @@
 RL-based execution policy training using advantage actor-critic (A2C).
 
 This trains the ExecutionPolicy from models/signal_policy.py to learn optimal
-execution decisions: when to act, which action to take (BUY/SELL/HOLD), and 
+execution decisions: when to act, which action to take (BUY/SELL/HOLD), and
 sizing constraints based on market state.
 
 Example:
@@ -69,15 +69,15 @@ def compute_gae(
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Compute Generalized Advantage Estimation (GAE).
-    
+
     GAE provides low-variance, smooth advantage estimates for policy gradient training.
-    
+
     Args:
         rewards: Shape (T,) - rewards at each timestep
         values: Shape (T,) - value estimates at each timestep
         gamma: Discount factor
         lambda_: GAE smoothing parameter (0: high bias, low variance; 1: low bias, high variance)
-    
+
     Returns:
         advantages: Shape (T,) - GAE advantages
         returns: Shape (T,) - discounted cumulative rewards
@@ -117,7 +117,7 @@ def train_epoch(
 ) -> dict:
     """
     Train policy for one epoch using A2C updates.
-    
+
     Returns:
         metrics: dict with 'policy_loss', 'value_loss', 'entropy', 'total_loss'
     """

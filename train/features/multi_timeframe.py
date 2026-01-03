@@ -56,7 +56,7 @@ def resample_to_timeframe(df: pd.DataFrame, timeframe: str) -> pd.DataFrame:
 
 def add_multi_timeframe_features(
         df: pd.DataFrame,
-        timeframes: list[str] = ['15min', '1h', '4h', '1D'],
+        timeframes: list[str] = None,
 ) -> pd.DataFrame:
     """Add multi-timeframe features to 1-minute data.
 
@@ -74,6 +74,8 @@ def add_multi_timeframe_features(
         DataFrame with added multi-timeframe features
     """
     # Make copy to avoid modifying original
+    if timeframes is None:
+        timeframes = ['15min', '1h', '4h', '1D']
     df = df.copy()
 
     # Ensure we have required columns
@@ -165,7 +167,7 @@ def add_daily_patterns(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def get_multi_timeframe_feature_count(
-        timeframes: list[str] = ['15min', '1h', '4h', '1D'],
+        timeframes: list[str] = None,
         include_daily_patterns: bool = True,
 ) -> int:
     """Calculate total number of multi-timeframe features.
@@ -178,6 +180,8 @@ def get_multi_timeframe_feature_count(
         Total feature count
     """
     # 4 features per timeframe
+    if timeframes is None:
+        timeframes = ['15min', '1h', '4h', '1D']
     multi_tf_count = len(timeframes) * 4
 
     # 5 daily pattern features

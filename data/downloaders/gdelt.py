@@ -310,10 +310,12 @@ def main():
 
     if args.resolution == "daily":
         generator = iter_days(start_dt, end_dt)
-        formatter = lambda dt: dt.strftime("%Y%m%d")
+        def formatter(dt):
+            return dt.strftime("%Y%m%d")
     else:
         generator = iter_timestamps(start_dt, end_dt, step_minutes=args.step_minutes)
-        formatter = lambda dt: dt.strftime("%Y%m%d%H%M%S")
+        def formatter(dt):
+            return dt.strftime("%Y%m%d%H%M%S")
 
     session = requests.Session()
     if args.insecure:

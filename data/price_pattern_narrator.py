@@ -294,7 +294,7 @@ def generate_pattern_text(
         # Combine descriptions
         combined_descriptions = [
             f"{price}. {vol}" if price and vol else (price or vol or f"{pair} trading normally")
-            for price, vol in zip(price_descriptions, volatility_descriptions)
+            for price, vol in zip(price_descriptions, volatility_descriptions, strict=False)
         ]
     else:
         combined_descriptions = price_descriptions

@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 class FeatureCacheManager:
     """Manages content-hash based caching for feature computation.
-    
+
     This cache system ensures that expensive feature computations are only
     performed when the underlying data or configuration changes, dramatically
     improving iteration speed during development and experimentation.
@@ -28,7 +28,7 @@ class FeatureCacheManager:
             enabled: bool = True
     ):
         """Initialize the feature cache manager.
-        
+
         Parameters
         ----------
         cache_dir : Union[str, Path]
@@ -82,13 +82,13 @@ class FeatureCacheManager:
             pair_name: str = ""
     ) -> str:
         """Compute a robust content hash for cache key generation.
-        
+
         The hash includes:
         - Raw data values and index (not just shape)
         - Feature configuration parameters
         - Intrinsic time conversion flag
         - Pair name for multi-pair caching
-        
+
         Parameters
         ----------
         raw_data : pd.DataFrame
@@ -99,7 +99,7 @@ class FeatureCacheManager:
             Whether intrinsic time conversion was used.
         pair_name : str
             Name of the currency pair for multi-pair caching.
-            
+
         Returns
         -------
         str
@@ -124,14 +124,14 @@ class FeatureCacheManager:
 
     def _is_cache_valid(self, cache_path: Path, cache_key: str) -> bool:
         """Check if a cache file is still valid.
-        
+
         Parameters
         ----------
         cache_path : Path
             Path to the cache file.
         cache_key : str
             Cache key to validate.
-            
+
         Returns
         -------
         bool
@@ -177,7 +177,7 @@ class FeatureCacheManager:
             pair_name: str = ""
     ) -> pd.DataFrame | None:
         """Retrieve cached features if available.
-        
+
         Parameters
         ----------
         raw_data : pd.DataFrame
@@ -188,7 +188,7 @@ class FeatureCacheManager:
             Whether intrinsic time conversion was used.
         pair_name : str
             Name of the currency pair.
-            
+
         Returns
         -------
         Optional[pd.DataFrame]
@@ -223,7 +223,7 @@ class FeatureCacheManager:
             pair_name: str
     ) -> None:
         """Save computed features to cache.
-        
+
         Parameters
         ----------
         feature_df : pd.DataFrame
@@ -247,7 +247,7 @@ class FeatureCacheManager:
 
     def cleanup_expired_cache(self) -> tuple[int, int]:
         """Clean up expired cache files and return cleanup statistics.
-        
+
         Returns
         -------
         Tuple[int, int]
@@ -291,7 +291,7 @@ class FeatureCacheManager:
 
     def get_cache_stats(self) -> dict[str, Any]:
         """Get cache performance statistics.
-        
+
         Returns
         -------
         Dict[str, Any]
@@ -318,7 +318,7 @@ class FeatureCacheManager:
 
     def clear_all_cache(self) -> int:
         """Clear all cache files and return number of files removed.
-        
+
         Returns
         -------
         int
@@ -354,7 +354,7 @@ class FeatureCacheManager:
 
 def get_default_cache_manager() -> FeatureCacheManager:
     """Get the default feature cache manager instance.
-    
+
     Returns
     -------
     FeatureCacheManager

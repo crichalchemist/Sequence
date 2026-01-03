@@ -13,10 +13,10 @@ logger = logging.getLogger(__name__)
 
 class AMPTrainer:
     """Unified AMP training wrapper with automatic gradient scaling.
-    
+
     Uses PyTorch's automatic mixed precision (AMP) to train with float16 tensors
     where possible, reducing memory usage and accelerating computation on modern GPUs.
-    
+
     Parameters
     ----------
     enabled : bool, optional
@@ -46,7 +46,7 @@ class AMPTrainer:
             zero_grad_first: bool = False
     ) -> None:
         """Perform backward pass with gradient scaling.
-        
+
         Parameters
         ----------
         loss : torch.Tensor
@@ -82,7 +82,7 @@ class AMPTrainer:
 
     def autocast_context(self):
         """Get autocast context manager for forward pass.
-        
+
         Returns
         -------
         context manager
@@ -94,12 +94,12 @@ class AMPTrainer:
 
     def scale_loss(self, loss: torch.Tensor) -> torch.Tensor:
         """Scale the loss for AMP training.
-        
+
         Parameters
         ----------
         loss : torch.Tensor
             Loss tensor to scale.
-            
+
         Returns
         -------
         torch.Tensor
@@ -111,7 +111,7 @@ class AMPTrainer:
 
     def step_optimizer(self, optimizer: torch.optim.Optimizer) -> None:
         """Step the optimizer with proper AMP handling.
-        
+
         Parameters
         ----------
         optimizer : torch.optim.Optimizer
@@ -125,7 +125,7 @@ class AMPTrainer:
 
     def unscale_gradients(self, optimizer: torch.optim.Optimizer) -> None:
         """Unscale gradients for gradient clipping.
-        
+
         Parameters
         ----------
         optimizer : torch.optim.Optimizer
@@ -136,7 +136,7 @@ class AMPTrainer:
 
     def is_enabled(self) -> bool:
         """Check if AMP is enabled.
-        
+
         Returns
         -------
         bool
@@ -146,7 +146,7 @@ class AMPTrainer:
 
     def is_fp16_enabled(self) -> bool:
         """Check if FP16 is enabled.
-        
+
         Returns
         -------
         bool
@@ -156,7 +156,7 @@ class AMPTrainer:
 
     def get_scaler(self) -> GradScaler | None:
         """Get the GradScaler instance.
-        
+
         Returns
         -------
         Optional[GradScaler]
@@ -171,12 +171,12 @@ AMPManager = AMPTrainer
 
 def create_amp_manager(cfg) -> AMPTrainer:
     """Create an AMP manager from training configuration.
-    
+
     Parameters
     ----------
     cfg : TrainingConfig
         Training configuration with AMP settings.
-        
+
     Returns
     -------
     AMPTrainer
@@ -191,12 +191,12 @@ def create_amp_manager(cfg) -> AMPTrainer:
 
 def convert_model_to_fp16(model: torch.nn.Module) -> torch.nn.Module:
     """Convert model parameters to FP16.
-    
+
     Parameters
     ----------
     model : torch.nn.Module
         Model to convert.
-        
+
     Returns
     -------
     torch.nn.Module

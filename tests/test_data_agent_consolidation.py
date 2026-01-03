@@ -150,7 +150,7 @@ class TestBaseDataAgent:
 
     def test_sequence_dataset(self, single_task_config, sample_data):
         """Test SequenceDataset creation and indexing."""
-        agent = BaseDataAgent(single_task_config)
+        BaseDataAgent(single_task_config)
         feature_cols = [col for col in sample_data.columns
                         if col not in {single_task_config.datetime_column, 'source_file'}]
 
@@ -284,7 +284,7 @@ class TestSingleTaskDataAgent:
         datasets = agent.build_datasets(sample_data)
 
         # Should produce same output format as original implementation
-        train_dataset = datasets['train']
+        datasets['train']
 
         # Check that we can create DataLoaders
         loader = agent.build_dataloaders(datasets, batch_size=8, num_workers=0)
@@ -475,7 +475,7 @@ def test_integration_with_existing_workflows(single_task_config, sample_data):
     loaders = agent.build_dataloaders(datasets, batch_size=8)
 
     # Test that we can iterate through batches
-    for split_name, loader in loaders.items():
+    for _split_name, loader in loaders.items():
         batch_count = 0
         for batch in loader:
             sequences, targets = batch

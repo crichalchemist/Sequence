@@ -180,7 +180,7 @@ class MultiTaskDataAgent(BaseDataAgent):
             range_size = max(high_price - low_price, 1e-8)
             body = close_price - open_price
             body_ratio = abs(body) / range_size
-            upper_wick = high_price - max(open_price, close_price)
+            high_price - max(open_price, close_price)
             lower_wick = min(open_price, close_price) - low_price
 
             if body_ratio < 0.1:

@@ -197,7 +197,7 @@ def main():
             preds_tfm = []
             preds_ensemble = []
 
-            for seq, close_seq in zip(sequences, close_windows):
+            for seq, close_seq in zip(sequences, close_windows, strict=False):
                 x = torch.tensor(seq, dtype=torch.float32, device=device).unsqueeze(0)
                 with torch.no_grad():
                     outputs, _ = dignity(x)

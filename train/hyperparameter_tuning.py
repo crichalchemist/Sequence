@@ -65,7 +65,7 @@ class HyperparameterGrid:
     def get_grid_size(self) -> int:
         """Calculate total number of configurations in grid."""
         sizes = []
-        for field_name, field_value in asdict(self).items():
+        for _field_name, field_value in asdict(self).items():
             if isinstance(field_value, list):
                 sizes.append(len(field_value))
         return int(np.prod(sizes))
@@ -254,7 +254,7 @@ class HyperparameterTuner:
 
         configs = []
         for combination in itertools.product(*values):
-            config = dict(zip(keys, combination))
+            config = dict(zip(keys, combination, strict=False))
             configs.append(config)
 
         return configs
@@ -308,7 +308,7 @@ class HyperparameterTuner:
             obs = env.reset()
 
             # Simple policy: random actions for now (replace with trained policy later)
-            for step in range(episode_length):
+            for _step in range(episode_length):
                 # Random policy for tuning (not optimal, just for hyperparameter comparison)
                 action_idx = random.choice([0, 1, 2])  # SELL, HOLD, BUY
                 order = action_converter.policy_to_order(
@@ -423,7 +423,7 @@ def main():
     tuner = HyperparameterTuner(base_exec_config, base_rl_config)
 
     # Run random search (faster for large grids)
-    results = tuner.random_search(grid, n_samples=20, n_episodes=5, episode_length=100, seed=42)
+    tuner.random_search(grid, n_samples=20, n_episodes=5, episode_length=100, seed=42)
 
     # Print top 5 configurations
     logger.info("\n" + "=" * 80)

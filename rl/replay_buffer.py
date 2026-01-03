@@ -84,7 +84,7 @@ class ReplayBuffer:
 
         # Gather transitions
         states, actions, rewards, next_states, dones = zip(
-            *[self.buffer[idx] for idx in indices]
+            *[self.buffer[idx] for idx in indices], strict=False
         )
 
         return (
@@ -216,7 +216,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
 
         # Gather transitions
         states, actions, rewards, next_states, dones = zip(
-            *[self.buffer[idx] for idx in indices]
+            *[self.buffer[idx] for idx in indices], strict=False
         )
 
         # Compute importance sampling weights
@@ -247,7 +247,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         # Update priorities: p_i = |TD_error| + ε
         priorities = np.abs(td_errors) + self.epsilon
 
-        for idx, priority in zip(indices, priorities):
+        for idx, priority in zip(indices, priorities, strict=False):
             self.priorities[idx] = priority
 
         # Track max priority for new transitions
