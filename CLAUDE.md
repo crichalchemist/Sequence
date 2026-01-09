@@ -26,6 +26,41 @@ python data/prepare_dataset.py \
   --t-in 120 \
   --t-out 10 \
   --include-sentiment
+
+# Collect fundamental economic data
+python run/scripts/example_fundamental_integration.py \
+  --pair EURUSD \
+  --start 2023-01-01 \
+  --end 2023-12-31 \
+  --output-dir data/fundamentals
+```
+
+### Fundamental Data Sources (New)
+
+```bash
+# Install fundamental data packages
+bash run/scripts/install_data_sources.sh
+
+# Set API keys
+export FRED_API_KEY="your_key"
+export COMTRADE_API_KEY="your_key"  # optional
+
+# Test installation
+python run/scripts/test_data_sources.py
+
+# Collect all fundamental data for a currency pair
+python -c "
+from data.extended_data_collection import collect_all_forex_fundamentals
+import os
+
+data = collect_all_forex_fundamentals(
+    currency_pair='EURUSD',
+    start_date='2023-01-01',
+    end_date='2023-12-31',
+    fred_api_key=os.getenv('FRED_API_KEY')
+)
+print(f'Collected: {sum(len(df) for df in data.values())} records')
+"
 ```
 
 ### Training
@@ -125,6 +160,11 @@ The codebase follows a modular architecture with clear separation of concerns:
    - `gdelt/`: GDELT news event download and parsing
    - `train/features/agent_features.py`: Technical indicator computation
    - `train/features/agent_sentiment.py`: FinBERT sentiment integration
+   - `extended_data_collection.py`: Fundamental data integration (NEW)
+   - `downloaders/comtrade_downloader.py`: UN Comtrade trade data (NEW)
+   - `downloaders/fred_downloader.py`: FRED economic indicators (NEW)
+   - `downloaders/ecb_shocks_downloader.py`: ECB monetary policy shocks (NEW)
+   - `pipeline_controller.py`: Unified data pipeline orchestration (updated)
 
 2. **Model Architecture** (`models/`)
    - `agent_hybrid.py`: SharedEncoder base class (CNN→LSTM→Attention)
@@ -253,6 +293,59 @@ Multi-stage process in `data/gdelt/`:
 3. `train/features/agent_sentiment.py`: Run FinBERT sentiment analysis
 4. `alignment.py`: Temporal alignment with OHLCV data
 
+### Fundamental Data Pipeline (NEW)
+
+Three new data sources complement price and sentiment data:
+
+**1. UN Comtrade - International Trade Data**
+- Source: UN Comtrade API (`data/downloaders/comtrade_downloader.py`)
+- Data: Monthly trade balance by country (exports - imports)
+- Usage: Trade flows affect currency demand
+- Supported pairs: EURUSD, GBPUSD, USDJPY, AUDUSD, EURJPY, EURGBP, USDCAD, USDCHF
+- API Key: Optional (500 records/request without key)
+
+**2. FRED - Federal Reserve Economic Data**
+- Source: FRED API (`data/downloaders/fred_downloader.py`)
+- Data: Interest rates, inflation (CPI), GDP, unemployment, retail sales
+- Usage: Central bank policy indicators and economic health metrics
+- Supported currencies: USD, EUR, GBP, JPY, AUD, CAD
+- API Key: Required (free at https://fred.stlouisfed.org/docs/api/api_key.html)
+
+**3. ECB Monetary Policy Shocks**
+- Source: Jarocinski & Karadi (2020) dataset (`data/downloaders/ecb_shocks_downloader.py`)
+- Data: Surprise changes in ECB policy stance (Monetary Policy and Central Bank Information shocks)
+- Usage: Identify unexpected policy shifts affecting EUR pairs
+- Supported pairs: EUR pairs only (EURUSD, EURGBP, EURJPY, EURCHF)
+- API Key: Not required (CSV data included)
+
+**Integration Pattern:**
+```python
+from data.extended_data_collection import collect_all_forex_fundamentals
+from data.pipeline_controller import controller
+
+# Unified collection
+data = collect_all_forex_fundamentals(
+    currency_pair="EURUSD",
+    start_date="2023-01-01",
+    end_date="2023-12-31"
+)
+
+# Or via pipeline controller
+data = controller.collect_fundamental_data(
+    currency_pair="EURUSD",
+    start_date="2023-01-01",
+    end_date="2023-12-31"
+)
+```
+
+**Data Merging:**
+Fundamental data is merged with price data using forward-fill to match high-frequency price data with lower-frequency fundamental indicators (monthly/quarterly). See `extended_data_collection.merge_with_price_data()`.
+
+**Documentation:**
+- Quick start: `docs/QUICK_START_DATA_SOURCES.md`
+- Full guide: `docs/NEW_DATA_SOURCES.md`
+- Integration summary: `INTEGRATION_SUMMARY.md`
+
 ### RL Environment Selection
 
 - Use **backtesting mode** for reproducible experiments and paper results
@@ -305,6 +398,11 @@ Core dependencies (see `requirements.txt`):
 - `transformers>=4.38.0`: FinBERT sentiment model
 - `backtesting>=0.3.2`: Backtesting library integration
 - `models/timesFM`: Google TimesFM foundation model (editable install via `-e ./models/timesFM`)
+
+Fundamental data packages (installed via `run/scripts/install_data_sources.sh`):
+- `comtradeapicall`: UN Comtrade API (editable install from `new data for collection/comtradeapicall`)
+- `fred`: Federal Reserve Economic Data API (editable install from `new data for collection/FRB`)
+- ECB shocks: CSV data only, no installation required (`new data for collection/jkshocks_update_ecb`)
 
 Development tools:
 - `pytest>=7.4.0`: Testing framework

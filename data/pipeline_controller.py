@@ -317,6 +317,71 @@ class DataPipelineController:
             logger.error(f"HistData collection failed: {e}")
             return None
 
+    def collect_fundamental_data(
+            self,
+            currency_pair: str,
+            start_date: str,
+            end_date: str,
+            comtrade_api_key: str | None = None,
+            fred_api_key: str | None = None,
+            include_sources: list[str] | None = None
+    ) -> dict[str, pd.DataFrame]:
+        """
+        Collect fundamental economic data for a forex pair.
+
+        Args:
+            currency_pair: Forex pair (e.g., "EURUSD")
+            start_date: Start date "YYYY-MM-DD"
+            end_date: End date "YYYY-MM-DD"
+            comtrade_api_key: UN Comtrade API key
+            fred_api_key: FRED API key
+            include_sources: Optional list of sources ["trade", "economic", "shocks"]
+
+        Returns:
+            Dictionary with DataFrames for each source
+        """
+        try:
+            from data.extended_data_collection import collect_all_forex_fundamentals
+
+            logger.info(f"Collecting fundamental data for {currency_pair}")
+
+            data = collect_all_forex_fundamentals(
+                currency_pair=currency_pair,
+                start_date=start_date,
+                end_date=end_date,
+                comtrade_api_key=comtrade_api_key,
+                fred_api_key=fred_api_key,
+                include_sources=include_sources
+            )
+
+            # Record in database
+            collection_id = f"{datetime.now().isoformat()}_{currency_pair}_fundamentals"
+
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.cursor()
+
+            total_rows = sum(len(df) for df in data.values() if not df.empty)
+
+            cursor.execute('''
+                           INSERT INTO data_collections
+                           (collection_id, data_source, symbol, start_date, end_date,
+                            resolution, rows_collected, status)
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                           ''', (
+                               collection_id, 'FUNDAMENTALS', currency_pair,
+                               start_date, end_date, 'mixed', total_rows, 'COMPLETED'
+                           ))
+
+            conn.commit()
+            conn.close()
+
+            logger.info(f"Collected {total_rows} fundamental records for {currency_pair}")
+            return data
+
+        except Exception as e:
+            logger.error(f"Fundamental data collection failed: {e}")
+            return {}
+
     def preprocess(
             self,
             data: pd.DataFrame,
