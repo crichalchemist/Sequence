@@ -108,7 +108,7 @@ def mock_ecb_shocks_daily():
 @pytest.fixture
 def mock_ecb_shocks_monthly():
     """Mock ECB monetary policy shocks (monthly frequency)."""
-    dates = pd.date_range("2023-01-01", "2023-05-01", freq="MS")
+    dates = pd.date_range("2023-01-01", "2023-05-01", freq="ME")
     return pd.DataFrame({
         "date": dates,
         "MP_median": [0.005, -0.003, 0.002, 0.001, -0.004],

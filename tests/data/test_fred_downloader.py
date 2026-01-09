@@ -127,7 +127,7 @@ class TestFredDownloadMultipleSeries:
         # Setup mock to return different data for each series
         def mock_response(series_id, start_date, end_date, api_key):
             return pd.DataFrame({
-                "date": pd.date_range("2023-01-01", periods=3, freq="MS"),
+                "date": pd.date_range("2023-01-01", periods=3, freq="ME"),
                 "value": [1.0, 2.0, 3.0],
                 "series_id": [series_id] * 3,
                 "series_name": [f"Series {series_id}"] * 3
@@ -157,7 +157,7 @@ class TestFredDownloadMultipleSeries:
             if series_id == "INVALID":
                 raise Exception("Series not found")
             return pd.DataFrame({
-                "date": pd.date_range("2023-01-01", periods=2, freq="MS"),
+                "date": pd.date_range("2023-01-01", periods=2, freq="ME"),
                 "value": [1.0, 2.0],
                 "series_id": [series_id] * 2,
                 "series_name": [f"Series {series_id}"] * 2
@@ -263,7 +263,7 @@ class TestForexEconomicIndicators:
     def test_get_forex_indicators_multiple_pairs(self, mock_download, pair):
         """Test that all major currency pairs work."""
         mock_download.return_value = pd.DataFrame({
-            "date": pd.date_range("2023-01-01", periods=1, freq="MS"),
+            "date": pd.date_range("2023-01-01", periods=1, freq="ME"),
             "value": [1.0],
             "series_id": ["TEST"],
             "series_name": ["Test"]

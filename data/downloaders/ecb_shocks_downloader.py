@@ -29,6 +29,7 @@ Usage:
 """
 
 import os
+from functools import lru_cache
 from pathlib import Path
 
 import pandas as pd
@@ -61,16 +62,12 @@ def _resolve_project_root() -> Path:
             return current
         current = current.parent
     
-    # Strategy 3: No silent fallback; proceed to raise clear error
-    
-    # Strategy 4: Raise clear error
+    # Strategy 3: Raise clear error
     raise RuntimeError(
         "Could not determine project root. Set PROJECT_ROOT environment variable or "
         "ensure .git, pyproject.toml, or setup.py exists in project hierarchy."
     )
 
-
-from functools import lru_cache
 
 # Lazy path resolution to avoid import-time failures
 @lru_cache(maxsize=None)
@@ -78,9 +75,11 @@ def get_ecb_shocks_dir() -> Path:
     root = _resolve_project_root()
     return root / "new_data_sources" / "jkshocks_update_ecb"
 
+@lru_cache(maxsize=None)
 def get_daily_shocks_file() -> Path:
     return get_ecb_shocks_dir() / "shocks_ecb_mpd_me_d.csv"
 
+@lru_cache(maxsize=None)
 def get_monthly_shocks_file() -> Path:
     return get_ecb_shocks_dir() / "shocks_ecb_mpd_me_m.csv"
 
@@ -121,7 +120,12 @@ def _load_ecb_shocks(file_path: Path, date_col_index: int = 0) -> pd.DataFrame:
         # Parse date column
         date_col = df.columns[date_col_index]
 
-        # Always parse into df['date'], drop original only if differently named
+        # Handle pre-existing 'date' column if different from source column
+        if 'date' in df.columns and date_col != 'date':
+            # Drop the pre-existing date column before assignment to avoid duplication
+            df = df.drop(columns=['date'])
+        
+        # Parse into df['date']; drop original only if differently named
         df['date'] = pd.to_datetime(df[date_col])
         if date_col != 'date':
             df = df.drop(columns=[date_col])

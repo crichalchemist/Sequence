@@ -8,7 +8,7 @@ without mocking the downloaders themselves (though APIs are still mocked).
 import pytest
 import pandas as pd
 from unittest.mock import patch, MagicMock
-from datetime import datetime, timedelta
+from datetime import datetime
 
 
 @pytest.mark.integration
@@ -31,7 +31,7 @@ class TestDataPipelineIntegration:
     def sample_trade_data(self):
         """Sample trade data from Comtrade."""
         return pd.DataFrame({
-            'date': pd.date_range('2023-01-01', periods=12, freq='MS'),
+            'date': pd.date_range('2023-01-01', periods=12, freq='ME'),
             'trade_balance': [100000 + i*10000 for i in range(12)],
             'imports': [1000000 + i*50000 for i in range(12)],
             'exports': [900000 + i*40000 for i in range(12)],
@@ -55,7 +55,7 @@ class TestDataPipelineIntegration:
     def sample_shock_data(self):
         """Sample monetary policy shock data from ECB."""
         return pd.DataFrame({
-            'date': pd.date_range('1999-01-04', periods=12, freq='Y'),
+            'date': pd.date_range('1999-01-04', periods=12, freq='YE'),
             'pc1': [0.12, -0.05, 0.03, -0.02, 0.08, 0.01, -0.03, 0.04, 
                     -0.01, 0.06, 0.02, -0.04],
             'STOXX50': [0.23, -0.10, 0.15, -0.08, 0.20, 0.05, -0.12, 0.18, 

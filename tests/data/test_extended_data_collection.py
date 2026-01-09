@@ -44,7 +44,7 @@ class TestCollectAllForexFundamentals:
         })
 
         mock_fred.return_value = pd.DataFrame({
-            "date": pd.date_range("2023-01-01", periods=3, freq="MS"),
+            "date": pd.date_range("2023-01-01", periods=3, freq="ME"),
             "value": [4.5, 4.6, 4.7],
             "series_id": ["FEDFUNDS"] * 3,
             "series_name": ["Fed Funds Rate"] * 3,
@@ -99,7 +99,7 @@ class TestCollectAllForexFundamentals:
     ):
         """Test collecting only specified sources."""
         mock_comtrade.return_value = pd.DataFrame({
-            "date": pd.date_range("2023-01-01", periods=2, freq="MS"),
+            "date": pd.date_range("2023-01-01", periods=2, freq="ME"),
             "trade_balance": [1000, 2000]
         })
 

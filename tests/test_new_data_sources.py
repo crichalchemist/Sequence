@@ -10,8 +10,8 @@ Comprehensive test coverage for:
 
 import pytest
 import pandas as pd
-from unittest.mock import Mock, patch, MagicMock
-from datetime import datetime, timedelta
+from unittest.mock import patch, MagicMock
+from datetime import datetime
 
 
 # ============================================================================

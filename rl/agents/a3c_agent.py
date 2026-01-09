@@ -360,6 +360,16 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        handlers=[
+            logging.StreamHandler(sys.stdout),
+            logging.FileHandler("a3c_training.log"),
+        ]
+    )
+    
     args = parse_args()
 
     try:

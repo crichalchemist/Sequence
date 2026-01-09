@@ -99,7 +99,7 @@ def mock_model_config():
 
 
 @pytest.fixture
-def mock_training_config():
+def mock_training_config(tmp_path):
     """Mock TrainingConfig with sensible defaults."""
     from config.config import TrainingConfig
     return TrainingConfig(
@@ -108,7 +108,7 @@ def mock_training_config():
         learning_rate=1e-3,
         weight_decay=0.0,
         device="cpu",
-        checkpoint_path="./test_checkpoints",
+        checkpoint_path=str(tmp_path / "checkpoints"),
         max_return_weight=0.1,
         topk_return_weight=0.1,
         topk_price_weight=0.1,

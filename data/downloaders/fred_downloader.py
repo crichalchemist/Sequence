@@ -28,6 +28,7 @@ Usage:
     )
 """
 
+import os
 import sys
 from pathlib import Path
 
@@ -82,8 +83,6 @@ FOREX_ECONOMIC_SERIES = {
     },
 }
 
-
-import os
 
 def download_series(
         series_id: str,

@@ -150,6 +150,19 @@ python utils/run_training_pipeline.py \
 
 ### Fundamental Data Collection (NEW)
 
+**Required API Keys:**
+
+- **FRED API Key** (Federal Reserve Economic Data):
+  - Sign up at: https://fred.stlouisfed.org/docs/api/fred/
+  - Free account required; 120 requests/minute limit
+  - Error handling: Script will log API errors with suggestions; check network connectivity if failures persist
+  - Set via: `export FRED_API_KEY="your_fred_api_key"`
+
+- **COMTRADE API Key** (Trade Statistics):
+  - Optional; available at: https://comtradeplus.un.org/
+  - Enhances trade data collection; falls back to public data if unavailable
+  - Set via: `export COMTRADE_API_KEY="your_comtrade_key"`
+
 ```bash
 # Install fundamental data sources
 bash run/scripts/install_data_sources.sh
