@@ -156,7 +156,7 @@ def add_price_action_patterns(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-# TODO(human): Implement trend strength detection
+# Low priority: finalize trend strength detection (e.g., ADX) in add_trend_strength_features.
 def add_trend_strength_features(df: pd.DataFrame, window: int = 14) -> pd.DataFrame:
     """
     Add Average Directional Index (ADX) for trend strength detection.

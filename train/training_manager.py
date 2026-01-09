@@ -207,7 +207,9 @@ class TrainingManager:
                         _, job_id, job = self.job_queue.get(timeout=1)
                         self._execute_job(job)
                     except queue.Empty:
-                        pass
+                        # Queue timeout (1s) chosen to balance responsiveness to new
+                        # jobs with CPU usage from frequent polling; if no job is
+                        # available, simply continue and try again on the next loop.
 
                 # Update GPU stats
                 self.gpu_monitor.record_stats()

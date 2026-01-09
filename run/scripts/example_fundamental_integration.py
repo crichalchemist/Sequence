@@ -38,8 +38,9 @@ def main():
     parser.add_argument("--end", default="2023-12-31", help="End date (YYYY-MM-DD)")
     parser.add_argument("--output-dir", default="data/fundamentals", help="Output directory")
     parser.add_argument("--price-data", help="Optional: Path to price data to merge with")
+    parser.add_argument("--date-column", default="datetime", help="Name of date column in price data (default: datetime)")
     parser.add_argument("--sources", nargs="+", default=None,
-                       help="Data sources to collect (trade economic shocks)")
+                       help="Data sources to collect (space-separated list: trade economic shocks). Example: --sources trade economic")
     args = parser.parse_args()
 
     logger.info("="*70)
@@ -67,9 +68,11 @@ def main():
         # Display summary
         logger.info("\nData Collection Summary:")
         for source, df in fundamentals.items():
-            if not df.empty:
+            if not df.empty and 'date' in df.columns:
                 logger.info(f"  ✅ {source:12s}: {len(df):6d} records, "
                           f"{df['date'].min()} to {df['date'].max()}")
+            elif not df.empty:
+                logger.info(f"  ✅ {source:12s}: {len(df):6d} records")
             else:
                 logger.info(f"  ⚠️  {source:12s}: No data")
 
@@ -113,7 +116,7 @@ def main():
             if price_file.suffix == '.parquet':
                 price_df = pd.read_parquet(price_file)
             elif price_file.suffix == '.csv':
-                price_df = pd.read_csv(price_file, parse_dates=['datetime'])
+                price_df = pd.read_csv(price_file, parse_dates=[args.date_column])
             else:
                 logger.error(f"Unsupported price data format: {price_file.suffix}")
                 return 1
@@ -121,7 +124,7 @@ def main():
             logger.info(f"  Loaded price data: {len(price_df)} rows, {len(price_df.columns)} columns")
 
             # Merge
-            merged_df = merge_with_price_data(fundamentals, price_df, date_column="datetime")
+            merged_df = merge_with_price_data(fundamentals, price_df, date_column=args.date_column)
 
             # Save merged dataset
             output_file = Path(args.output_dir) / f"{args.pair}_merged.parquet"

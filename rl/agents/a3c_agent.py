@@ -1,4 +1,6 @@
 import argparse
+import logging
+import queue
 import sys
 import time
 from collections.abc import Callable
@@ -21,6 +23,8 @@ if str(ROOT / "run") not in sys.path:
 
 from config.config import ModelConfig  # noqa: E402
 from models.agent_hybrid import TemporalAttention  # noqa: E402
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -192,8 +196,14 @@ class A3CAgent:
                     if step - last_log >= self.cfg.log_interval:
                         print(f"[global_step={step}] mean_loss={loss:.4f}")
                         last_log = step
-            except Exception:
+            except queue.Empty:
+                # Queue communication timeout - ignore
                 pass
+            except Exception:
+                # Unexpected error - log and continue
+                logger.exception(
+                    "Error while retrieving or processing message from training log queue in train()"
+                )
             time.sleep(0.1)
 
         for p in processes:

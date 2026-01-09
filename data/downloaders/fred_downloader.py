@@ -11,13 +11,12 @@ Data Source:
 
 Dependencies:
     Install from local package:
-    pip install -e "new data for collection/FRB"
+    pip install -e ./new_data_sources/FRB
 
 Usage:
     from data.downloaders.fred_downloader import (
         download_multiple_series,
-        get_forex_economic_indicators,
-        download_category_series
+        get_forex_economic_indicators
     )
 
     # Download key economic indicators for EUR/USD analysis
@@ -84,6 +83,8 @@ FOREX_ECONOMIC_SERIES = {
 }
 
 
+import os
+
 def download_series(
         series_id: str,
         start_date: str,
@@ -108,14 +109,12 @@ def download_series(
                 date  value  series_id    series_name
         0 2023-01-01   4.33  FEDFUNDS  Federal Funds Rate
     """
-    import os
-
     try:
         from fred import Fred
     except ImportError:
         raise ImportError(
             "fred package not installed. Install with: "
-            "pip install -e 'new data for collection/FRB'"
+            "pip install -e ./new_data_sources/FRB"
         )
 
     api_key = api_key or os.getenv("FRED_API_KEY")
@@ -141,9 +140,13 @@ def download_series(
             logger.warning(f"[fred] No data returned for series {series_id}")
             return pd.DataFrame()
 
-        # Get series metadata
+        # Get series metadata (may return None)
         series_info = fred.series.details(series_id=series_id)
-        series_name = series_info.get('title', series_id)
+        if series_info and isinstance(series_info, dict):
+            series_name = series_info.get('title', series_id)
+        else:
+            logger.warning(f"[fred] Could not retrieve metadata for series {series_id}")
+            series_name = f"Unknown Series: {series_id}"
 
         # Convert to DataFrame
         df = pd.DataFrame(series_data)

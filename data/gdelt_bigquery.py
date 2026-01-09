@@ -1,6 +1,10 @@
 """
 GDELT BigQuery Integration for Sentiment Analysis
 
+**STATUS: EXPERIMENTAL - Limited production use**
+This module is experimental and only used in prebuild_cognee_graph.py.
+For production GDELT data, use data/downloaders/gdelt.py instead.
+
 This module queries GDELT GKG (Global Knowledge Graph) data from Google BigQuery
 to extract sentiment scores for financial news. Designed for use in Google Colab
 where BigQuery access is free for public datasets.
@@ -88,9 +92,8 @@ def _parse_v2tone(tone_string: str) -> float:
         if len(parts) >= 1:
             return float(parts[0])  # First field is average tone
     except (ValueError, IndexError):
-        pass
-
-    return 0.0
+        # Invalid format - return default
+        return 0.0
 
 
 def query_gdelt_sentiment(

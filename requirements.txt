@@ -12,6 +12,11 @@ fredapi>=0.5.1
 histdata>=1.1
 yfinance>=0.2.50
 
+# New data sources - install from local packages
+# pip install -e "new_data_sources/comtradeapicall"
+# pip install -e "new_data_sources/FRB"
+# ECB shocks: No installation needed (CSV data only)
+
 # ML and NLP
 datasets>=2.19.0
 transformers>=4.40.0
@@ -20,6 +25,9 @@ bitsandbytes>=0.44.0
 
 # Testing and code quality
 pytest>=7.4.0
+pytest-cov>=4.1.0
+pytest-mock>=3.12.0
+hypothesis>=6.92.0
 testcontainers>=4.6.0
 ruff>=0.6.0
 

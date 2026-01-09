@@ -8,6 +8,7 @@ Usage:
 """
 
 import sys
+import pandas as pd
 from pathlib import Path
 
 # Add project root to path
@@ -61,12 +62,34 @@ def test_ecb_shocks():
     
     try:
         from data.downloaders.ecb_shocks_downloader import load_ecb_shocks_daily
-        
+
         df = load_ecb_shocks_daily()
+
+        if df.empty:
+            logger.warning("⚠️  No ECB shock data loaded")
+            return False
+        
+        # Always log count and columns once
         logger.info(f"✅ Loaded {len(df)} ECB shock observations")
-        logger.info(f"   Date range: {df['date'].min()} to {df['date'].max()}")
         logger.info(f"   Columns: {list(df.columns)}")
+        
+        # Check if 'date' column is present and validate its contents
+        if 'date' not in df.columns:
+            logger.error("   Missing 'date' column - ECB shocks data invalid")
+            return False
+        
+        # Convert date column to datetime and validate
+        df['date'] = pd.to_datetime(df['date'], errors='coerce')
+        valid_dates = df['date'].dropna()
+        
+        if len(valid_dates) == 0:
+            logger.error("   Missing or invalid 'date' values - ECB shocks data invalid")
+            return False
+        
+        # Log date range from valid dates
+        logger.info(f"   Date range: {valid_dates.min()} to {valid_dates.max()}")
         return True
+            
     except Exception as e:
         logger.error(f"❌ ECB shocks test failed: {e}")
         return False
@@ -99,7 +122,7 @@ def test_comtrade(api_key=None):
             return True
         else:
             logger.warning("⚠️  No data returned - may need valid API key")
-            return True  # Not a failure, just no data
+            return False
     except Exception as e:
         logger.error(f"❌ Comtrade test failed: {e}")
         return False

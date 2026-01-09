@@ -1,6 +1,5 @@
 # Sequence – Deep Learning Framework for Multi-Asset Market Prediction
 
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c.svg)](https://pytorch.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
@@ -149,6 +148,32 @@ python utils/run_training_pipeline.py \
   --rl-num-workers 8
 ```
 
+### Fundamental Data Collection (NEW)
+
+```bash
+# Install fundamental data sources
+bash run/scripts/install_data_sources.sh
+
+# Set API keys
+export FRED_API_KEY="your_fred_api_key"
+export COMTRADE_API_KEY="your_comtrade_key"  # optional
+
+# Collect economic data for forex pairs
+python run/scripts/example_fundamental_integration.py \
+  --pair EURUSD \
+  --start 2023-01-01 \
+  --end 2023-12-31 \
+  --output-dir data/fundamentals \
+  --price-data data/prepared/EURUSD_1h.parquet
+```
+
+**New data sources include:**
+- **UN Comtrade**: International trade balance data
+- **FRED**: Federal Reserve economic indicators (interest rates, inflation, GDP, unemployment)
+- **ECB Shocks**: Monetary policy surprise measures (EUR pairs only)
+
+See [docs/QUICK_START_DATA_SOURCES.md](docs/QUICK_START_DATA_SOURCES.md) for details.
+
 ### Evaluation
 
 ```bash
@@ -179,6 +204,9 @@ python eval/ensemble_timesfm.py \
 Raw Data Sources
 ├── HistData OHLCV (1-minute bars) - FX, Crypto, Commodities
 ├── GDELT News Events (Global Knowledge Graph)
+├── FRED Economic Indicators (Interest rates, inflation, GDP, etc.)
+├── UN Comtrade Trade Data (Import/export balance)
+├── ECB Monetary Shocks (Policy surprises for EUR pairs)
 └── TimesFM (Google foundation model - evaluation only)
                     ↓
 Asset Detection & Configuration
@@ -188,6 +216,7 @@ Asset Detection & Configuration
 Feature Engineering
 ├── Technical Indicators (SMA, EMA, RSI, Bollinger, ATR, etc.)
 │   └── Asset-aware windows (RSI7 for crypto, RSI14 for FX)
+├── Fundamental Features (Interest rate differentials, trade balance, etc.)
 ├── Intrinsic Time (Directional-change transformation)
 ├── FinBERT Sentiment (GDELT → FinBERT-tone → sentiment scores)
 └── Feature Normalization

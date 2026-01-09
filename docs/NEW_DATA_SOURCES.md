@@ -2,6 +2,33 @@
 
 This document describes the three new fundamental data sources integrated into the Sequence trading system.
 
+## Quick Start (5 minutes)
+
+```bash
+# 1. Install packages
+bash run/scripts/install_data_sources.sh
+
+# 2. Set up API keys
+export FRED_API_KEY="your_fred_key_here"
+export COMTRADE_API_KEY="your_comtrade_key_here"  # optional
+
+# 3. Test installation
+python run/scripts/test_data_sources.py
+
+# 4. Collect data
+python run/scripts/example_fundamental_integration.py \
+    --pair EURUSD \
+    --start 2023-01-01 \
+    --end 2023-12-31 \
+    --output-dir data/fundamentals
+```
+
+**Get API Keys:**
+- **FRED** (required): https://fred.stlouisfed.org/docs/api/api_key.html
+- **Comtrade** (optional): https://comtradeplus.un.org/
+
+---
+
 ## Overview
 
 Three new data sources have been added to enhance forex prediction with macroeconomic fundamentals:
@@ -22,10 +49,10 @@ bash run/scripts/install_data_sources.sh
 
 ```bash
 # Install UN Comtrade API
-pip install -e "new data for collection/comtradeapicall"
+pip install -e ./new_data_sources/comtradeapicall
 
 # Install FRED API
-pip install -e "new data for collection/FRB"
+pip install -e ./new_data_sources/FRB
 
 # ECB shocks: No installation needed (CSV data)
 ```
@@ -52,7 +79,7 @@ pip install -e "new data for collection/FRB"
 
 ### ECB Shocks
 
-No API key required - data is loaded from CSV files in `new data for collection/jkshocks_update_ecb/`.
+No API key required - data is loaded from CSV files in `new_data_sources/jkshocks_update_ecb/`.
 
 ## Usage Examples
 
@@ -264,10 +291,14 @@ def add_fundamental_features(df):
     """Add derived features from fundamental data."""
     # Interest rate differential (for EURUSD)
     if 'economic_interest_rate' in df.columns:
-        df['interest_rate_diff'] = (
-            df[df['economic_currency'] == 'EUR']['economic_interest_rate'] -
-            df[df['economic_currency'] == 'USD']['economic_interest_rate']
+        # Pivot to get one row per date with separate columns for each currency
+        rate_pivot = df.pivot_table(
+            index=df.index,
+            columns='economic_currency',
+            values='economic_interest_rate'
         )
+        if 'EUR' in rate_pivot.columns and 'USD' in rate_pivot.columns:
+            df['interest_rate_diff'] = rate_pivot['EUR'] - rate_pivot['USD']
     
     # Trade balance momentum
     if 'trade_trade_balance' in df.columns:
@@ -309,8 +340,8 @@ ingest_dataframe(formatted_data, source="FRED_economic")
 If you get `ModuleNotFoundError`:
 ```bash
 # Ensure packages are installed
-pip install -e "new data for collection/comtradeapicall"
-pip install -e "new data for collection/FRB"
+pip install -e "new_data_sources/comtradeapicall"
+pip install -e "new_data_sources/FRB"
 ```
 
 ### API Rate Limits
@@ -328,7 +359,7 @@ pip install -e "new data for collection/FRB"
 
 Ensure CSV files exist:
 ```bash
-ls "new data for collection/jkshocks_update_ecb/"
+ls "new_data_sources/jkshocks_update_ecb/"
 # Should show:
 # - shocks_ecb_mpd_me_d.csv
 # - shocks_ecb_mpd_me_m.csv

@@ -25,15 +25,10 @@ Usage:
     )
 """
 
-import sys
+from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
-
-# Add project root to path
-ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
 
 from utils.logger import get_logger
 
@@ -222,9 +217,13 @@ def collect_all_forex_fundamentals(
 
     result = {}
 
-    # Extract years from dates
-    start_year = int(start_date[:4])
-    end_year = int(end_date[:4])
+    # Extract years from dates with robust parsing
+    try:
+        start_year = datetime.strptime(start_date, "%Y-%m-%d").year
+        end_year = datetime.strptime(end_date, "%Y-%m-%d").year
+    except ValueError:
+        logger.error("[extended] Invalid date format for start_date or end_date. Expected YYYY-MM-DD")
+        raise ValueError("Dates must be in YYYY-MM-DD format.")
 
     # Collect trade data
     if "trade" in include_sources:
@@ -315,7 +314,8 @@ def save_fundamental_data(
 def merge_with_price_data(
         fundamentals: dict[str, pd.DataFrame],
         price_df: pd.DataFrame,
-        date_column: str = "datetime"
+        date_column: str = "datetime",
+        resample_freq: str = "1H"
 ) -> pd.DataFrame:
     """
     Merge fundamental data with price data for training.
@@ -323,7 +323,8 @@ def merge_with_price_data(
     Args:
         fundamentals: Dictionary of fundamental DataFrames
         price_df: Price DataFrame with datetime column
-        date_column: Name of the datetime column in price_df
+        date_column: Name of the datetime column in price_df (or any common timestamp column)
+        resample_freq: Resample frequency for fundamental data (e.g., '1H', '1D')
 
     Returns:
         Merged DataFrame with all data sources aligned by date
@@ -331,16 +332,31 @@ def merge_with_price_data(
     Example:
         >>> fundamentals = collect_all_forex_fundamentals("EURUSD", "2023-01-01", "2023-12-31")
         >>> price_df = pd.read_parquet("data/prepared/EURUSD_1h.parquet")
-        >>> merged = merge_with_price_data(fundamentals, price_df)
+        >>> merged = merge_with_price_data(fundamentals, price_df, resample_freq='1H')
     """
     logger.info("[extended] Merging fundamental data with price data")
 
+    # Detect timestamp column if not found
+    possible_date_cols = [date_column, 'date', 'timestamp', 'period']
+    timestamp_col = None
+    for col in possible_date_cols:
+        if col in price_df.columns:
+            timestamp_col = col
+            break
+
+    if timestamp_col is None:
+        raise ValueError(
+            f"No timestamp column found. Tried: {possible_date_cols}. "
+            f"Available columns: {list(price_df.columns)}"
+        )
+
     # Ensure price data has datetime index
-    if date_column in price_df.columns:
-        price_df = price_df.set_index(date_column)
+    price_df = price_df.copy()
+    price_df[timestamp_col] = pd.to_datetime(price_df[timestamp_col])
+    price_df = price_df.set_index(timestamp_col)
 
     # Start with price data
-    merged = price_df.copy()
+    merged = price_df
 
     # Merge each fundamental source
     for source, df in fundamentals.items():
@@ -354,7 +370,7 @@ def merge_with_price_data(
             df = df.set_index('date')
 
         # Forward fill fundamental data to match price frequency
-        df_resampled = df.resample('1H').ffill()
+        df_resampled = df.resample(resample_freq).ffill()
 
         # Add source prefix to columns
         df_resampled = df_resampled.add_prefix(f"{source}_")

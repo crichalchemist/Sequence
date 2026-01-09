@@ -28,24 +28,119 @@ Usage:
     monthly_shocks = load_ecb_shocks_monthly()
 """
 
-import sys
+import os
 from pathlib import Path
 
 import pandas as pd
-
-# Add project root to path
-ROOT = Path(__file__).resolve().parents[2]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
 
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-# Path to ECB shocks data
-ECB_SHOCKS_DIR = ROOT / "new data for collection" / "jkshocks_update_ecb"
-DAILY_SHOCKS_FILE = ECB_SHOCKS_DIR / "shocks_ecb_mpd_me_d.csv"
-MONTHLY_SHOCKS_FILE = ECB_SHOCKS_DIR / "shocks_ecb_mpd_me_m.csv"
+
+def _resolve_project_root() -> Path:
+    """
+    Resolve the project root directory robustly.
+    
+    Strategy:
+    1. Check PROJECT_ROOT environment variable
+    2. Walk up from this file looking for markers (.git, pyproject.toml, setup.py)
+    3. Fallback to parent directories
+    4. Raise clear error if not found
+    """
+    # Strategy 1: Environment variable
+    if env_root := os.getenv("PROJECT_ROOT"):
+        root = Path(env_root)
+        if root.is_dir():
+            return root
+    
+    # Strategy 2: Look for markers (.git, pyproject.toml, setup.py)
+    current = Path(__file__).resolve().parent
+    for _ in range(10):  # Limit search depth
+        if any((current / marker).exists() for marker in [".git", "pyproject.toml", "setup.py"]):
+            return current
+        current = current.parent
+    
+    # Strategy 3: No silent fallback; proceed to raise clear error
+    
+    # Strategy 4: Raise clear error
+    raise RuntimeError(
+        "Could not determine project root. Set PROJECT_ROOT environment variable or "
+        "ensure .git, pyproject.toml, or setup.py exists in project hierarchy."
+    )
+
+
+from functools import lru_cache
+
+# Lazy path resolution to avoid import-time failures
+@lru_cache(maxsize=None)
+def get_ecb_shocks_dir() -> Path:
+    root = _resolve_project_root()
+    return root / "new_data_sources" / "jkshocks_update_ecb"
+
+def get_daily_shocks_file() -> Path:
+    return get_ecb_shocks_dir() / "shocks_ecb_mpd_me_d.csv"
+
+def get_monthly_shocks_file() -> Path:
+    return get_ecb_shocks_dir() / "shocks_ecb_mpd_me_m.csv"
+
+
+def _load_ecb_shocks(file_path: Path, date_col_index: int = 0) -> pd.DataFrame:
+    """
+    Helper function to load and process ECB shocks from CSV.
+
+    Args:
+        file_path: Path to the shocks CSV file
+        date_col_index: Index of the date column (default: 0)
+
+    Returns:
+        DataFrame with parsed dates and numeric shock columns
+    """
+    if not file_path.exists():
+        raise FileNotFoundError(
+            f"ECB shocks file not found: {file_path}. "
+            f"Ensure the file exists at the specified path."
+        )
+
+    logger.info(f"[ecb_shocks] Loading shocks from {file_path}")
+
+    try:
+        df = pd.read_csv(file_path)
+
+        # Validate date_col_index before using it
+        if not isinstance(date_col_index, int):
+            raise TypeError(
+                f"date_col_index must be an integer, got {type(date_col_index).__name__}"
+            )
+        if date_col_index < 0 or date_col_index >= len(df.columns):
+            raise ValueError(
+                f"date_col_index {date_col_index} out of range for "
+                f"DataFrame with {len(df.columns)} columns"
+            )
+
+        # Parse date column
+        date_col = df.columns[date_col_index]
+
+        # Always parse into df['date'], drop original only if differently named
+        df['date'] = pd.to_datetime(df[date_col])
+        if date_col != 'date':
+            df = df.drop(columns=[date_col])
+
+        # Ensure numeric columns
+        numeric_cols = ['pc1', 'STOXX50', 'MP_pm', 'CBI_pm', 'MP_median', 'CBI_median']
+        for col in numeric_cols:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+
+        # Sort and reset index
+        df = df.sort_values('date').reset_index(drop=True)
+
+        logger.info(f"[ecb_shocks] Loaded {len(df)} shock observations")
+        return df
+
+    except Exception as e:
+        logger.error(f"[ecb_shocks] Error loading shocks: {e}")
+        raise
 
 
 def load_ecb_shocks_daily() -> pd.DataFrame:
@@ -68,36 +163,7 @@ def load_ecb_shocks_daily() -> pd.DataFrame:
                 date      pc1  STOXX50   MP_pm  CBI_pm  MP_median  CBI_median
         0 1999-01-04  0.12345  0.23456  0.1000  0.0234     0.0950      0.0284
     """
-    if not DAILY_SHOCKS_FILE.exists():
-        raise FileNotFoundError(
-            f"ECB daily shocks file not found: {DAILY_SHOCKS_FILE}. "
-            "Ensure 'new data for collection/jkshocks_update_ecb/shocks_ecb_mpd_me_d.csv' exists."
-        )
-
-    logger.info(f"[ecb_shocks] Loading daily shocks from {DAILY_SHOCKS_FILE}")
-
-    try:
-        df = pd.read_csv(DAILY_SHOCKS_FILE)
-
-        # Parse date column (first column)
-        date_col = df.columns[0]
-        df['date'] = pd.to_datetime(df[date_col])
-        df = df.drop(columns=[date_col])
-
-        # Ensure numeric columns
-        numeric_cols = ['pc1', 'STOXX50', 'MP_pm', 'CBI_pm', 'MP_median', 'CBI_median']
-        for col in numeric_cols:
-            if col in df.columns:
-                df[col] = pd.to_numeric(df[col], errors='coerce')
-
-        df = df.sort_values('date').reset_index(drop=True)
-
-        logger.info(f"[ecb_shocks] Loaded {len(df)} daily shock observations")
-        return df
-
-    except Exception as e:
-        logger.error(f"[ecb_shocks] Error loading daily shocks: {e}")
-        raise
+    return _load_ecb_shocks(get_daily_shocks_file())
 
 
 def load_ecb_shocks_monthly() -> pd.DataFrame:
@@ -114,36 +180,7 @@ def load_ecb_shocks_monthly() -> pd.DataFrame:
                 date      pc1  STOXX50   MP_pm  CBI_pm  MP_median  CBI_median
         0 1999-01-01  0.12345  0.23456  0.1000  0.0234     0.0950      0.0284
     """
-    if not MONTHLY_SHOCKS_FILE.exists():
-        raise FileNotFoundError(
-            f"ECB monthly shocks file not found: {MONTHLY_SHOCKS_FILE}. "
-            "Ensure 'new data for collection/jkshocks_update_ecb/shocks_ecb_mpd_me_m.csv' exists."
-        )
-
-    logger.info(f"[ecb_shocks] Loading monthly shocks from {MONTHLY_SHOCKS_FILE}")
-
-    try:
-        df = pd.read_csv(MONTHLY_SHOCKS_FILE)
-
-        # Parse date column (first column)
-        date_col = df.columns[0]
-        df['date'] = pd.to_datetime(df[date_col])
-        df = df.drop(columns=[date_col])
-
-        # Ensure numeric columns
-        numeric_cols = ['pc1', 'STOXX50', 'MP_pm', 'CBI_pm', 'MP_median', 'CBI_median']
-        for col in numeric_cols:
-            if col in df.columns:
-                df[col] = pd.to_numeric(df[col], errors='coerce')
-
-        df = df.sort_values('date').reset_index(drop=True)
-
-        logger.info(f"[ecb_shocks] Loaded {len(df)} monthly shock observations")
-        return df
-
-    except Exception as e:
-        logger.error(f"[ecb_shocks] Error loading monthly shocks: {e}")
-        raise
+    return _load_ecb_shocks(get_monthly_shocks_file())
 
 
 def get_monetary_policy_events(
@@ -194,6 +231,9 @@ def get_monetary_policy_events(
         else:
             logger.warning("[ecb_shocks] MP_median column not found, cannot filter by threshold")
 
+    # Reset index after filtering
+    df = df.reset_index(drop=True)
+
     logger.info(f"[ecb_shocks] Retrieved {len(df)} monetary policy events")
     return df
 
@@ -206,7 +246,8 @@ def classify_shock_type(row: pd.Series) -> str:
         row: DataFrame row with MP_median and CBI_median columns
 
     Returns:
-        Shock classification: "dovish_MP", "hawkish_MP", "positive_CBI", "negative_CBI", "mixed"
+        Shock classification: one of "hawkish_MP", "dovish_MP", "neutral_MP",
+        "positive_CBI", "negative_CBI", or "neutral_CBI"
     """
     mp = row.get('MP_median', 0)
     cbi = row.get('CBI_median', 0)
@@ -237,17 +278,25 @@ def format_for_cognee(df: pd.DataFrame) -> pd.DataFrame:
     # Add shock classification
     df['shock_type'] = df.apply(classify_shock_type, axis=1)
 
-    df['full_text'] = df.apply(
-        lambda row: (
-            f"ECB Monetary Policy Event on {row['date'].strftime('%Y-%m-%d')}: "
+    def _format_row(row):
+        """Format a single row with safe date handling."""
+        date_str = "unknown date"
+        if pd.notna(row.get('date')):
+            try:
+                date_str = row['date'].strftime('%Y-%m-%d')
+            except (AttributeError, ValueError):
+                pass
+
+        return (
+            f"ECB Monetary Policy Event on {date_str}: "
             f"Policy indicator surprise (pc1): {row.get('pc1', 0):.4f}, "
             f"Monetary Policy shock: {row.get('MP_median', 0):.4f}, "
             f"Central Bank Information shock: {row.get('CBI_median', 0):.4f}. "
             f"Classification: {row.get('shock_type', 'unknown')}. "
             f"Euro Stoxx 50 change: {row.get('STOXX50', 0):.4f}."
-        ),
-        axis=1
-    )
+        )
+
+    df['full_text'] = df.apply(_format_row, axis=1)
 
     return df
 

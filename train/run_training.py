@@ -44,7 +44,6 @@ from data.prepare_dataset import process_pair  # noqa: E402
 from models.signal_policy import ExecutionPolicy, SignalModel  # noqa: E402
 from train.core.agent_train import (  # noqa: E402
     pretrain_signal_model,
-    train_execution_policy,
 )
 
 
@@ -178,13 +177,11 @@ def main():
             detach_signal=args.detach_signal,
             checkpoint_path=str(policy_ckpt),
         )
-        policy_head = ExecutionPolicy(policy_cfg)
-        train_execution_policy(
-            signal_model,
-            policy_head,
-            train_loader,
-            rl_cfg,
-            task_type=args.task_type,
+        # NOTE: Fake RL training removed. Use train/core/env_based_rl_training.py for real RL.
+        # For supervised policy training, use pretrain_signal_model above.
+        print(
+            f"[{pair_name}] Skipping deprecated fake RL training. "
+            "Use train/core/env_based_rl_training.py for real RL."
         )
 
         results[pair_name] = {"signal_history": signal_history}

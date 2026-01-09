@@ -42,6 +42,11 @@ python run/scripts/example_fundamental_integration.py \
 bash run/scripts/install_data_sources.sh
 
 # Set API keys
+# SECURITY: Store keys in .env file (already in .gitignore) for local development
+# Production: Use OS credential stores (Keychain, Vault) or secret managers (AWS Secrets Manager)
+# NEVER commit API keys to version control!
+# FRED_API_KEY is REQUIRED - get free key at https://fred.stlouisfed.org/docs/api/api_key.html
+# COMTRADE_API_KEY is optional (500 records/request without key)
 export FRED_API_KEY="your_key"
 export COMTRADE_API_KEY="your_key"  # optional
 
@@ -312,7 +317,8 @@ Three new data sources complement price and sentiment data:
 - API Key: Required (free at https://fred.stlouisfed.org/docs/api/api_key.html)
 
 **3. ECB Monetary Policy Shocks**
-- Source: Jarocinski & Karadi (2020) dataset (`data/downloaders/ecb_shocks_downloader.py`)
+- Source: Jarociński & Karadi (2020), "Deconstructing Monetary Policy Surprises—The Role of Information Shocks", _American Economic Journal: Macroeconomics_ 12(2): 1-43. DOI: [10.1257/mac.20180090](https://doi.org/10.1257/mac.20180090)
+- Dataset: Updated series from [ECB website](https://www.ecb.europa.eu/pub/research/working-papers/html/index.en.html) (`data/downloaders/ecb_shocks_downloader.py`)
 - Data: Surprise changes in ECB policy stance (Monetary Policy and Central Bank Information shocks)
 - Usage: Identify unexpected policy shifts affecting EUR pairs
 - Supported pairs: EUR pairs only (EURUSD, EURGBP, EURJPY, EURCHF)
@@ -341,10 +347,13 @@ data = controller.collect_fundamental_data(
 **Data Merging:**
 Fundamental data is merged with price data using forward-fill to match high-frequency price data with lower-frequency fundamental indicators (monthly/quarterly). See `extended_data_collection.merge_with_price_data()`.
 
+**CAUTION on Forward-Fill:** Forward-filling propagates the last known fundamental value forward in time, which is appropriate for slowly-changing economic indicators (e.g., GDP, trade balances). However, this can be problematic during volatile periods when stale monthly/quarterly data may not reflect current conditions. Consider alternatives for time-sensitive features:
+- **Interpolation**: Linear or spline interpolation for smoother transitions
+- **Event-based alignment**: Trigger updates only when new fundamental data is released
+- **Validation**: Add staleness checks (e.g., warn if fundamental data is >30 days old during high volatility)
+
 **Documentation:**
-- Quick start: `docs/QUICK_START_DATA_SOURCES.md`
-- Full guide: `docs/NEW_DATA_SOURCES.md`
-- Integration summary: `INTEGRATION_SUMMARY.md`
+- Complete guide: `docs/NEW_DATA_SOURCES.md` (includes quick start)
 
 ### RL Environment Selection
 
@@ -400,9 +409,9 @@ Core dependencies (see `requirements.txt`):
 - `models/timesFM`: Google TimesFM foundation model (editable install via `-e ./models/timesFM`)
 
 Fundamental data packages (installed via `run/scripts/install_data_sources.sh`):
-- `comtradeapicall`: UN Comtrade API (editable install from `new data for collection/comtradeapicall`)
-- `fred`: Federal Reserve Economic Data API (editable install from `new data for collection/FRB`)
-- ECB shocks: CSV data only, no installation required (`new data for collection/jkshocks_update_ecb`)
+- `comtradeapicall`: UN Comtrade API (editable install from `new_data_sources/comtradeapicall`)
+- `fred`: Federal Reserve Economic Data API (editable install from `new_data_sources/FRB`)
+- ECB shocks: CSV data only, no installation required (`new_data_sources/jkshocks_update_ecb`)
 
 Development tools:
 - `pytest>=7.4.0`: Testing framework

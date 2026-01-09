@@ -340,6 +340,8 @@ class DataPipelineController:
         Returns:
             Dictionary with DataFrames for each source
         """
+        # Generate collection_id once before try block for both success/failure paths
+        collection_id = f"{datetime.now().isoformat()}_{currency_pair}_fundamentals"
         try:
             from data.extended_data_collection import collect_all_forex_fundamentals
 
@@ -354,13 +356,11 @@ class DataPipelineController:
                 include_sources=include_sources
             )
 
-            # Record in database
-            collection_id = f"{datetime.now().isoformat()}_{currency_pair}_fundamentals"
-
+            # Record in database (use same collection_id for both success/failure)
             conn = sqlite3.connect(DB_PATH)
             cursor = conn.cursor()
 
-            total_rows = sum(len(df) for df in data.values() if not df.empty)
+            total_rows = sum(len(df) for df in data.values() if isinstance(df, pd.DataFrame) and not df.empty)
 
             cursor.execute('''
                            INSERT INTO data_collections
@@ -380,6 +380,26 @@ class DataPipelineController:
 
         except Exception as e:
             logger.error(f"Fundamental data collection failed: {e}")
+
+            # Update database to reflect failure with error message
+            try:
+                conn = sqlite3.connect(DB_PATH)
+                cursor = conn.cursor()
+                cursor.execute('''
+                    INSERT INTO data_collections
+                    (collection_id, data_source, symbol, start_date, end_date,
+                     resolution, rows_collected, status, error_message)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ''', (
+                        collection_id,
+                        'FUNDAMENTALS', currency_pair, start_date, end_date,
+                        'mixed', 0, 'FAILED', str(e)
+                    ))
+                conn.commit()
+                conn.close()
+            except Exception as db_err:
+                logger.error(f"Failed to record collection failure in database: {db_err}")
+
             return {}
 
     def preprocess(
