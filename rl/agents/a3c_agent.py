@@ -369,7 +369,7 @@ def main() -> None:
             logging.FileHandler("a3c_training.log"),
         ]
     )
-    
+
     args = parse_args()
 
     try:

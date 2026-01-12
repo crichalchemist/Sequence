@@ -19,11 +19,13 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 import os
+
 import pandas as pd
+
 from data.extended_data_collection import (
     collect_all_forex_fundamentals,
+    merge_with_price_data,
     save_fundamental_data,
-    merge_with_price_data
 )
 from data.pipeline_controller import controller
 from utils.logger import get_logger

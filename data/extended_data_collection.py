@@ -55,8 +55,8 @@ def collect_trade_data(
     """
     try:
         from data.downloaders.comtrade_downloader import (
+            format_for_cognee,
             get_trade_indicators_for_forex,
-            format_for_cognee
         )
 
         logger.info(f"[extended] Collecting trade data for {currency_pair}")
@@ -101,8 +101,8 @@ def collect_economic_data(
     """
     try:
         from data.downloaders.fred_downloader import (
+            format_for_cognee,
             get_forex_economic_indicators,
-            format_for_cognee
         )
 
         logger.info(f"[extended] Collecting economic data for {currency_pair}")
@@ -146,8 +146,8 @@ def collect_monetary_shocks(
     """
     try:
         from data.downloaders.ecb_shocks_downloader import (
+            format_for_cognee,
             get_shocks_for_forex_pair,
-            format_for_cognee
         )
 
         if "EUR" not in currency_pair.upper():

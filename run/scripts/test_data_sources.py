@@ -8,14 +8,16 @@ Usage:
 """
 
 import sys
-import pandas as pd
 from pathlib import Path
+
+import pandas as pd
 
 # Add project root to path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 import os
+
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -24,42 +26,38 @@ logger = get_logger(__name__)
 def test_imports():
     """Test that all modules can be imported."""
     logger.info("Testing module imports...")
-    
+
     try:
-        from data.downloaders.comtrade_downloader import get_trade_indicators_for_forex
         logger.info("✅ Comtrade downloader imported successfully")
     except Exception as e:
         logger.error(f"❌ Comtrade downloader import failed: {e}")
         return False
-    
+
     try:
-        from data.downloaders.fred_downloader import get_forex_economic_indicators
         logger.info("✅ FRED downloader imported successfully")
     except Exception as e:
         logger.error(f"❌ FRED downloader import failed: {e}")
         return False
-    
+
     try:
-        from data.downloaders.ecb_shocks_downloader import load_ecb_shocks_daily
         logger.info("✅ ECB shocks downloader imported successfully")
     except Exception as e:
         logger.error(f"❌ ECB shocks downloader import failed: {e}")
         return False
-    
+
     try:
-        from data.extended_data_collection import collect_all_forex_fundamentals
         logger.info("✅ Extended data collection imported successfully")
     except Exception as e:
         logger.error(f"❌ Extended data collection import failed: {e}")
         return False
-    
+
     return True
 
 
 def test_ecb_shocks():
     """Test ECB shocks loading (no API key required)."""
     logger.info("\nTesting ECB shocks data...")
-    
+
     try:
         from data.downloaders.ecb_shocks_downloader import load_ecb_shocks_daily
 
@@ -68,28 +66,28 @@ def test_ecb_shocks():
         if df.empty:
             logger.warning("⚠️  No ECB shock data loaded")
             return False
-        
+
         # Always log count and columns once
         logger.info(f"✅ Loaded {len(df)} ECB shock observations")
         logger.info(f"   Columns: {list(df.columns)}")
-        
+
         # Check if 'date' column is present and validate its contents
         if 'date' not in df.columns:
             logger.error("   Missing 'date' column - ECB shocks data invalid")
             return False
-        
+
         # Convert date column to datetime and validate
         df['date'] = pd.to_datetime(df['date'], errors='coerce')
         valid_dates = df['date'].dropna()
-        
+
         if len(valid_dates) == 0:
             logger.error("   Missing or invalid 'date' values - ECB shocks data invalid")
             return False
-        
+
         # Log date range from valid dates
         logger.info(f"   Date range: {valid_dates.min()} to {valid_dates.max()}")
         return True
-            
+
     except Exception as e:
         logger.error(f"❌ ECB shocks test failed: {e}")
         return False
@@ -98,16 +96,16 @@ def test_ecb_shocks():
 def test_comtrade(api_key=None):
     """Test Comtrade API (requires API key for full test)."""
     logger.info("\nTesting UN Comtrade API...")
-    
+
     if not api_key:
         api_key = os.getenv("COMTRADE_API_KEY")
-    
+
     if not api_key:
         logger.warning("⚠️  COMTRADE_API_KEY not set - using preview mode (limited to 500 records)")
-    
+
     try:
         from data.downloaders.comtrade_downloader import download_trade_balance
-        
+
         # Test with USA (country code 842) for a single year
         df = download_trade_balance(
             reporter_code="842",
@@ -115,7 +113,7 @@ def test_comtrade(api_key=None):
             end_year=2023,
             subscription_key=api_key
         )
-        
+
         if len(df) > 0:
             logger.info(f"✅ Retrieved {len(df)} trade balance records")
             logger.info(f"   Sample data: {df.head(2).to_dict('records')}")
@@ -131,18 +129,18 @@ def test_comtrade(api_key=None):
 def test_fred(api_key=None):
     """Test FRED API (requires API key)."""
     logger.info("\nTesting FRED API...")
-    
+
     if not api_key:
         api_key = os.getenv("FRED_API_KEY")
-    
+
     if not api_key:
         logger.error("❌ FRED_API_KEY not set - cannot test FRED API")
         logger.info("   Get a free API key at: https://fred.stlouisfed.org/docs/api/api_key.html")
         return False
-    
+
     try:
         from data.downloaders.fred_downloader import download_series
-        
+
         # Test with Federal Funds Rate
         df = download_series(
             series_id="FEDFUNDS",
@@ -150,7 +148,7 @@ def test_fred(api_key=None):
             end_date="2023-01-31",
             api_key=api_key
         )
-        
+
         if len(df) > 0:
             logger.info(f"✅ Retrieved {len(df)} FRED observations")
             logger.info(f"   Sample data: {df.head(2).to_dict('records')}")
@@ -168,24 +166,24 @@ def main():
     logger.info("="*60)
     logger.info("Testing New Data Sources Integration")
     logger.info("="*60)
-    
+
     results = {
         "imports": test_imports(),
         "ecb_shocks": test_ecb_shocks(),
         "comtrade": test_comtrade(),
         "fred": test_fred()
     }
-    
+
     logger.info("\n" + "="*60)
     logger.info("Test Summary")
     logger.info("="*60)
-    
+
     for test_name, passed in results.items():
         status = "✅ PASS" if passed else "❌ FAIL"
         logger.info(f"{test_name:20s}: {status}")
-    
+
     all_passed = all(results.values())
-    
+
     if all_passed:
         logger.info("\n🎉 All tests passed!")
     else:
@@ -195,7 +193,7 @@ def main():
         logger.info("2. Set API keys:")
         logger.info("   export FRED_API_KEY='your_key'")
         logger.info("   export COMTRADE_API_KEY='your_key'  # optional")
-    
+
     return all_passed
 
 

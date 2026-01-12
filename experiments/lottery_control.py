@@ -235,9 +235,9 @@ def main():
     print("LOTTERY CONTROL EXPERIMENT")
     print("=" * 60)
     print(f"Pair: {args.pair}")
-    print(f"Purpose: Test if model finds patterns in pure randomness")
-    print(f"Expected: ~33.3% accuracy (random baseline)")
-    print(f"Red flag: >40% accuracy (overfitting to noise)")
+    print("Purpose: Test if model finds patterns in pure randomness")
+    print("Expected: ~33.3% accuracy (random baseline)")
+    print("Red flag: >40% accuracy (overfitting to noise)")
     print("=" * 60)
     print()
 
@@ -385,7 +385,7 @@ def main():
     results_path.parent.mkdir(exist_ok=True)
 
     with open(results_path, "w") as f:
-        f.write(f"Lottery Control Experiment Results\n")
+        f.write("Lottery Control Experiment Results\n")
         f.write(f"{'='*60}\n")
         f.write(f"Pair: {args.pair}\n")
         f.write(f"Test Accuracy: {results['accuracy']:.4f}\n")

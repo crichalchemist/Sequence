@@ -31,9 +31,9 @@ if str(ROOT / "run") not in sys.path:
     sys.path.insert(0, str(ROOT / "run"))
 
 from config.config import DataConfig, FeatureConfig, ModelConfig
-from eval.timesfm_wrapper import TimesFMWrapper
 from data.agents.single_task_agent import SingleTaskDataAgent as DataAgent
 from data.prepare_dataset import _compute_time_ranges, _load_pair_data
+from eval.timesfm_wrapper import TimesFMWrapper
 from models.agent_hybrid import build_model
 from train.features.agent_features import build_feature_frame
 

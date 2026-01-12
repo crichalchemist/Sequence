@@ -28,7 +28,6 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 import pandas as pd
 import requests
@@ -85,8 +84,8 @@ class TwelveDataClient:
         self,
         symbol: str,
         interval: str = "1day",
-        start_date: Optional[str] = None,
-        end_date: Optional[str] = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
         outputsize: int = 5000,
     ) -> pd.DataFrame:
         """
@@ -469,7 +468,7 @@ def main():
             continue
 
     print(f"\n{'='*60}")
-    print(f"Download complete!")
+    print("Download complete!")
     print(f"API calls used: {client.calls_made}/{client.max_calls}")
     print(f"Output directory: {output_dir}")
     print(f"{'='*60}")

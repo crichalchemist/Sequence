@@ -38,6 +38,7 @@ def setup_colab_environment():
 
     try:
         import numpy as np
+
         # Try importing a compiled extension to test compatibility
         from numpy.random import RandomState  # noqa: F401
         print("✅ NumPy compatibility check passed")

@@ -41,7 +41,7 @@ from config.config import (  # noqa: E402
     TrainingConfig,
 )
 from data.prepare_dataset import process_pair  # noqa: E402
-from models.signal_policy import ExecutionPolicy, SignalModel  # noqa: E402
+from models.signal_policy import SignalModel  # noqa: E402
 from train.core.agent_train import (  # noqa: E402
     pretrain_signal_model,
 )

@@ -1,10 +1,11 @@
 """Root conftest for all tests - shared fixtures and configuration."""
 import sys
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
 import pytest
 import torch
-import pandas as pd
-import numpy as np
-from pathlib import Path
 
 # Add project root to path
 ROOT = Path(__file__).resolve().parents[1]
@@ -129,7 +130,7 @@ def temp_checkpoint_dir(tmp_path):
 @pytest.fixture
 def minimal_dataloader(sample_batch):
     """Create a minimal DataLoader with one batch."""
-    from torch.utils.data import TensorDataset, DataLoader
+    from torch.utils.data import DataLoader, TensorDataset
     x, y = sample_batch
     # Create simple dataset with mock batches - use y["primary"] directly to match batch size
     dataset = TensorDataset(x, y["primary"])

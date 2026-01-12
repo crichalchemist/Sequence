@@ -8,12 +8,11 @@ if str(ROOT / "run") not in sys.path:
     sys.path.insert(0, str(ROOT / "run"))
 
 import torch
-import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
-from config.config import RLTrainingConfig, TrainingConfig
+from config.config import TrainingConfig
 from models.agent_hybrid import DignityModel
-from models.signal_policy import ExecutionPolicy, SignalModel
+from models.signal_policy import SignalModel
 from risk.risk_manager import RiskManager
 
 

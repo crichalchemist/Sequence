@@ -28,7 +28,6 @@ import argparse
 import csv
 import os
 import sys
-from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
@@ -156,7 +155,7 @@ def convert_to_timeseries_combined(
             powerball_col = col
             break
 
-    print(f"Using columns:")
+    print("Using columns:")
     print(f"  Date: {date_col}")
     print(f"  Balls 1-5: {ball_cols}")
     print(f"  Powerball: {powerball_col}")
@@ -452,9 +451,9 @@ def main():
     )
 
     print(f"\n{'='*60}")
-    print(f"Lottery data conversion complete!")
+    print("Lottery data conversion complete!")
     print(f"Output directory: {output_dir}")
-    print(f"\nUsage with prepare_dataset.py:")
+    print("\nUsage with prepare_dataset.py:")
     if args.create_separate_balls:
         print("  python data/prepare_dataset.py --pairs powerball_ball1 --input-root data/lottery")
     else:

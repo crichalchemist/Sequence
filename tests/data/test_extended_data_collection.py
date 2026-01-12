@@ -16,10 +16,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from data.extended_data_collection import (
-    collect_all_forex_fundamentals,
-    merge_with_price_data
-)
+from data.extended_data_collection import collect_all_forex_fundamentals, merge_with_price_data
 
 
 class TestCollectAllForexFundamentals:
@@ -76,18 +73,18 @@ class TestCollectAllForexFundamentals:
         assert not data["trade"].empty
         assert not data["economic"].empty
         assert not data["shocks"].empty
-        
+
         # Assert mocks were called with expected parameters using call_args.kwargs
         mock_comtrade.assert_called_once()
         assert mock_comtrade.call_args.kwargs["currency_pair"] == "EURUSD"
-        
+
         mock_fred.assert_called_once()
         assert mock_fred.call_args.kwargs["currency_pair"] == "EURUSD"
         assert mock_fred.call_args.kwargs["fred_api_key"] == "test_key"
         # Verify exact values for start/end dates
         assert mock_fred.call_args.kwargs["start_date"] == "2023-01-01"
         assert mock_fred.call_args.kwargs["end_date"] == "2023-12-31"
-        
+
         mock_ecb.assert_called_once()
 
     @patch("data.extended_data_collection.download_trade_balance")

@@ -7,7 +7,6 @@ predictions using the TimesFM model.
 
 import argparse
 import json
-from pathlib import Path
 
 import numpy as np
 
@@ -19,7 +18,7 @@ def main():
     args = parser.parse_args()
 
     # Load inputs
-    with open(args.input, "r") as f:
+    with open(args.input) as f:
         data = json.load(f)
 
     horizon = data["horizon"]

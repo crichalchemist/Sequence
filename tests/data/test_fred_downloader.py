@@ -4,16 +4,16 @@ Unit tests for FRED downloader.
 Tests the Federal Reserve Economic Data API wrapper with mocked responses.
 """
 
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import MagicMock, Mock, patch
 
 import pandas as pd
 import pytest
 
 from data.downloaders.fred_downloader import (
-    download_series,
+    FOREX_ECONOMIC_SERIES,
     download_multiple_series,
+    download_series,
     get_forex_economic_indicators,
-    FOREX_ECONOMIC_SERIES
 )
 
 
