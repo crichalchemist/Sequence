@@ -152,6 +152,42 @@ ruff check train/ models/
 ruff check --fix .
 ```
 
+**Ruff Configuration** (see `pyproject.toml`):
+- Line length: 100 characters
+- Target: Python 3.10+
+- Import sorting: Enabled (isort rules)
+- Key exclusions:
+  - `E501` (line length - handled by formatter)
+  - `E402` (module-level imports after sys.path manipulation - intentional for Colab compatibility)
+  - External code excluded: `models/timesFM`, `.venvx`, `build`, `dist`
+
+Per-file rules:
+- Test files: Allow unused imports (`F401`) and import order flexibility
+- Model files: Allow PyTorch convention (`torch.nn.functional as F`)
+
+### Utility Scripts
+
+Helper scripts in `run/scripts/`:
+
+```bash
+# Validate prepared dataset integrity
+python run/scripts/validate_training_data.py \
+  --data-path data/data/gbpusd/gbpusd_prepared.csv
+
+# Debug attention mechanism behavior
+python run/scripts/debug_attention.py \
+  --checkpoint models/gbpusd_best_model.pt
+
+# Run hyperparameter search with Optuna
+python run/scripts/run_hyperparameter_tuning.py \
+  --pairs gbpusd \
+  --n-trials 50 \
+  --study-name gbpusd_optimization
+
+# Full integration smoke test
+python run/scripts/test_full_integration.py
+```
+
 ## Architecture Overview
 
 ### Core Components
@@ -398,6 +434,36 @@ Key test files:
 - `test_optimized_attention_integration.py`: Attention mechanism correctness
 - `test_gdelt_alignment.py`: GDELT-OHLCV temporal alignment
 
+### Test Markers and Categories
+
+Tests are organized with pytest markers for selective execution:
+
+```bash
+# Run only fast unit tests (< 5s timeout)
+pytest -m fast
+
+# Run integration tests
+pytest -m integration
+
+# Skip tests requiring API keys (useful in CI)
+pytest -m "not real_api"
+
+# Run regression guardrails only
+pytest -m regression
+
+# Skip slow tests (for rapid iteration)
+pytest -m "not slow"
+```
+
+Available markers (see `pytest.ini`):
+- `unit`: Fast tests with mocked dependencies
+- `integration`: Multi-component integration tests
+- `fast`: Quick tests (5s timeout enforced)
+- `slow`: Long-running tests (nightly CI only)
+- `real_api`: Requires FRED/Comtrade API keys (skipped in CI)
+- `regression`: Critical path validation
+- `timeout_300`: Extended timeout for RL training tests
+
 ## Dependencies
 
 Core dependencies (see `requirements.txt`):
@@ -443,3 +509,14 @@ Development tools:
 5. **Memory Usage**: For large datasets, use `data/iterable_dataset.py` (streaming) instead of loading full data into memory.
 
 6. **Attention Sequence Length**: For sequences >1024, enable `use_optimized_attention=True` in ModelConfig to avoid OOM errors.
+
+7. **Python Path Management**: Scripts use intentional `E402` pattern (imports after sys.path) for Colab compatibility. Don't "fix" these imports:
+   ```python
+   # Correct pattern for Colab compatibility
+   ROOT = Path(__file__).resolve().parents[1]
+   if str(ROOT) not in sys.path:
+       sys.path.insert(0, str(ROOT))
+
+   # Imports come AFTER sys.path manipulation
+   from config.config import ModelConfig
+   ```
