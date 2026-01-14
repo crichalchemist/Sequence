@@ -39,6 +39,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from utils.logger import get_logger
+from utils.retry_utils import api_retry, retry_with_backoff
 
 logger = get_logger(__name__)
 
@@ -56,10 +57,7 @@ FOREX_COUNTRY_MAPPING = {
 
 
 def download_trade_balance(
-        reporter_code: str,
-        start_year: int,
-        end_year: int,
-        subscription_key: str | None = None
+    reporter_code: str, start_year: int, end_year: int, subscription_key: str | None = None
 ) -> pd.DataFrame:
     """
     Download trade balance data for a country.
@@ -87,13 +85,18 @@ def download_trade_balance(
             "pip install -e ./new_data_sources/comtradeapicall"
         )
 
-    logger.info(f"[comtrade] Downloading trade balance for country {reporter_code}, "
-                f"{start_year}-{end_year}")
+    logger.info(
+        f"[comtrade] Downloading trade balance for country {reporter_code}, {start_year}-{end_year}"
+    )
 
     try:
         # Build selection criteria
         # For monthly data, period must be in YYYYMM format
-        periods = [f"{year}{month:02d}" for year in range(start_year, end_year + 1) for month in range(1, 13)]
+        periods = [
+            f"{year}{month:02d}"
+            for year in range(start_year, end_year + 1)
+            for month in range(1, 13)
+        ]
 
         selection_criteria = {
             "typeCode": "C",  # Commodities
@@ -107,15 +110,21 @@ def download_trade_balance(
             "partner2Code": None,
         }
 
+        @api_retry(max_retries=3, base_delay=3.0, rate_limit_calls=0.3)  # Conservative for Comtrade
+        def _fetch_trade_data(api_func, **kwargs):
+            """Internal function for API call with retry logic."""
+            return api_func(**kwargs)
+
         # Use preview if no subscription key, otherwise use full API
         if subscription_key:
-            df = previewGet.getTradeBalance(
-                subscription_key=subscription_key,
-                **selection_criteria
+            df = _fetch_trade_data(
+                previewGet.getTradeBalance, subscription_key=subscription_key, **selection_criteria
             )
         else:
-            logger.warning("[comtrade] No subscription key provided, using preview (limited to 500 records)")
-            df = previewGet.previewTradeBalance(**selection_criteria)
+            logger.warning(
+                "[comtrade] No subscription key provided, using preview (limited to 500 records)"
+            )
+            df = _fetch_trade_data(previewGet.previewTradeBalance, **selection_criteria)
 
         if df is None or df.empty:
             logger.warning(f"[comtrade] No data returned for country {reporter_code}")
@@ -123,28 +132,32 @@ def download_trade_balance(
 
         # Process and normalize
         df = df.copy()
-        df['date'] = pd.to_datetime(df['period'], format='%Y%m')
-        df['country_code'] = reporter_code
+        df["date"] = pd.to_datetime(df["period"], format="%Y%m")
+        df["country_code"] = reporter_code
 
         # Calculate trade balance - validate columns exist
-        if 'trade_balance' not in df.columns:
-            required_cols = {'exports', 'imports'}
+        if "trade_balance" not in df.columns:
+            required_cols = {"exports", "imports"}
             missing_cols = required_cols - set(df.columns)
             if missing_cols:
                 # Build missing columns list in deterministic order
-                ordered_required = ['exports', 'imports']
+                ordered_required = ["exports", "imports"]
                 ordered_missing = [col for col in ordered_required if col in missing_cols]
-                logger.error(f"[comtrade] Missing required columns for trade balance calculation: {ordered_missing}")
-                raise ValueError(f"Missing columns {ordered_missing} required to compute trade_balance")
+                logger.error(
+                    f"[comtrade] Missing required columns for trade balance calculation: {ordered_missing}"
+                )
+                raise ValueError(
+                    f"Missing columns {ordered_missing} required to compute trade_balance"
+                )
 
         # Select columns - include imports/exports per docstring
         # Build deterministically: date, trade_balance, optional (imports, exports), country_code
-        columns_to_select = ['date', 'trade_balance']
-        if 'imports' in df.columns:
-            columns_to_select.append('imports')
-        if 'exports' in df.columns:
-            columns_to_select.append('exports')
-        columns_to_select.append('country_code')
+        columns_to_select = ["date", "trade_balance"]
+        if "imports" in df.columns:
+            columns_to_select.append("imports")
+        if "exports" in df.columns:
+            columns_to_select.append("exports")
+        columns_to_select.append("country_code")
 
         result = df[columns_to_select].copy()
 
@@ -157,10 +170,7 @@ def download_trade_balance(
 
 
 def get_trade_indicators_for_forex(
-        currency_pair: str,
-        start_year: int,
-        end_year: int,
-        subscription_key: str | None = None
+    currency_pair: str, start_year: int, end_year: int, subscription_key: str | None = None
 ) -> pd.DataFrame:
     """
     Download trade indicators relevant to a forex pair.
@@ -194,22 +204,18 @@ def get_trade_indicators_for_forex(
 
     # Download for base currency country
     for base_country in countries["base"]:
-        df_base = download_trade_balance(
-            base_country, start_year, end_year, subscription_key
-        )
+        df_base = download_trade_balance(base_country, start_year, end_year, subscription_key)
         if not df_base.empty:
-            df_base['currency_pair'] = pair_upper
-            df_base['country_type'] = 'base'
+            df_base["currency_pair"] = pair_upper
+            df_base["country_type"] = "base"
             all_data.append(df_base)
 
     # Download for quote currency country
     for quote_country in countries["quote"]:
-        df_quote = download_trade_balance(
-            quote_country, start_year, end_year, subscription_key
-        )
+        df_quote = download_trade_balance(quote_country, start_year, end_year, subscription_key)
         if not df_quote.empty:
-            df_quote['currency_pair'] = pair_upper
-            df_quote['country_type'] = 'quote'
+            df_quote["currency_pair"] = pair_upper
+            df_quote["country_type"] = "quote"
             all_data.append(df_quote)
 
     if not all_data:
@@ -217,7 +223,7 @@ def get_trade_indicators_for_forex(
         return pd.DataFrame()
 
     result = pd.concat(all_data, ignore_index=True)
-    result = result.sort_values('date').reset_index(drop=True)
+    result = result.sort_values("date").reset_index(drop=True)
 
     logger.info(f"[comtrade] Retrieved {len(result)} trade indicator records for {currency_pair}")
     return result
@@ -236,41 +242,41 @@ def format_for_cognee(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
 
     # Validate required columns
-    required_cols = ['date', 'trade_balance']
+    required_cols = ["date", "trade_balance"]
     missing_cols = [col for col in required_cols if col not in df.columns]
     if missing_cols:
         raise ValueError(f"Missing required columns: {missing_cols}")
 
     # Coerce date column to datetime
-    df['date'] = pd.to_datetime(df['date'], errors='coerce')
-    nat_count = df['date'].isna().sum()
+    df["date"] = pd.to_datetime(df["date"], errors="coerce")
+    nat_count = df["date"].isna().sum()
     if nat_count > 0:
         logger.warning(f"[comtrade] {nat_count} rows have invalid dates, dropping them")
-        df = df.dropna(subset=['date'])
+        df = df.dropna(subset=["date"])
 
     # Coerce trade_balance to numeric
-    df['trade_balance'] = pd.to_numeric(df['trade_balance'], errors='coerce')
-    nan_count = df['trade_balance'].isna().sum()
+    df["trade_balance"] = pd.to_numeric(df["trade_balance"], errors="coerce")
+    nan_count = df["trade_balance"].isna().sum()
     if nan_count > 0:
         logger.warning(f"[comtrade] {nan_count} rows have invalid trade_balance, dropping them")
-        df = df.dropna(subset=['trade_balance'])
+        df = df.dropna(subset=["trade_balance"])
 
     # Ensure optional columns with defaults
-    if 'country_type' not in df.columns:
-        df['country_type'] = 'country'
-    if 'currency_pair' not in df.columns:
-        df['currency_pair'] = 'pair'
-    if 'country_code' not in df.columns:
-        df['country_code'] = 'N/A'
+    if "country_type" not in df.columns:
+        df["country_type"] = "country"
+    if "currency_pair" not in df.columns:
+        df["currency_pair"] = "pair"
+    if "country_code" not in df.columns:
+        df["country_code"] = "N/A"
 
-    df['full_text'] = df.apply(
+    df["full_text"] = df.apply(
         lambda row: (
             f"Trade balance for {row['country_type']} currency "
             f"in {row['currency_pair']} on {row['date'].strftime('%Y-%m-%d')}: "
             f"${row['trade_balance']:,.0f}. "
             f"Country code: {row['country_code']}."
         ),
-        axis=1
+        axis=1,
     )
 
     return df

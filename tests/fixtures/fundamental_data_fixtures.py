@@ -122,7 +122,7 @@ def mock_ecb_shocks_monthly():
 @pytest.fixture
 def sample_price_data():
     """Sample OHLCV price data for testing merge operations."""
-    dates = pd.date_range("2023-01-01", "2023-01-10", freq="H")
+    dates = pd.date_range("2023-01-01", "2023-01-10", freq="h")
     n = len(dates)
 
     return pd.DataFrame({

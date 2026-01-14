@@ -315,7 +315,7 @@ def merge_with_price_data(
         fundamentals: dict[str, pd.DataFrame],
         price_df: pd.DataFrame,
         date_column: str = "datetime",
-        resample_freq: str = "1H"
+        resample_freq: str = "1h"
 ) -> pd.DataFrame:
     """
     Merge fundamental data with price data for training.
@@ -324,7 +324,7 @@ def merge_with_price_data(
         fundamentals: Dictionary of fundamental DataFrames
         price_df: Price DataFrame with datetime column
         date_column: Name of the datetime column in price_df (or any common timestamp column)
-        resample_freq: Resample frequency for fundamental data (e.g., '1H', '1D')
+        resample_freq: Resample frequency for fundamental data (e.g., '1h', '1D')
 
     Returns:
         Merged DataFrame with all data sources aligned by date
@@ -332,7 +332,7 @@ def merge_with_price_data(
     Example:
         >>> fundamentals = collect_all_forex_fundamentals("EURUSD", "2023-01-01", "2023-12-31")
         >>> price_df = pd.read_parquet("data/prepared/EURUSD_1h.parquet")
-        >>> merged = merge_with_price_data(fundamentals, price_df, resample_freq='1H')
+        >>> merged = merge_with_price_data(fundamentals, price_df, resample_freq='1h')
     """
     logger.info("[extended] Merging fundamental data with price data")
 

@@ -24,6 +24,8 @@ def mock_fred_series_response():
         {"date": "2023-01-01", "value": "4.33"},
         {"date": "2023-02-01", "value": "4.57"},
         {"date": "2023-03-01", "value": "4.65"},
+        {"date": "2023-04-01", "value": "4.83"},
+        {"date": "2023-05-01", "value": "5.06"},
     ]
 
 
@@ -36,7 +38,7 @@ def mock_fred_series_info():
 class TestFredDownloadSeries:
     """Test download_series function."""
 
-    @patch("data.downloaders.fred_downloader.Fred")
+    @patch("fred.Fred")
     def test_download_series_success(self, mock_fred_class, mock_fred_series_response, mock_fred_series_info):
         """Test successful series download."""
         # Setup mock
@@ -68,7 +70,7 @@ class TestFredDownloadSeries:
         )
         mock_fred.series.details.assert_called_once_with(series_id="FEDFUNDS")
 
-    @patch("data.downloaders.fred_downloader.Fred")
+    @patch("fred.Fred")
     def test_download_series_empty_response(self, mock_fred_class):
         """Test handling of empty API response."""
         mock_fred = Mock()
@@ -94,7 +96,7 @@ class TestFredDownloadSeries:
                 api_key=None
             )
 
-    @patch("data.downloaders.fred_downloader.Fred")
+    @patch("fred.Fred")
     def test_download_series_handles_nan_values(self, mock_fred_class):
         """Test that NaN values are dropped."""
         mock_fred = Mock()

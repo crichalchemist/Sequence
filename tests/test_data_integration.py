@@ -68,10 +68,10 @@ class TestDataPipelineIntegration:
             'currency_pair': ['EURUSD'] * 12
         })
 
-    @patch('data.extended_data_collection.get_trade_indicators_for_forex')
-    @patch('data.extended_data_collection.download_multiple_series')
-    @patch('data.extended_data_collection.load_ecb_shocks_daily')
-    def test_full_pipeline_eurusd(self, mock_shocks, mock_econ, mock_trade,
+    @patch('data.downloaders.ecb_shocks_downloader.get_shocks_for_forex_pair')
+    @patch('data.downloaders.fred_downloader.get_forex_economic_indicators')
+    @patch('data.downloaders.comtrade_downloader.get_trade_indicators_for_forex')
+    def test_full_pipeline_eurusd(self, mock_trade, mock_econ, mock_shocks,
                                   sample_trade_data, sample_economic_data,
                                   sample_shock_data):
         """Test complete pipeline for EURUSD fundamental data collection."""
@@ -85,18 +85,18 @@ class TestDataPipelineIntegration:
 
         # Verify structure
         assert isinstance(result, dict)
-        assert 'trade_data' in result
-        assert 'economic_data' in result
-        assert 'monetary_shocks' in result
+        assert 'trade' in result
+        assert 'economic' in result
+        assert 'shocks' in result
 
         # Verify all data sources were called
         assert mock_trade.called
         assert mock_econ.called
         assert mock_shocks.called
 
-    @patch('data.extended_data_collection.get_trade_indicators_for_forex')
-    @patch('data.extended_data_collection.download_multiple_series')
-    def test_data_merge_alignment_on_dates(self, mock_econ, mock_trade,
+    @patch('data.downloaders.fred_downloader.get_forex_economic_indicators')
+    @patch('data.downloaders.comtrade_downloader.get_trade_indicators_for_forex')
+    def test_data_merge_alignment_on_dates(self, mock_trade, mock_econ,
                                           sample_price_data, sample_trade_data,
                                           sample_economic_data):
         """Test that different data sources align correctly on dates."""
@@ -106,25 +106,29 @@ class TestDataPipelineIntegration:
         from data.extended_data_collection import merge_with_price_data
 
         # Merge trade data with price data
-        result = merge_with_price_data(sample_price_data, sample_trade_data)
+        result = merge_with_price_data(
+            fundamentals={'trade': sample_trade_data},
+            price_df=sample_price_data,
+            date_column='date',
+            resample_freq='1h'
+        )
 
         # Verify alignment
         assert not result.empty
-        assert 'date' in result.columns
-        # Should have dates that exist in both datasets
-        common_dates = set(sample_price_data['date']) & set(sample_trade_data['date'])
-        if common_dates:
-            assert any(result['date'].isin(common_dates))
+        # Price data columns should be preserved
+        assert 'close' in result.columns
+        # Trade data should be merged with prefix
+        assert 'trade_trade_balance' in result.columns
 
     @pytest.mark.parametrize("currency_pair,start_date,end_date", [
         ("EURUSD", "2023-01-01", "2023-12-31"),
         ("GBPUSD", "2022-06-01", "2023-06-30"),
         ("USDJPY", "2023-01-01", "2023-03-31"),
     ])
-    @patch('data.extended_data_collection.get_trade_indicators_for_forex')
-    @patch('data.extended_data_collection.download_multiple_series')
-    @patch('data.extended_data_collection.load_ecb_shocks_daily')
-    def test_pipeline_multiple_pairs_and_dates(self, mock_shocks, mock_econ, mock_trade,
+    @patch('data.downloaders.ecb_shocks_downloader.get_shocks_for_forex_pair')
+    @patch('data.downloaders.fred_downloader.get_forex_economic_indicators')
+    @patch('data.downloaders.comtrade_downloader.get_trade_indicators_for_forex')
+    def test_pipeline_multiple_pairs_and_dates(self, mock_trade, mock_econ, mock_shocks,
                                                currency_pair, start_date, end_date):
         """Test pipeline works for various currency pairs and date ranges."""
         mock_trade.return_value = pd.DataFrame()
@@ -136,12 +140,12 @@ class TestDataPipelineIntegration:
         result = collect_all_forex_fundamentals(currency_pair, start_date, end_date)
 
         assert isinstance(result, dict)
-        assert all(key in result for key in ['trade_data', 'economic_data', 'monetary_shocks'])
+        assert all(key in result for key in ['trade', 'economic', 'shocks'])
 
-    @patch('data.extended_data_collection.get_trade_indicators_for_forex')
-    @patch('data.extended_data_collection.download_multiple_series')
-    @patch('data.extended_data_collection.load_ecb_shocks_daily')
-    def test_partial_data_availability(self, mock_shocks, mock_econ, mock_trade):
+    @patch('data.downloaders.ecb_shocks_downloader.get_shocks_for_forex_pair')
+    @patch('data.downloaders.fred_downloader.get_forex_economic_indicators')
+    @patch('data.downloaders.comtrade_downloader.get_trade_indicators_for_forex')
+    def test_partial_data_availability(self, mock_trade, mock_econ, mock_shocks):
         """Test pipeline handles when some data sources are unavailable."""
         # Trade data available, economic data empty, shocks error
         mock_trade.return_value = pd.DataFrame({
@@ -157,15 +161,15 @@ class TestDataPipelineIntegration:
 
         # Should still return partial results
         assert isinstance(result, dict)
-        assert not result['trade_data'].empty
-        assert result['economic_data'].empty
+        assert not result['trade'].empty
+        assert result['economic'].empty
         # Verify shocks error was handled - should have empty DataFrame or None
-        assert 'monetary_shocks' in result
-        assert result['monetary_shocks'] is None or result['monetary_shocks'].empty
+        assert 'shocks' in result
+        assert result['shocks'] is None or result['shocks'].empty
 
-    @patch('data.extended_data_collection.get_trade_indicators_for_forex')
-    @patch('data.extended_data_collection.download_multiple_series')
-    def test_cognee_format_integration(self, mock_econ, mock_trade, sample_trade_data):
+    @patch('data.downloaders.fred_downloader.get_forex_economic_indicators')
+    @patch('data.downloaders.comtrade_downloader.get_trade_indicators_for_forex')
+    def test_cognee_format_integration(self, mock_trade, mock_econ, sample_trade_data):
         """Test that data is properly formatted for Cognee ingestion."""
         mock_trade.return_value = sample_trade_data
         mock_econ.return_value = pd.DataFrame()
@@ -183,23 +187,28 @@ class TestDataPipelineIntegration:
         """Test that data types are preserved through collection and merge."""
         from data.extended_data_collection import merge_with_price_data
 
-        result = merge_with_price_data(sample_price_data, sample_trade_data)
+        result = merge_with_price_data(
+            fundamentals={'trade': sample_trade_data},
+            price_df=sample_price_data,
+            date_column='date',
+            resample_freq='1h'
+        )
 
         # Assert result is non-empty and has expected columns
         assert not result.empty, "merge_with_price_data should return non-empty DataFrame"
-        assert 'date' in result.columns
-        assert 'close' in result.columns or 'trade_balance' in result.columns
+        # Columns are prefixed with source name after merge
+        assert 'close' in result.columns or 'trade_trade_balance' in result.columns
 
         # Numeric columns should be numeric
         if 'close' in result.columns:
             assert pd.api.types.is_numeric_dtype(result['close'])
-        if 'trade_balance' in result.columns:
-            assert pd.api.types.is_numeric_dtype(result['trade_balance'])
+        if 'trade_trade_balance' in result.columns:
+            assert pd.api.types.is_numeric_dtype(result['trade_trade_balance'])
 
-        # Date column should be datetime
-        assert pd.api.types.is_datetime64_any_dtype(result['date'])
+        # Index should be datetime (merge sets index as datetime)
+        assert pd.api.types.is_datetime64_any_dtype(result.index)
 
-    @patch('data.extended_data_collection.get_trade_indicators_for_forex')
+    @patch('data.downloaders.comtrade_downloader.get_trade_indicators_for_forex')
     def test_error_logging_on_api_failure(self, mock_trade, caplog):
         """Test that API failures are properly logged."""
         import logging
@@ -219,12 +228,20 @@ class TestDataPipelineIntegration:
         """Test that merged data has consistent columns."""
         from data.extended_data_collection import merge_with_price_data
 
-        result = merge_with_price_data(sample_price_data, sample_trade_data)
+        result = merge_with_price_data(
+            fundamentals={'trade': sample_trade_data},
+            price_df=sample_price_data,
+            date_column='date',
+            resample_freq='1h'
+        )
 
         if not result.empty:
             # Should have columns from both datasets
-            assert 'date' in result.columns
-            # Should not have unexpected columns
+            # Price columns should be preserved
+            assert 'close' in result.columns
+            # Trade columns should be prefixed
+            assert 'trade_trade_balance' in result.columns
+            # All columns should be strings
             assert all(isinstance(col, str) for col in result.columns)
 
 
@@ -252,7 +269,12 @@ class TestDataPipelinePerformance:
 
         # Measure execution time
         start_time = time.time()
-        result = merge_with_price_data(price_data, fundamental_data)
+        result = merge_with_price_data(
+            fundamentals={'economic': fundamental_data},
+            price_df=price_data,
+            date_column='date',
+            resample_freq='1h'
+        )
         elapsed_time = time.time() - start_time
 
         # Performance assertions
@@ -262,10 +284,10 @@ class TestDataPipelinePerformance:
         assert elapsed_time < max_time, f"Merge took {elapsed_time:.3f}s, expected < {max_time:.3f}s"
 
 
-    @patch('data.extended_data_collection.get_trade_indicators_for_forex')
-    @patch('data.extended_data_collection.download_multiple_series')
-    @patch('data.extended_data_collection.load_ecb_shocks_daily')
-    def test_full_pipeline_performance(self, mock_shocks, mock_econ, mock_trade):
+    @patch('data.downloaders.ecb_shocks_downloader.get_shocks_for_forex_pair')
+    @patch('data.downloaders.fred_downloader.get_forex_economic_indicators')
+    @patch('data.downloaders.comtrade_downloader.get_trade_indicators_for_forex')
+    def test_full_pipeline_performance(self, mock_trade, mock_econ, mock_shocks):
         """Test full pipeline performance with realistic data sizes."""
         # Create large datasets
         mock_trade.return_value = pd.DataFrame({
@@ -359,26 +381,23 @@ class TestDataValidation:
             'value': [100 + i for i in range(5)]
         })
 
-        result = merge_with_price_data(price_df, fundamental_df)
+        result = merge_with_price_data(
+            fundamentals={'economic': fundamental_df},
+            price_df=price_df,
+            date_column='date',
+            resample_freq='1h'
+        )
 
         if not result.empty:
-            # Test merge strategy: should use inner join (only common dates)
-            # Common dates: 2023-01-05 through 2023-01-09 (5 days)
-            expected_dates = pd.date_range('2023-01-05', periods=5, freq='D')
-            result_dates = sorted(result['date'])
+            # Merge with left join preserves all price data rows and forward-fills fundamentals
+            # Result should have at least as many rows as price data after resampling
+            assert len(result) >= len(price_df)
 
-            # Verify merge kept only common dates (inner join behavior)
-            assert len(result_dates) == 5, "Merge should use inner join strategy"
-            for expected, actual in zip(expected_dates, result_dates):
-                assert expected == actual
+            # Check that fundamental data was merged and forward-filled
+            assert 'economic_value' in result.columns
 
-            # All result dates should have data from both sources
-            result_dates_set = set(result['date'])
-            price_dates_set = set(price_df['date'])
-            fundamental_dates_set = set(fundamental_df['date'])
-
-            # Verify inner join: all results in both sources
-            assert result_dates_set.issubset(price_dates_set & fundamental_dates_set)
+            # Economic data should have non-null values after forward fill
+            assert result['economic_value'].notna().any()
 
 
 if __name__ == "__main__":

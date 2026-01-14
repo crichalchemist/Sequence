@@ -72,15 +72,18 @@ def _resolve_project_root() -> Path:
 # Lazy path resolution to avoid import-time failures
 @cache
 def get_ecb_shocks_dir() -> Path:
+    """Get vendored ECB shocks data directory."""
     root = _resolve_project_root()
-    return root / "new_data_sources" / "jkshocks_update_ecb"
+    return root / "data" / "vendors" / "ecb_shocks" / "data"
 
 @cache
 def get_daily_shocks_file() -> Path:
+    """Get path to daily ECB shocks CSV file."""
     return get_ecb_shocks_dir() / "shocks_ecb_mpd_me_d.csv"
 
 @cache
 def get_monthly_shocks_file() -> Path:
+    """Get path to monthly ECB shocks CSV file."""
     return get_ecb_shocks_dir() / "shocks_ecb_mpd_me_m.csv"
 
 

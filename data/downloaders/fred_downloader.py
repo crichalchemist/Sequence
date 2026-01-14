@@ -32,7 +32,7 @@ import os
 import sys
 from pathlib import Path
 
-import pandas as pd
+import pandas pd
 
 # Add project root to path
 ROOT = Path(__file__).resolve().parents[2]
@@ -40,6 +40,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from utils.logger import get_logger
+from utils.retry_utils import api_retry, retry_with_backoff
 
 logger = get_logger(__name__)
 
@@ -125,15 +126,20 @@ def download_series(
 
     logger.info(f"[fred] Downloading series '{series_id}' from {start_date} to {end_date}")
 
-    try:
-        fred = Fred(api_key=api_key)
-
-        # Get series data
-        series_data = fred.series.observations(
+    @api_retry(max_retries=3, base_delay=2.0, rate_limit_calls=0.5)
+    def _fetch_series_data(fred_client, series_id, start_date, end_date):
+        """Internal function for API call with retry logic."""
+        return fred_client.series.observations(
             series_id=series_id,
             observation_start=start_date,
             observation_end=end_date
         )
+
+    try:
+        fred = Fred(api_key=api_key)
+
+        # Get series data with retry
+        series_data = _fetch_series_data(fred, series_id, start_date, end_date)
 
         if not series_data:
             logger.warning(f"[fred] No data returned for series {series_id}")
