@@ -1,0 +1,105 @@
+# Default Environment Variables for CI/CD Workflows
+
+# These variables are referenced across multiple workflow files
+# They can be overridden at the environment, job, or step level
+
+name: Set CI/CD Environment Variables
+
+on:
+  workflow_call:
+
+env:
+  # Python Configuration
+  PYTHON_VERSION: '3.11'
+  PYTHON_TARGET_VERSION: '3.10'
+  
+  # Cache Configuration
+  CACHE_VERSION: v1
+  CACHE_TTL_DAYS: 5
+  
+  # Quality Standards
+  RUFF_TARGET_SCORE: 100
+  MIN_TEST_COVERAGE: 80
+  MIN_CODE_QUALITY: 85
+  
+  # Timeout Configuration (in seconds)
+  PYTEST_TIMEOUT: 600
+  VERIFICATION_TIMEOUT: 300
+  BUILD_TIMEOUT: 300
+  
+  # Artifact Configuration
+  ARTIFACT_RETENTION_DAYS: 30
+  COVERAGE_RETENTION_DAYS: 90
+  
+  # Sentry Configuration
+  SENTRY_ENVIRONMENT: production
+  SENTRY_RELEASE_PREFIX: 'v'
+  
+  # Logging Configuration
+  VERBOSE_LOGGING: 'true'
+  LOG_LEVEL: 'INFO'
+  
+  # Performance Configuration
+  PARALLEL_TESTS: 'true'
+  MAX_TEST_WORKERS: 4
+  
+  # Security Configuration
+  ENABLE_SECURITY_SCANNING: 'true'
+  SECURITY_SEVERITY_LEVEL: 'warning'
+  
+  # Path Configuration
+  SOURCE_DIR: './data ./train ./rl ./utils'
+  TEST_DIR: './tests'
+  CONFIG_DIR: './config'
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  # This is a reusable workflow that other workflows can call
+  # It doesn't do anything by itself, but provides consistent env vars
+  validate-env:
+    name: Validate Environment Configuration
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Python version
+        run: |
+          python --version
+          echo "✓ Python $PYTHON_VERSION configured"
+          
+      - name: Verify cache configuration
+        run: |
+          echo "Cache version: $CACHE_VERSION"
+          echo "TTL: $CACHE_TTL_DAYS days"
+          
+      - name: Check quality thresholds
+        run: |
+          echo "Target code quality: $MIN_CODE_QUALITY%"
+          echo "Min test coverage: $MIN_TEST_COVERAGE%"
+          echo "Ruff score target: $RUFF_TARGET_SCORE"
+          
+      - name: Verify timeout settings
+        run: |
+          echo "Pytest timeout: $PYTEST_TIMEOUT seconds"
+          echo "Build timeout: $BUILD_TIMEOUT seconds"
+          
+      - name: Log configuration summary
+        run: |
+          echo "### CI/CD Environment Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Python:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Runtime: $PYTHON_VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "- Target: $PYTHON_TARGET_VERSION+" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Quality Standards:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Code Quality: $MIN_CODE_QUALITY%" >> $GITHUB_STEP_SUMMARY
+          echo "- Test Coverage: $MIN_TEST_COVERAGE%" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Performance:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Parallel Testing: $PARALLEL_TESTS" >> $GITHUB_STEP_SUMMARY
+          echo "- Max Workers: $MAX_TEST_WORKERS" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Security:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Security Scanning: $ENABLE_SECURITY_SCANNING" >> $GITHUB_STEP_SUMMARY
+          echo "- Severity Level: $SECURITY_SEVERITY_LEVEL" >> $GITHUB_STEP_SUMMARY

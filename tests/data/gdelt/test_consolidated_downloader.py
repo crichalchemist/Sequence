@@ -7,20 +7,14 @@ Tests GDELT event download, parsing, and filtering:
 - Event parsing and FX relevance filtering
 """
 
-import sys
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import Mock, patch
 from io import BytesIO
 import gzip
 
 import pandas as pd
 import pytest
-
-# Add project root to path
-ROOT = Path(__file__).resolve().parents[3]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
 
 from data.gdelt.consolidated_downloader import GDELTDownloader
 
@@ -44,9 +38,9 @@ def mock_compressed_data(mock_gdelt_csv_data):
 
 
 @pytest.fixture
-def downloader():
-    """GDELT downloader instance."""
-    return GDELTDownloader(output_dir=Path("/tmp/test_gdelt"))
+def downloader(tmp_path):
+    """GDELT downloader instance using a temporary directory."""
+    return GDELTDownloader(output_dir=tmp_path / "test_gdelt")
 
 
 @pytest.fixture

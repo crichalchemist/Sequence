@@ -15,6 +15,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
+# Minimum number of cells required in the notebook for sufficient coverage
+# This represents essential setup, configuration, download, and processing cells
+MIN_NOTEBOOK_CELL_COUNT = 18
+
 def check_requirements():
     """Verify requirements.txt has correct packages."""
     print("📦 Checking requirements.txt...")
@@ -26,10 +30,23 @@ def check_requirements():
 
     content = req_file.read_text()
 
+    # Use precise package name matching (not substring)
     checks = {
-        'fred>=1.1.4': 'fred' in content,
-        'comtradeapicall>=1.3.0': 'comtradeapicall' in content,
-        'ratelimit>=2.2.1': 'ratelimit' in content,
+        'fred>=1.1.4': any(
+            line.strip().startswith('fred')
+            for line in content.split('\n')
+            if line.strip() and not line.strip().startswith('#')
+        ),
+        'comtradeapicall>=1.3.0': any(
+            line.strip().startswith('comtradeapicall')
+            for line in content.split('\n')
+            if line.strip() and not line.strip().startswith('#')
+        ),
+        'ratelimit>=2.2.1': any(
+            line.strip().startswith('ratelimit')
+            for line in content.split('\n')
+            if line.strip() and not line.strip().startswith('#')
+        ),
     }
 
     all_passed = True
@@ -148,7 +165,7 @@ def check_notebook():
         if not found:
             all_passed = False
 
-    return all_passed and cell_count >= 18
+    return all_passed and cell_count >= MIN_NOTEBOOK_CELL_COUNT
 
 def check_path_fixes():
     """Verify path fixes in notebooks."""
@@ -177,7 +194,7 @@ def check_path_fixes():
         return False
     else:
         print("  ⚠️  No path configuration found")
-        return True
+        return False
 
 def main():
     """Run all verification checks."""

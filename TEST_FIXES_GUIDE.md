@@ -96,7 +96,7 @@ with pytest.raises(ValueError):
 ```python
 # In train/execution/simulated_retail_env.py, ExecutionConfig.__post_init__:
 if self.spread <= 0:
-    raise ValueError("Spread must be non-negative")
+    raise ValueError("Spread must be positive")
 if not 0 <= self.limit_fill_probability <= 1:
     raise ValueError("Limit fill probability must be within [0, 1]")
 if self.lot_size <= 0:
@@ -207,6 +207,15 @@ def test_end_to_end_sentiment_pipeline(self, mock_build_scorer, ...):
 
 ## Implementation Checklist
 
+### Preliminary Safety Steps
+Before applying any fixes, ensure your codebase is protected:
+- [ ] Initialize git if not already done: `git init`
+- [ ] Create a feature branch for fixes: `git checkout -b fix/test-repairs`
+- [ ] Run full test suite to capture baseline: `pytest tests/ -v > baseline_results.txt`
+- [ ] Stash any uncommitted work: `git stash` (or commit to a backup branch)
+
+These steps ensure you can easily revert if issues arise and provide a clear baseline to measure improvement.
+
 ### Phase 1: Critical Fixes (30 minutes)
 - [ ] Update `backtesting_env.py` line 147: `self.i` → `self.I`
 - [ ] Update all 6 TestBuildFinBERTToneScorer methods to patch from `transformers`
@@ -226,10 +235,27 @@ def test_end_to_end_sentiment_pipeline(self, mock_build_scorer, ...):
 
 ## Validation Steps
 
-After applying fixes:
+After applying fixes, run tests in phases to isolate regressions:
 
 ```bash
-# Run all tests
+# Phase 1: Critical tests (ExecutionConfig, Sentiment, and core environment)
+pytest tests/train/execution/test_execution_environments.py::TestBacktestingEnv \
+        tests/train/execution/test_execution_environments.py::TestBuildFinBERTToneScorer \
+        tests/train/test_agent_sentiment.py::TestAttachSentimentFeatures::test_attach_sentiment_features_different_lengths_raises \
+        -v
+# Expected: 10–15 critical tests passing
+
+# Phase 2: High-priority tests (ExecutionConfig and position tracking)
+pytest tests/train/execution/test_execution_environments.py \
+        -k "ExecutionConfig or position_tracking" -v
+# Expected: 20–25 tests passing
+
+# Phase 3: Sentiment and integration tests
+pytest tests/train/test_agent_sentiment.py \
+        -k "end_to_end or sentiment_features_attach" -v
+# Expected: 30–40 tests passing
+
+# Full suite
 pytest tests/train/core/test_env_based_rl_training.py \
         tests/train/execution/test_execution_environments.py \
         tests/train/test_agent_sentiment.py -v

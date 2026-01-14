@@ -39,7 +39,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from utils.logger import get_logger
-from utils.retry_utils import api_retry, retry_with_backoff
+from utils.retry_utils import api_retry
 
 logger = get_logger(__name__)
 
@@ -204,19 +204,31 @@ def get_trade_indicators_for_forex(
 
     # Download for base currency country
     for base_country in countries["base"]:
-        df_base = download_trade_balance(base_country, start_year, end_year, subscription_key)
-        if not df_base.empty:
-            df_base["currency_pair"] = pair_upper
-            df_base["country_type"] = "base"
-            all_data.append(df_base)
+        try:
+            df_base = download_trade_balance(base_country, start_year, end_year, subscription_key)
+            if not df_base.empty:
+                df_base["currency_pair"] = pair_upper
+                df_base["country_type"] = "base"
+                all_data.append(df_base)
+        except Exception as e:
+            logger.warning(
+                f"[comtrade] Failed to download data for base country {base_country} "
+                f"in pair {pair_upper}: {e}. Continuing with other countries."
+            )
 
     # Download for quote currency country
     for quote_country in countries["quote"]:
-        df_quote = download_trade_balance(quote_country, start_year, end_year, subscription_key)
-        if not df_quote.empty:
-            df_quote["currency_pair"] = pair_upper
-            df_quote["country_type"] = "quote"
-            all_data.append(df_quote)
+        try:
+            df_quote = download_trade_balance(quote_country, start_year, end_year, subscription_key)
+            if not df_quote.empty:
+                df_quote["currency_pair"] = pair_upper
+                df_quote["country_type"] = "quote"
+                all_data.append(df_quote)
+        except Exception as e:
+            logger.warning(
+                f"[comtrade] Failed to download data for quote country {quote_country} "
+                f"in pair {pair_upper}: {e}. Continuing with other countries."
+            )
 
     if not all_data:
         logger.warning(f"[comtrade] No data retrieved for {currency_pair}")
@@ -261,22 +273,23 @@ def format_for_cognee(df: pd.DataFrame) -> pd.DataFrame:
         logger.warning(f"[comtrade] {nan_count} rows have invalid trade_balance, dropping them")
         df = df.dropna(subset=["trade_balance"])
 
-    # Ensure optional columns with defaults
+    # Ensure optional columns with descriptive defaults
     if "country_type" not in df.columns:
-        df["country_type"] = "country"
+        df["country_type"] = "unknown_country_type"
     if "currency_pair" not in df.columns:
-        df["currency_pair"] = "pair"
+        df["currency_pair"] = "unknown_currency_pair"
     if "country_code" not in df.columns:
-        df["country_code"] = "N/A"
+        df["country_code"] = "unknown_country_code"
 
-    df["full_text"] = df.apply(
-        lambda row: (
-            f"Trade balance for {row['country_type']} currency "
-            f"in {row['currency_pair']} on {row['date'].strftime('%Y-%m-%d')}: "
-            f"${row['trade_balance']:,.0f}. "
-            f"Country code: {row['country_code']}."
-        ),
-        axis=1,
+    # Vectorized string composition using pandas operations
+    formatted_date = df["date"].dt.strftime("%Y-%m-%d")
+    formatted_balance = df["trade_balance"].apply(lambda x: f"{x:,.0f}")
+    
+    df["full_text"] = (
+        "Trade balance for " + df["country_type"] + " currency " +
+        "in " + df["currency_pair"] + " on " + formatted_date + ": " +
+        "$" + formatted_balance + ". " +
+        "Country code: " + df["country_code"] + "."
     )
 
     return df

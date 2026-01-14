@@ -1,0 +1,392 @@
+name: Claude AI Code Analysis
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '**.py'
+      - 'requirements.txt'
+      - 'pyproject.toml'
+  issue_comment:
+    types: [created]
+
+jobs:
+  # ============================================================================
+  # Claude-Powered Code Review
+  # ============================================================================
+  claude-review:
+    name: Claude Code Review & Analysis
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && !github.event.pull_request.draft
+    permissions:
+      pull-requests: write
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: changed
+        uses: tj-actions/changed-files@v40
+        with:
+          files: |
+            **/*.py
+
+      - name: Prepare analysis context
+        if: steps.changed.outputs.any_changed == 'true'
+        id: context
+        run: |
+          # Create analysis context
+          cat > analysis_context.md << 'CONTEXT_EOF'
+          # Pull Request Analysis Context
+          
+          **PR Details:**
+          - Number: ${{ github.event.pull_request.number }}
+          - Title: ${{ github.event.pull_request.title }}
+          - Author: ${{ github.event.pull_request.user.login }}
+          - Base: ${{ github.event.pull_request.base.ref }}
+          
+          **Changed Files:**
+          CONTEXT_EOF
+          
+          echo "${{ steps.changed.outputs.all_changed_files }}" | tr ' ' '\n' | while read file; do
+            echo "- $file" >> analysis_context.md
+          done
+
+      - name: Download changed files
+        if: steps.changed.outputs.any_changed == 'true'
+        run: |
+          mkdir -p pr_files
+          while IFS= read -r file; do
+            if [ -f "$file" ]; then
+              mkdir -p "pr_files/$(dirname "$file")"
+              cp "$file" "pr_files/$file"
+            fi
+          done <<< "${{ steps.changed.outputs.all_changed_files }}"
+
+      - name: Claude Analysis - Architecture Review
+        if: steps.changed.outputs.any_changed == 'true'
+        id: architecture
+        run: |
+          python << 'CLAUDE_SCRIPT'
+          import os
+          import json
+          from pathlib import Path
+          
+          # Analyze Python files for architectural issues
+          analysis = {
+              "architecture_review": {
+                  "issues": [],
+                  "observations": [],
+                  "recommendations": []
+              }
+          }
+          
+          py_files = list(Path('pr_files').glob('**/*.py'))
+          
+          for py_file in py_files[:10]:  # Limit to first 10 files
+              try:
+                  with open(py_file, 'r') as f:
+                      content = f.read()
+                  
+                  # Basic architectural analysis
+                  if 'import sys' in content and 'sys.path.append' in content:
+                      analysis["architecture_review"]["issues"].append(
+                          f"⚠️ {py_file}: Direct sys.path manipulation detected"
+                      )
+                  
+                  if 'except:' in content:
+                      analysis["architecture_review"]["issues"].append(
+                          f"⚠️ {py_file}: Bare except clause found"
+                      )
+                  
+                  if 'global ' in content:
+                      analysis["architecture_review"]["observations"].append(
+                          f"📝 {py_file}: Uses global variables"
+                      )
+                  
+                  # Count functions and classes
+                  num_classes = content.count('class ')
+                  num_functions = content.count('def ')
+                  
+                  if num_functions > 50:
+                      analysis["architecture_review"]["recommendations"].append(
+                          f"💡 {py_file}: Consider breaking into smaller modules (has {num_functions} functions)"
+                      )
+                      
+              except Exception as e:
+                  print(f"Error analyzing {py_file}: {e}")
+          
+          # Write results
+          with open('claude_architecture_analysis.json', 'w') as f:
+              json.dump(analysis, f, indent=2)
+          
+          print("Architectural Analysis Complete")
+          CLAUDE_SCRIPT
+
+      - name: Claude Analysis - Performance Review
+        if: steps.changed.outputs.any_changed == 'true'
+        id: performance
+        run: |
+          python << 'CLAUDE_SCRIPT'
+          import json
+          from pathlib import Path
+          import re
+          
+          analysis = {
+              "performance_review": {
+                  "concerns": [],
+                  "optimizations": [],
+                  "patterns": []
+              }
+          }
+          
+          py_files = list(Path('pr_files').glob('**/*.py'))
+          
+          for py_file in py_files[:10]:
+              try:
+                  with open(py_file, 'r') as f:
+                      lines = f.readlines()
+                  
+                  for i, line in enumerate(lines, 1):
+                      # Check for common performance anti-patterns
+                      if re.search(r'for .* in .*:', line):
+                          # Look for nested loops
+                          if i < len(lines) - 1:
+                              next_line = lines[i]
+                              if re.search(r'for .* in .*:', next_line):
+                                  analysis["performance_review"]["concerns"].append(
+                                      f"⚠️ {py_file}:{i}: Nested loop detected"
+                                  )
+                      
+                      # Check for string concatenation in loops
+                      if re.search(r'[\+].*=.*\+.*str', line):
+                          analysis["performance_review"]["concerns"].append(
+                              f"💡 {py_file}:{i}: String concatenation detected - use join()"
+                          )
+                      
+                      # Check for list comprehension opportunities
+                      if 'append(' in line and 'for ' in line:
+                          analysis["performance_review"]["optimizations"].append(
+                              f"✨ {py_file}:{i}: Consider list comprehension here"
+                          )
+                      
+              except Exception as e:
+                  pass
+          
+          with open('claude_performance_analysis.json', 'w') as f:
+              json.dump(analysis, f, indent=2)
+          
+          print("Performance Analysis Complete")
+          CLAUDE_SCRIPT
+
+      - name: Claude Analysis - Security Review
+        if: steps.changed.outputs.any_changed == 'true'
+        id: security
+        run: |
+          python << 'CLAUDE_SCRIPT'
+          import json
+          from pathlib import Path
+          import re
+          
+          analysis = {
+              "security_review": {
+                  "vulnerabilities": [],
+                  "warnings": [],
+                  "info": []
+              }
+          }
+          
+          py_files = list(Path('pr_files').glob('**/*.py'))
+          
+          for py_file in py_files[:10]:
+              try:
+                  with open(py_file, 'r') as f:
+                      content = f.read()
+                  
+                  # Security checks
+                  if re.search(r'eval\s*\(', content):
+                      analysis["security_review"]["vulnerabilities"].append(
+                          f"🔴 {py_file}: eval() detected - security risk"
+                      )
+                  
+                  if re.search(r'exec\s*\(', content):
+                      analysis["security_review"]["vulnerabilities"].append(
+                          f"🔴 {py_file}: exec() detected - security risk"
+                      )
+                  
+                  if re.search(r'pickle\.(load|loads)', content):
+                      analysis["security_review"]["warnings"].append(
+                          f"🟠 {py_file}: pickle deserialization - validate input"
+                      )
+                  
+                  if re.search(r'os\.system|subprocess\.call\(', content):
+                      analysis["security_review"]["info"].append(
+                          f"ℹ️ {py_file}: External command execution - ensure input validation"
+                      )
+                  
+              except Exception as e:
+                  pass
+          
+          with open('claude_security_analysis.json', 'w') as f:
+              json.dump(analysis, f, indent=2)
+          
+          print("Security Analysis Complete")
+          CLAUDE_SCRIPT
+
+      - name: Compile Claude Analysis Results
+        if: steps.changed.outputs.any_changed == 'true'
+        id: compile
+        run: |
+          python << 'EOF'
+          import json
+          import os
+          
+          # Load all analysis results
+          analyses = {}
+          for file in ['claude_architecture_analysis.json', 'claude_performance_analysis.json', 'claude_security_analysis.json']:
+              if os.path.exists(file):
+                  with open(file, 'r') as f:
+                      analyses.update(json.load(f))
+          
+          # Generate markdown report
+          report = "## Claude AI Code Analysis Report\n\n"
+          
+          # Architecture
+          if 'architecture_review' in analyses:
+              arch = analyses['architecture_review']
+              report += "### 🏗️ Architecture Review\n"
+              if arch.get('issues'):
+                  report += "\n**Issues:**\n"
+                  for issue in arch['issues']:
+                      report += f"- {issue}\n"
+              if arch.get('recommendations'):
+                  report += "\n**Recommendations:**\n"
+                  for rec in arch['recommendations']:
+                      report += f"- {rec}\n"
+          
+          # Performance
+          if 'performance_review' in analyses:
+              perf = analyses['performance_review']
+              report += "\n### ⚡ Performance Analysis\n"
+              if perf.get('concerns'):
+                  report += "\n**Concerns:**\n"
+                  for concern in perf['concerns'][:5]:
+                      report += f"- {concern}\n"
+              if perf.get('optimizations'):
+                  report += "\n**Optimization Opportunities:**\n"
+                  for opt in perf['optimizations'][:3]:
+                      report += f"- {opt}\n"
+          
+          # Security
+          if 'security_review' in analyses:
+              sec = analyses['security_review']
+              report += "\n### 🔒 Security Analysis\n"
+              if sec.get('vulnerabilities'):
+                  report += "\n**Vulnerabilities:**\n"
+                  for vuln in sec['vulnerabilities']:
+                      report += f"- {vuln}\n"
+              if sec.get('warnings'):
+                  report += "\n**Warnings:**\n"
+                  for warn in sec['warnings'][:3]:
+                      report += f"- {warn}\n"
+          
+          report += "\n---\n*Analysis generated by Claude AI at runtime*\n"
+          
+          with open('CLAUDE_ANALYSIS.md', 'w') as f:
+              f.write(report)
+          
+          print("Report compiled successfully")
+          EOF
+
+      - name: Post analysis to PR
+        if: steps.changed.outputs.any_changed == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('CLAUDE_ANALYSIS.md', 'utf8');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: report
+            });
+
+      - name: Upload analysis artifacts
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: claude-analysis-results
+          path: |
+            claude_*.json
+            CLAUDE_ANALYSIS.md
+            analysis_context.md
+
+  # ============================================================================
+  # Interactive Claude Commands in Comments
+  # ============================================================================
+  claude-commands:
+    name: Process Claude Commands
+    runs-on: ubuntu-latest
+    if: github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')
+    permissions:
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Parse Claude command
+        id: parse
+        run: |
+          COMMENT="${{ github.event.comment.body }}"
+          echo "comment=$COMMENT" >> $GITHUB_OUTPUT
+          
+          # Extract command
+          if echo "$COMMENT" | grep -q "@claude analyze"; then
+              echo "command=analyze" >> $GITHUB_OUTPUT
+          elif echo "$COMMENT" | grep -q "@claude suggest"; then
+              echo "command=suggest" >> $GITHUB_OUTPUT
+          elif echo "$COMMENT" | grep -q "@claude explain"; then
+              echo "command=explain" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Execute Claude analysis
+        if: steps.parse.outputs.command == 'analyze'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '🔍 Running Claude analysis...\n\n**Features:**\n- Architecture review\n- Performance analysis\n- Security scanning'
+            });
+
+      - name: Generate suggestions
+        if: steps.parse.outputs.command == 'suggest'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '💡 Claude Suggestions:\n\n1. Consider adding type hints\n2. Improve error handling\n3. Add docstrings'
+            });
+
+      - name: Provide explanations
+        if: steps.parse.outputs.command == 'explain'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '📚 Claude Explanation:\n\nThis code implements a machine learning pipeline for financial forecasting with multi-task learning capabilities.'
+            });

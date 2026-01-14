@@ -10,7 +10,6 @@ import random
 import functools
 import logging
 from typing import Type, Union, List, Callable, Optional, Any
-from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -110,7 +109,7 @@ def rate_limit(calls_per_second: float = 1.0) -> Callable:
         Decorated function with rate limiting
 
     Example:
-        @rate_limit(calls_per_second=0.5)  # 2 calls per second max
+        @rate_limit(calls_per_second=0.5)  # 0.5 calls per second (1 call every 2 seconds)
         def api_call():
             return requests.get(url)
     """
@@ -188,17 +187,18 @@ def api_call_with_retry(
         # Apply rate limiting first
         rate_limited = rate_limit(rate_limit_calls)(func)
 
-        # Then apply retry logic
+        # Then apply retry logic with only transient/network errors
         retried = retry_with_backoff(
             max_retries=max_retries,
             base_delay=base_delay,
             max_delay=max_delay,
             exceptions=[
-                # HTTP/network errors
+                # HTTP/network errors that are transient
                 TimeoutError,
                 ConnectionError,
-                # Request library errors
-                Exception,  # Will be filtered by specific check in retry decorator
+                # Add request library specific exceptions if available
+                # OSError for file/network issues
+                OSError,
             ],
         )(rate_limited)
 
@@ -274,13 +274,15 @@ class RetryContext:
 
                 delay = min(self.base_delay * (2**attempt), self.max_delay)
                 jitter = delay * 0.1 * (2 * random.random() - 1)
+                # Ensure sleep time is non-negative
+                sleep_time = max(0, delay + jitter)
 
                 logger.warning(
                     f"[retry_context] Attempt {attempt + 1} failed: {str(e)[:50]}... "
-                    f"Retrying in {delay + jitter:.1f}s"
+                    f"Retrying in {sleep_time:.1f}s"
                 )
 
-                time.sleep(delay + jitter)
+                time.sleep(sleep_time)
 
     def get_stats(self) -> dict:
         """Get retry statistics."""

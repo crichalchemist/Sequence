@@ -26,9 +26,11 @@ def get_data_dir() -> Path:
     Get the directory containing ECB shocks CSV files.
 
     Returns:
-        Path: Absolute path to data directory containing vendored CSV files.
+        Path: Absolute path to the data directory containing vendored CSV files.
+              The path is resolved to ensure it is absolute regardless of the
+              current working directory.
     """
-    return Path(__file__).parent / "data"
+    return (Path(__file__).parent / "data").resolve()
 
 
 def get_daily_shocks_path() -> Path:

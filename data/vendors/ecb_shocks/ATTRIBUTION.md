@@ -34,7 +34,7 @@ The original data and replication files can be obtained from:
 
 ## Usage in Sequence Project
 
-This data is used in `/Volumes/Containers/Sequence/data/downloaders/ecb_shocks_downloader.py` to:
+This data is used in `data/downloaders/ecb_shocks_downloader.py` to:
 1. Load monetary policy shock data for EUR currency pairs
 2. Classify shocks as hawkish, dovish, or neutral based on thresholds
 3. Merge with high-frequency FX price data for fundamental analysis
@@ -59,7 +59,16 @@ If you use this data in academic research, please cite:
 
 ## License
 
-The original dataset is provided under the AEA's data availability policy for replication purposes. Academic use requires proper citation as specified above.
+The original dataset is provided under the [AEA Data Availability Policy](https://www.aeaweb.org/journals/policies/data-code/). 
+
+**Permitted Uses:**
+- Academic replication and research purposes only. The dataset must be cited properly as shown in the "Citation Requirements" section above.
+
+**Restrictions:**
+- Non-academic and commercial use requires explicit written permission from the authors and compliance with the original AEA policy terms.
+
+**Permission & Licensing:**
+For requests regarding non-academic use, derivative works, or commercial licensing, please contact the authors (see Contact section) or visit the [AEA Data Repository](https://www.openicpsr.org/openicpsr/project/116329) for licensing options.
 
 ## Version
 

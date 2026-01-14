@@ -6,6 +6,7 @@ Tests the most critical components without complex imports.
 """
 
 import json
+import sys
 from pathlib import Path
 from datetime import datetime
 
@@ -205,7 +206,11 @@ def check_test_suite():
 
 
 def generate_summary():
-    """Generate final summary."""
+    """Generate final summary and return exit code.
+    
+    Returns:
+        int: 0 if all checks pass, non-zero if any check fails.
+    """
     print("\n" + "=" * 60)
     print("📋 INFRASTRUCTURE VERIFICATION SUMMARY")
     print("=" * 60)
@@ -221,17 +226,25 @@ def generate_summary():
     ]
 
     results = {}
+    any_failed = False
     for check_func in checks:
         try:
             check_func()
+            results[check_func.__name__] = True
         except Exception as e:
             print(f"❌ Check {check_func.__name__} failed: {e}")
+            results[check_func.__name__] = str(e)
+            any_failed = True
 
+    # Determine overall status based on results
+    overall_status = "failed" if any_failed else "passed"
+    
     # Generate timestamped report
     report = {
         "timestamp": datetime.now().isoformat(),
         "verification_type": "simple_colab_infrastructure",
-        "status": "completed",
+        "status": overall_status,
+        "results": results,
     }
 
     report_file = Path("simple_verification_report.json")
@@ -239,7 +252,13 @@ def generate_summary():
         json.dump(report, f, indent=2)
 
     print(f"\n📄 Report saved: {report_file}")
-    print("\n🎉 Key infrastructure components verified!")
+    
+    if overall_status == "passed":
+        print("\n🎉 Key infrastructure components verified!")
+        return 0
+    else:
+        print(f"\n❌ Verification failed: {len([v for v in results.values() if v is not True])} check(s) failed")
+        return 1
 
 
 if __name__ == "__main__":
@@ -247,4 +266,5 @@ if __name__ == "__main__":
     print("=" * 60)
     print("Verifying critical path fixes and components...\n")
 
-    generate_summary()
+    exit_code = generate_summary()
+    sys.exit(exit_code)

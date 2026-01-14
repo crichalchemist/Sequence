@@ -9,20 +9,15 @@ Tests the SAC components including:
 - Save/load functionality
 """
 
-import sys
+import os
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 import numpy as np
 import pytest
 import torch
 import torch.nn as nn
-
-# Add project root to path
-ROOT = Path(__file__).resolve().parents[2]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
 
 from rl.agents.sac_agent import SACAgent
 from rl.networks.sac_networks import QNetwork, StochasticPolicy
@@ -65,12 +60,16 @@ def replay_buffer_with_data(state_dim, action_dim):
     buffer = ReplayBuffer(capacity=1000)
 
     # Add 500 random transitions
-    for _ in range(500):
+    for i in range(500):
         state = np.random.randn(state_dim)
-        action = np.random.uniform(-1, 1, action_dim)[0]
+        # Generate action with proper shape (don't slice if action_dim > 1)
+        action = np.random.uniform(-1, 1, size=action_dim)
+        if action_dim == 1:
+            action = action[0]  # Scalar for action_dim=1
         reward = np.random.randn()
         next_state = np.random.randn(state_dim)
-        done = False
+        # Vary done: ~10% of transitions are terminal
+        done = i % 10 == 0
 
         buffer.add(state, action, reward, next_state, done)
 
@@ -155,8 +154,9 @@ class TestStochasticPolicy:
         assert (actions >= -1).all()
         assert (actions <= 1).all()
 
-        # Log probs should be negative (log of probabilities < 1)
-        assert (log_probs <= 0).all()
+        # Log probs can have small positive values due to tanh squashing and Jacobian correction
+        # Allow small positive tolerance
+        assert (log_probs <= 1e-3).all()
 
         # Should be finite
         assert torch.isfinite(actions).all()
@@ -445,8 +445,10 @@ class TestSACAgent:
         for _ in range(10):
             agent.update(replay_buffer_with_data, batch_size=64)
 
-        # Alpha should have changed (auto-tuning)
-        assert agent.alpha != initial_alpha
+        # Alpha should have changed (auto-tuning) within tolerance
+        # Use absolute/relative tolerance for float comparison
+        import math
+        assert not math.isclose(agent.alpha, initial_alpha, abs_tol=1e-6, rel_tol=1e-6)
 
         # Alpha should remain positive
         assert agent.alpha > 0
@@ -493,7 +495,6 @@ class TestSACAgent:
             assert np.allclose(action1, action2, atol=1e-5)
 
         finally:
-            import os
             os.remove(checkpoint_path)
 
     def test_manual_soft_update(self, state_dim, action_dim, hidden_dim):
@@ -518,7 +519,12 @@ class TestSACAgent:
 
         # Check target is now 50% of source (tau=0.5)
         expected_value = 0.5 * 1.0 + 0.5 * 0.0
-        assert torch.allclose(target_param, torch.tensor(expected_value), atol=1e-5)
+        # Use dtype matching when creating expected tensor
+        assert torch.allclose(
+            target_param, 
+            torch.tensor(expected_value, dtype=target_param.dtype), 
+            atol=1e-5
+        )
 
 
 class TestSACIntegration:
@@ -543,7 +549,7 @@ class TestSACIntegration:
         # All losses should be finite
         assert all(np.isfinite(loss) for loss in losses)
 
-    def test_action_selection_consistency(self, state_dim, action_dim, hidden_dim):
+    def test_action_selection_consistency(self, state_dim, action_dim, hidden_dim, replay_buffer_with_data):
         """Test action selection before and after update."""
         agent = SACAgent(state_dim=state_dim, action_dim=action_dim, hidden_dim=hidden_dim)
 
@@ -552,23 +558,16 @@ class TestSACIntegration:
         # Action before update
         action_before = agent.select_action(state, evaluate=True)
 
-        # Create and fill replay buffer
-        buffer = ReplayBuffer(capacity=500)
-        for _ in range(500):
-            s = np.random.randn(state_dim)
-            a = np.random.uniform(-1, 1, action_dim)[0]
-            r = np.random.randn()
-            s_next = np.random.randn(state_dim)
-            buffer.add(s, a, r, s_next, False)
-
-        # Update
-        agent.update(buffer, batch_size=64)
+        # Use pre-filled replay buffer fixture for update
+        # Update multiple times to ensure policy changes
+        for _ in range(3):
+            agent.update(replay_buffer_with_data, batch_size=64)
 
         # Action after update
         action_after = agent.select_action(state, evaluate=True)
 
-        # Actions should be different (policy updated)
-        assert not np.allclose(action_before, action_after)
+        # Actions should be different (policy updated) with relaxed tolerance
+        assert not np.allclose(action_before, action_after, atol=1e-4, rtol=1e-4)
 
         # But both should be valid
         assert np.all(action_before >= -1) and np.all(action_before <= 1)

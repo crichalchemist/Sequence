@@ -32,7 +32,7 @@ import os
 import sys
 from pathlib import Path
 
-import pandas pd
+import pandas as pd
 
 # Add project root to path
 ROOT = Path(__file__).resolve().parents[2]
@@ -40,7 +40,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from utils.logger import get_logger
-from utils.retry_utils import api_retry, retry_with_backoff
+from utils.retry_utils import api_retry
 
 logger = get_logger(__name__)
 
@@ -85,6 +85,26 @@ FOREX_ECONOMIC_SERIES = {
 }
 
 
+@api_retry(max_retries=3, base_delay=2.0, rate_limit_calls=0.5)
+def _fetch_series_data(fred_client, series_id: str, start_date: str, end_date: str):
+    """Internal function for API call with retry logic.
+    
+    Args:
+        fred_client: Initialized Fred client
+        series_id: FRED series identifier
+        start_date: Start date in "YYYY-MM-DD" format
+        end_date: End date in "YYYY-MM-DD" format
+        
+    Returns:
+        Series data from FRED API
+    """
+    return fred_client.series.observations(
+        series_id=series_id,
+        observation_start=start_date,
+        observation_end=end_date
+    )
+
+
 def download_series(
         series_id: str,
         start_date: str,
@@ -125,15 +145,6 @@ def download_series(
         )
 
     logger.info(f"[fred] Downloading series '{series_id}' from {start_date} to {end_date}")
-
-    @api_retry(max_retries=3, base_delay=2.0, rate_limit_calls=0.5)
-    def _fetch_series_data(fred_client, series_id, start_date, end_date):
-        """Internal function for API call with retry logic."""
-        return fred_client.series.observations(
-            series_id=series_id,
-            observation_start=start_date,
-            observation_end=end_date
-        )
 
     try:
         fred = Fred(api_key=api_key)

@@ -10,23 +10,24 @@ import sys
 import json
 import subprocess
 import tempfile
+import importlib
 from pathlib import Path
 from datetime import datetime
 
 # Add project root to path
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 
 # Color codes for output
 class Colors:
-    GREEN = "\\033[92m"
-    RED = "\\033[91m"
-    YELLOW = "\\033[93m"
-    BLUE = "\\033[94m"
-    BOLD = "\\033[1m"
-    END = "\\033[0m"
+    GREEN = "\033[92m"
+    RED = "\033[91m"
+    YELLOW = "\033[93m"
+    BLUE = "\033[94m"
+    BOLD = "\033[1m"
+    END = "\033[0m"
 
 
 def print_status(message, status="info"):
@@ -70,7 +71,10 @@ def check_package_imports():
 
     for package_name, import_name in packages_to_check:
         try:
-            exec(f"import {import_name}")
+            # Convert module path (e.g., "utils.retry_utils" -> use importlib)
+            module_parts = import_name.split('.')
+            module_name = module_parts[0]
+            importlib.import_module(module_name)
             print_status(f"{package_name}: Import successful", "success")
             success_count += 1
         except ImportError as e:
@@ -80,7 +84,7 @@ def check_package_imports():
 
     success_rate = success_count / total_count
     print(
-        f"\\n{Colors.BLUE}Import Success Rate: {success_rate:.1%} ({success_count}/{total_count}){Colors.END}"
+        f"\n{Colors.BLUE}Import Success Rate: {success_rate:.1%} ({success_count}/{total_count}){Colors.END}"
     )
 
     return success_rate >= 0.8  # Allow some optional packages to fail
@@ -91,7 +95,7 @@ def check_path_configuration():
     print_status("Checking Path Configuration", "info")
     print("=" * 50)
 
-try:
+    try:
         # Import directly from file to avoid module issues
         sys.path.insert(0, str(ROOT / 'notebooks'))
         from colab_data_collection import ColabConfig
@@ -121,7 +125,7 @@ try:
                 print_status(check_name, "error")
 
         print(
-            f"\\n{Colors.BLUE}Path Fix Success Rate: {success_count / len(checks):.1%}{Colors.END}"
+            f"\n{Colors.BLUE}Path Fix Success Rate: {success_count / len(checks):.1%}{Colors.END}"
         )
         return success_count == len(checks)
 
@@ -270,21 +274,27 @@ def check_requirements_file():
 
     content = requirements_file.read_text()
 
-    # Check for critical packages
+    # Check for critical packages by name only (ignoring version specifiers)
     required_packages = [
-        "fred>=1.1.4",
-        "comtradeapicall>=1.3.0",
-        "histdata>=1.1",
-        "ratelimit>=2.2.1",
+        ("fred", "fred>=1.1.4"),
+        ("comtradeapicall", "comtradeapicall>=1.3.0"),
+        ("histdata", "histdata>=1.1"),
+        ("ratelimit", "ratelimit>=2.2.1"),
     ]
 
     success_count = 0
-    for package in required_packages:
-        if package in content:
-            print_status(f"{package}: Found", "success")
+    for package_name, full_spec in required_packages:
+        # Check if package name appears as a requirement (name-based matching)
+        package_found = any(
+            line.strip().startswith(package_name) 
+            for line in content.split('\n') 
+            if line.strip() and not line.strip().startswith('#')
+        )
+        if package_found:
+            print_status(f"{full_spec}: Found", "success")
             success_count += 1
         else:
-            print_status(f"{package}: Missing", "error")
+            print_status(f"{full_spec}: Missing", "error")
 
     # Check for incorrect editable installs
     incorrect_patterns = ["-e ./new_data_sources/FRB", "-e ./new_data_sources/comtradeapicall"]
@@ -307,12 +317,13 @@ def run_test_suite():
     print("=" * 50)
 
     try:
-        # Run pytest on the Colab pipeline tests
+        # Run pytest on the Colab pipeline tests with a 300-second timeout
         result = subprocess.run(
             [sys.executable, "-m", "pytest", "tests/test_colab_pipeline.py", "-v", "--tb=short"],
             cwd=ROOT,
             capture_output=True,
             text=True,
+            timeout=300,
         )
 
         if result.returncode == 0:
@@ -323,7 +334,10 @@ def run_test_suite():
             print("STDOUT:", result.stdout[-500:] if len(result.stdout) > 500 else result.stdout)
             print("STDERR:", result.stderr[-500:] if len(result.stderr) > 500 else result.stderr)
             return False
-
+    
+    except subprocess.TimeoutExpired:
+        print_status("Test suite: Timed out after 5 minutes", "error")
+        return False
     except Exception as e:
         print_status(f"Test suite execution failed: {e}", "error")
         return False
@@ -342,13 +356,14 @@ def generate_verification_report():
         ("ECB Shocks Data", check_ecb_shocks_data),
         ("Colab Notebooks", check_colab_notebooks),
         ("Requirements File", check_requirements_file),
+        ("Test Suite", run_test_suite),
     ]
 
     results = {}
     passed_checks = 0
 
     for check_name, check_func in checks:
-        print(f"\\n{Colors.BOLD}Running: {check_name}{Colors.END}")
+        print(f"\n{Colors.BOLD}Running: {check_name}{Colors.END}")
         try:
             result = check_func()
             results[check_name] = {"status": "PASSED" if result else "FAILED", "passed": result}
@@ -362,7 +377,7 @@ def generate_verification_report():
     total_checks = len(checks)
     success_rate = passed_checks / total_checks
 
-    print(f"\\n{Colors.BOLD}{'=' * 60}{Colors.END}")
+    print(f"\n{Colors.BOLD}{'=' * 60}{Colors.END}")
     print(f"{Colors.BOLD}VERIFICATION SUMMARY{Colors.END}")
     print(f"{Colors.BOLD}{'=' * 60}{Colors.END}")
 

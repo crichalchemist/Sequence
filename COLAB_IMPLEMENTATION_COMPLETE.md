@@ -63,8 +63,38 @@ class DownloadState:
     
     @classmethod
     def load_from_drive(cls, path: Path):
-        """Resume from saved state."""
-        # Automatic resume capability
+        """Resume from saved state.
+        
+        Args:
+            path: Path to the saved state JSON file.
+            
+        Returns:
+            An instance of cls reconstructed from persisted data.
+            
+        Raises:
+            NotImplementedError: This is a placeholder implementation.
+                Full implementation requires reading JSON, deserializing
+                the state, and calling cls.__init__ with the restored values.
+        """
+        if not path.exists():
+            raise NotImplementedError(
+                "load_from_drive is a simplified placeholder. "
+                "Implement by: (1) opening the Path, (2) deserializing JSON, "
+                "(3) calling cls(**deserialized_dict) to reconstruct the instance. "
+                "Example: with open(path) as f: data = json.load(f); return cls(**data)"
+            )
+        
+        # Minimal working implementation:
+        try:
+            import json
+            with open(path, 'r') as f:
+                data = json.load(f)
+            return cls(**data)
+        except Exception as e:
+            raise NotImplementedError(
+                f"load_from_drive encountered an error: {e}. "
+                "Please implement full deserialization logic."
+            )
 ```
 
 ### 3. Robust Error Handling
