@@ -21,6 +21,18 @@ class FeatureConfig:
     microstructure_windows: list[int] = field(default_factory=lambda: [5, 10, 20])
     dc_threshold_up: float = 0.001  # Directional change threshold for upward moves (0.1%)
     dc_threshold_down: float | None = None  # Defaults to dc_threshold_up if not specified
+    # Quantum reservoir computing (emulation) knobs.
+    qrc_num_qubits: int = 8
+    qrc_input_qubits: int = 4
+    qrc_memory_qubits: int = 4
+    qrc_dt: float = 0.1
+    qrc_steps: int = 1
+    qrc_coupling_scale: float = 0.5
+    qrc_field_scale: float = 0.5
+    qrc_input_scale: float = 1.0
+    qrc_measure_pairs: bool = False
+    qrc_burn_in: int = 0
+    qrc_seed: int = 42
     include_groups: list[str] | None = None
     exclude_groups: list[str] | None = None
 

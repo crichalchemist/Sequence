@@ -229,5 +229,24 @@ def build_feature_frame(df: pd.DataFrame, config: FeatureConfig | None = None) -
             down_threshold=config.dc_threshold_down,
         )
 
+    if _should_add("quantum_reservoir", config):
+        from models.quantum_emulation.reservoir.ising_qrc import IsingQRCConfig
+        from train.features.quantum_reservoir import add_quantum_reservoir_features
+
+        qrc_cfg = IsingQRCConfig(
+            n_qubits=config.qrc_num_qubits,
+            n_input_qubits=config.qrc_input_qubits,
+            n_memory_qubits=config.qrc_memory_qubits,
+            dt=config.qrc_dt,
+            steps=config.qrc_steps,
+            coupling_scale=config.qrc_coupling_scale,
+            field_scale=config.qrc_field_scale,
+            input_scale=config.qrc_input_scale,
+            measure_pairs=config.qrc_measure_pairs,
+            burn_in=config.qrc_burn_in,
+            seed=config.qrc_seed,
+        )
+        feature_df = add_quantum_reservoir_features(feature_df, qrc_cfg)
+
     feature_df = feature_df.dropna().reset_index(drop=True)
     return feature_df

@@ -95,6 +95,38 @@ class DownloadState:
                 f"load_from_drive encountered an error: {e}. "
                 "Please implement full deserialization logic."
             )
+
+            """
+            Resume from saved state.
+            Args:
+                path: Path to the saved state JSON file.
+            Returns:
+                An instance of cls reconstructed from persisted data.
+            Raises:
+                FileNotFoundError: If the provided path does not exist.
+                ValueError: If JSON deserialization or instantiation fails.
+            """
+            if not path.exists():
+                raise FileNotFoundError(
+                    f"State file not found at {path}. "
+                    f"Ensure the path is correct and the file exists."
+                )
+            try:
+                with open(path, 'r') as f:
+                    data = json.load(f)
+                return cls(**data)
+            except json.JSONDecodeError as e:
+                raise ValueError(
+                    f"Failed to deserialize JSON from {path}: {e}"
+                ) from e
+            except TypeError as e:
+                raise ValueError(
+                    f"Failed to instantiate {cls.__name__} from data: {e}"
+                ) from e
+            except IOError as e:
+                raise IOError(
+                    f"Failed to read state file {path}: {e}"
+                ) from e
 ```
 
 ### 3. Robust Error Handling

@@ -5,7 +5,13 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pytest
-import torch
+
+try:
+    import torch
+    TORCH_AVAILABLE = True
+except ModuleNotFoundError:
+    torch = None
+    TORCH_AVAILABLE = False
 
 # Add project root to path
 ROOT = Path(__file__).resolve().parents[1]
@@ -40,9 +46,26 @@ def pytest_collection_modifyitems(config, items):
             item.add_marker(pytest.mark.timeout(300))
 
 
+def pytest_ignore_collect(collection_path, config):
+    """Skip torch-dependent tests when torch is unavailable."""
+    if TORCH_AVAILABLE:
+        return False
+    ext = collection_path.suffix
+    if ext != ".py":
+        return False
+    # Avoid importing torch-heavy tests by scanning for direct torch imports.
+    try:
+        content = collection_path.read_text(encoding="utf-8")
+    except Exception:
+        return False
+    return "import torch" in content or "from torch" in content
+
+
 @pytest.fixture(scope="session")
 def device():
     """Fixture for torch device (CPU or CUDA)."""
+    if not TORCH_AVAILABLE:
+        pytest.skip("torch is not available in this environment")
     return torch.device("cpu")
 
 

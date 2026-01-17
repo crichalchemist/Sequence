@@ -1,6 +1,6 @@
 # Sequence FX Trading System Documentation
 
-**Last Updated**: 2025-12-29
+**Last Updated**: 2026-01-17
 **Version**: Phase 3 Complete
 
 Welcome to the Sequence FX trading system documentation. This directory contains comprehensive guides, API references,
@@ -12,7 +12,7 @@ and implementation details for the reinforcement learning-based forex trading pl
 
 ### 🚀 Getting Started
 
-- **[Architecture & API Reference](ARCHITECTURE_API_REFERENCE.md)** - System overview, module reference, training
+- **[Architecture & API Reference](api/ARCHITECTURE_API_REFERENCE.md)** - System overview, module reference, training
   workflow
 - **[Configuration Reference](CONFIGURATION_REFERENCE.md)** - Production-ready configurations and parameter tuning
 
@@ -35,9 +35,15 @@ and implementation details for the reinforcement learning-based forex trading pl
 - **[Tracing Implementation](guides/TRACING_IMPLEMENTATION.md)** - OpenTelemetry setup and usage
 - **[Tracing Quick Reference](guides/TRACING_QUICK_REF.md)** - Quick start for tracing
 
+### 📊 Data Sources
+
+- **[New Data Sources](NEW_DATA_SOURCES.md)** - FRED, Comtrade, ECB fundamental data integration
+- **[Hyperparameter Tuning](guides/HYPERPARAMETER_TUNING_GUIDE.md)** - Bayesian optimization guide
+
 ### 📚 Research & Analysis
 
 - **[Research Evaluation](research/RESEARCH_EVALUATION.md)** - Research paper concepts mapped to implementation
+- **[Quantum Emulation](research/quantum_emulation.md)** - Experimental quantum-inspired features
 
 ### 📦 Archives
 
@@ -50,13 +56,18 @@ and implementation details for the reinforcement learning-based forex trading pl
 ```
 docs/
 ├── README.md                                    ✅ You are here
-├── ARCHITECTURE_API_REFERENCE.md                ✅ Current
 ├── CONFIGURATION_REFERENCE.md                   ✅ Current
+├── NEW_DATA_SOURCES.md                          ✅ Current
+├── TESTING_AND_LINTING.md                       ✅ Current
 ├── TESTING_VALIDATION_REPORT.md                 ✅ Current
+│
+├── api/
+│   └── ARCHITECTURE_API_REFERENCE.md            ✅ Current
 │
 ├── guides/
 │   ├── BACKTESTING_INTEGRATION_GUIDE.md         ✅ Current
 │   ├── FX_SIGNALS_RL_INTEGRATION.md             ✅ Current
+│   ├── HYPERPARAMETER_TUNING_GUIDE.md           ✅ Current
 │   ├── PHASE_3_QUICK_START.md                   ✅ Current
 │   ├── TRACING_IMPLEMENTATION.md                ✅ Current
 │   └── TRACING_QUICK_REF.md                     ✅ Current
@@ -66,10 +77,10 @@ docs/
 │   └── RL_IMPLEMENTATION_COMPARISON.md          ✅ Current
 │
 ├── research/
-│   └── RESEARCH_EVALUATION.md                   ✅ Current
+│   ├── RESEARCH_EVALUATION.md                   ✅ Current
+│   └── quantum_emulation.md                     ✅ Current
 │
-└── archive/
-    └── PHASE_1_2_TEST_RESULTS.md                📦 Archived
+└── archive/                                     📦 Historical docs
 ```
 
 ---

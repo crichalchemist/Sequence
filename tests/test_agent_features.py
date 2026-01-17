@@ -74,6 +74,7 @@ def test_feature_frame_no_lookahead_and_normalized_ranges():
         long_vol_window=5,
         spread_windows=[3],
         imbalance_smoothing=2,
+        exclude_groups=["regime"],
     )
 
     full_features = build_feature_frame(df, config=config)
@@ -95,3 +96,20 @@ def test_feature_frame_no_lookahead_and_normalized_ranges():
     assert np.nanmax(np.abs(float_values)) < 150
     assert full_features["wick_imbalance"].between(-1, 1).all()
     assert full_features["body_range_ratio"].between(-1, 1).all()
+
+
+def test_feature_frame_with_quantum_reservoir_group():
+    df = _sample_df(length=60)
+    config = FeatureConfig(
+        include_groups=["quantum_reservoir"],
+        qrc_num_qubits=4,
+        qrc_input_qubits=2,
+        qrc_memory_qubits=2,
+        qrc_steps=1,
+        qrc_measure_pairs=False,
+    )
+
+    feature_df = build_feature_frame(df, config=config)
+    qrc_cols = [c for c in feature_df.columns if c.startswith("qrc_")]
+    assert qrc_cols, "Expected quantum reservoir features to be present"
+    assert len(feature_df) > 0

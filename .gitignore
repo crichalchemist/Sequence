@@ -1,10 +1,14 @@
+# OS files
 .DS_Store
+
+# IDE/Editor
 .idea/
 .vscode/
 .python-version
 
 # Virtual environments
 .venv/
+.venvx_*/
 venv/
 env/
 
@@ -14,10 +18,17 @@ __pycache__/
 *.pyo
 *.pyd
 *.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
 
 # Build outputs
 build/
 dist/
+
+# JavaScript/Node
+node_modules/
+package-lock.json
 
 # Data and generated artifacts
 output/
@@ -33,6 +44,7 @@ forex research/
 models/*.onnx
 models/*.pt
 models/*.pth
+checkpoints/
 *.onnx
 *.pt
 *.pth
@@ -42,14 +54,11 @@ models/*.pth
 *.tar
 *.tar.gz
 *.log
+
+# Environment/secrets
+.env
+*.env.local
+
+# Keep these tracked
 !/tests/__init__.py
 !/.editorconfig
-!/.env
-
-!/.jbeval/
-
-!/.claude/
-
-!/.github/
-
-.env

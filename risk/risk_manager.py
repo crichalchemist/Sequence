@@ -14,7 +14,12 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
-import torch
+try:
+    import torch
+    TORCH_AVAILABLE = True
+except ModuleNotFoundError:  # pragma: no cover - exercised when torch isn't installed
+    torch = None
+    TORCH_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 if not logger.handlers:
@@ -111,6 +116,8 @@ class RiskManager:
         When a gate is active, all logits are suppressed except for the flat
         class, which is promoted to steer the policy away from new entries.
         """
+        if not TORCH_AVAILABLE:
+            raise ModuleNotFoundError("torch is required for apply_classification_logits")
 
         reasons = self._active_gates(context)
         if not reasons:
@@ -126,6 +133,8 @@ class RiskManager:
             self, preds: torch.Tensor, context: dict[str, Any] | None = None
     ) -> tuple[torch.Tensor, list[str]]:
         """Throttle regression outputs when gates are active."""
+        if not TORCH_AVAILABLE:
+            raise ModuleNotFoundError("torch is required for apply_regression_output")
 
         reasons = self._active_gates(context)
         if not reasons:
@@ -134,6 +143,8 @@ class RiskManager:
 
     def record_actions(self, actions: torch.Tensor) -> None:
         """Update position count based on non-flat decisions."""
+        if not TORCH_AVAILABLE:
+            raise ModuleNotFoundError("torch is required for record_actions")
 
         if actions.ndim == 0:
             non_flat = int(actions.item() != self.cfg.flat_class_index)
@@ -155,6 +166,8 @@ class RiskManager:
             spread: float | None = None,
     ) -> dict[str, Any]:
         """Derive a minimal context dict from optional inputs."""
+        if x is not None and not TORCH_AVAILABLE:
+            raise ModuleNotFoundError("torch is required for build_context when x is provided")
 
         context: dict[str, Any] = {}
         if timestamp:
