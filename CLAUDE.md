@@ -113,6 +113,42 @@ ruff format .          # Format
 ruff check --fix .     # Auto-fix issues
 ```
 
+**Ruff Configuration** (see `pyproject.toml`):
+- Line length: 100 characters
+- Target: Python 3.10+
+- Import sorting: Enabled (isort rules)
+- Key exclusions:
+  - `E501` (line length - handled by formatter)
+  - `E402` (module-level imports after sys.path manipulation - intentional for Colab compatibility)
+  - External code excluded: `models/timesFM`, `.venvx`, `build`, `dist`
+
+Per-file rules:
+- Test files: Allow unused imports (`F401`) and import order flexibility
+- Model files: Allow PyTorch convention (`torch.nn.functional as F`)
+
+### Utility Scripts
+
+Helper scripts in `run/scripts/`:
+
+```bash
+# Validate prepared dataset integrity
+python run/scripts/validate_training_data.py \
+  --data-path data/data/gbpusd/gbpusd_prepared.csv
+
+# Debug attention mechanism behavior
+python run/scripts/debug_attention.py \
+  --checkpoint models/gbpusd_best_model.pt
+
+# Run hyperparameter search with Optuna
+python run/scripts/run_hyperparameter_tuning.py \
+  --pairs gbpusd \
+  --n-trials 50 \
+  --study-name gbpusd_optimization
+
+# Full integration smoke test
+python run/scripts/test_full_integration.py
+```
+
 ## Architecture Overview
 
 ### Core Components
@@ -308,3 +344,5 @@ setup_tracing(
 7. **Attention Sequence Length**: For sequences >1024, enable `use_optimized_attention=True` in ModelConfig to avoid OOM errors.
 
 8. **joblib.Memory**: The `bytes_limit` parameter is deprecated in recent versions. Use `mmap_mode` for memory control instead.
+
+9. **Python Path Management**: Scripts use intentional `E402` pattern (imports after sys.path) for Colab compatibility. Don't "fix" these imports.
