@@ -210,6 +210,7 @@ class TrainingManager:
                         # Queue timeout (1s) chosen to balance responsiveness to new
                         # jobs with CPU usage from frequent polling; if no job is
                         # available, simply continue and try again on the next loop.
+                        pass
 
                 # Update GPU stats
                 self.gpu_monitor.record_stats()

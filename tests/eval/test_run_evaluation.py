@@ -233,6 +233,8 @@ class TestRiskManagerInitialization:
 
     def test_risk_manager_disabled(self):
         """Test that risk manager is None when disabled."""
+        from risk.risk_manager import RiskManager
+        
         disable_risk = True
         risk_manager = None if disable_risk else RiskManager()
 
