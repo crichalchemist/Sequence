@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from gdelt.config import get_gdelt_bucket_minutes
+from .config import get_gdelt_bucket_minutes
 
 
 def align_candle_to_regime(

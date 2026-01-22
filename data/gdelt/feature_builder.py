@@ -8,7 +8,7 @@ from datetime import datetime
 
 import numpy as np
 import pandas as pd
-from gdelt.config import (
+from .config import (
     COUNTS_OF_INTEREST,
     DEFAULT_MAX_COUNT_REF,
     EM_COUNTRY_CODES,
@@ -17,7 +17,7 @@ from gdelt.config import (
     REGIME_FEATURE_DIM,
     GDELTThemeConfig,
 )
-from gdelt.parser import GDELTRecord
+from .parser import GDELTRecord
 
 
 class GDELTTimeSeriesBuilder:

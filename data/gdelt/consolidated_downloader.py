@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pandas as pd
 import requests
-from gdelt.config import GDELT_TIME_DELTA_MINUTES
+from .config import GDELT_TIME_DELTA_MINUTES
 
 logger = logging.getLogger(__name__)
 

@@ -4,7 +4,7 @@ Utilities for loading and processing GDELT GKG files into sentiment DataFrames.
 from pathlib import Path
 
 import pandas as pd
-from gdelt.parser import GDELTParser
+from data.gdelt.parser import GDELTParser
 
 
 def load_gdelt_gkg(
