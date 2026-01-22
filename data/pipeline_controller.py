@@ -262,7 +262,7 @@ class DataPipelineController:
         try:
             from datetime import datetime as dt
 
-            from gdelt.consolidated_downloader import GDELTDownloader
+            from data.gdelt.consolidated_downloader import GDELTDownloader
 
             downloader = GDELTDownloader()
             start_dt = dt.strptime(config.start_date, '%Y-%m-%d')
