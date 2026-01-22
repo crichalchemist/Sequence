@@ -131,7 +131,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -e . -q
+          pip install --upgrade pip
+          pip install -r requirements.txt -q
           pip install pytest pytest-cov pytest-xdist pytest-timeout -q
 
       - name: Run ${{ matrix.test-group }} tests

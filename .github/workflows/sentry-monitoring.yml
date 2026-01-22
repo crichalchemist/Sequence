@@ -99,7 +99,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -e . -q
+          pip install --upgrade pip
+          pip install -r requirements.txt -q
           pip install pytest -q
 
       - name: Run health check tests
