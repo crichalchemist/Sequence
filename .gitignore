@@ -38,6 +38,10 @@ data/histdata/
 yfinance_output/
 yfinance_output_m1/
 yfinance_output1x/
+
+# Large model artifacts
+models/timesFM/
+models/finBERT-tone/
 forex research/
 
 # Model exports and checkpoints
