@@ -110,7 +110,6 @@ def mock_model_config():
     from config.config import ModelConfig
     return ModelConfig(
         num_features=20,
-        seq_length=120,
         num_classes=3,
         hidden_size_lstm=64,
         num_layers_lstm=1,
@@ -119,6 +118,7 @@ def mock_model_config():
         attention_dim=64,
         dropout=0.1,
         bidirectional=True,
+        max_seq_length=120,
     )
 
 

@@ -85,7 +85,7 @@ FOREX_ECONOMIC_SERIES = {
 }
 
 
-@api_retry(max_retries=3, base_delay=2.0, rate_limit_calls=0.5)
+@api_retry
 def _fetch_series_data(fred_client, series_id: str, start_date: str, end_date: str):
     """Internal function for API call with retry logic.
     

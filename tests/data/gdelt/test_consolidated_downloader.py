@@ -115,10 +115,7 @@ class TestGDELTURLGeneration:
 class TestGDELTDownload:
     """Test GDELT file downloading."""
 
-    @patch("data.gdelt.consolidated_downloader.requests.Session")
-    def test_download_single_file_success(
-        self, mock_session_class, downloader, mock_compressed_data
-    ):
+    def test_download_single_file_success(self, mock_compressed_data, tmp_path):
         """Test downloading a single GDELT file."""
         mock_session = Mock()
         mock_response = Mock()
@@ -126,43 +123,40 @@ class TestGDELTDownload:
         mock_response.content = mock_compressed_data
         mock_response.raise_for_status = Mock()
         mock_session.get.return_value = mock_response
-        mock_session_class.return_value = mock_session
 
+        downloader = GDELTDownloader(output_dir=tmp_path / "test_gdelt", session=mock_session)
         ts = datetime(2023, 1, 1, 0, 0, 0)
         result = downloader._download_single(ts)
 
         mock_session.get.assert_called()
 
-    @patch("data.gdelt.consolidated_downloader.requests.Session")
-    def test_download_single_file_404(self, mock_session_class, downloader):
+    def test_download_single_file_404(self, tmp_path):
         """Test handling of missing GDELT files."""
         mock_session = Mock()
         mock_response = Mock()
         mock_response.status_code = 404
         mock_session.get.return_value = mock_response
-        mock_session_class.return_value = mock_session
 
+        downloader = GDELTDownloader(output_dir=tmp_path / "test_gdelt", session=mock_session)
         ts = datetime(2023, 1, 1, 0, 0, 0)
         result = downloader._download_single(ts)
 
         assert result is None
 
-    @patch("data.gdelt.consolidated_downloader.requests.Session")
-    def test_download_single_file_network_error(self, mock_session_class, downloader):
+    def test_download_single_file_network_error(self, tmp_path):
         """Test retry logic on connection errors."""
         from requests.exceptions import ConnectionError
 
         mock_session = Mock()
         mock_session.get.side_effect = ConnectionError("Network error")
-        mock_session_class.return_value = mock_session
 
+        downloader = GDELTDownloader(output_dir=tmp_path / "test_gdelt", session=mock_session)
         ts = datetime(2023, 1, 1, 0, 0, 0)
         result = downloader._download_single(ts)
 
         assert result is None
 
-    @patch("data.gdelt.consolidated_downloader.requests.Session")
-    def test_download_uses_mirrors(self, mock_session_class, downloader):
+    def test_download_uses_mirrors(self, mock_compressed_data, tmp_path):
         """Test fallback to mirror URLs."""
         mock_session = Mock()
 
@@ -175,8 +169,8 @@ class TestGDELTDownload:
         mock_response2.raise_for_status = Mock()
 
         mock_session.get.side_effect = [mock_response1, mock_response2]
-        mock_session_class.return_value = mock_session
 
+        downloader = GDELTDownloader(output_dir=tmp_path / "test_gdelt", session=mock_session)
         ts = datetime(2023, 1, 1, 0, 0, 0)
         result = downloader._download_single(ts)
 

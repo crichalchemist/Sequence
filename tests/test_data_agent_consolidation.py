@@ -52,9 +52,13 @@ def sample_data():
 
 
 @pytest.fixture
-def single_task_config():
+def single_task_config(sample_data, tmp_path):
     """Create DataConfig for single task testing."""
+    csv_file = tmp_path / "test_data.csv"
+    sample_data.to_csv(csv_file, index=False)
+    
     return DataConfig(
+        csv_path=str(csv_file),
         datetime_column='datetime',
         t_in=60,
         t_out=10,
@@ -71,9 +75,13 @@ def single_task_config():
 
 
 @pytest.fixture
-def multitask_config():
+def multitask_config(sample_data, tmp_path):
     """Create MultiTaskDataConfig for testing."""
+    csv_file = tmp_path / "test_data_multi.csv"
+    sample_data.to_csv(csv_file, index=False)
+    
     return MultiTaskDataConfig(
+        csv_path=str(csv_file),
         datetime_column='datetime',
         t_in=60,
         t_out=10,

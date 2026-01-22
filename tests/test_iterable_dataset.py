@@ -53,9 +53,13 @@ def sample_feature_data():
 
 
 @pytest.fixture
-def iterable_config():
+def iterable_config(sample_feature_data, tmp_path):
     """Create DataConfig for IterableDataset testing."""
+    csv_file = tmp_path / "test_iterable_data.csv"
+    sample_feature_data.to_csv(csv_file, index=False)
+    
     return DataConfig(
+        csv_path=str(csv_file),
         datetime_column='datetime',
         t_in=60,
         t_out=10,
