@@ -318,7 +318,7 @@ jobs:
 
       - name: Upload analysis artifacts
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4.4.3
         with:
           name: claude-analysis-results
           path: |
