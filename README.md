@@ -2,7 +2,7 @@
 
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c.svg)](https://pytorch.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Claude Analysis](https://github.com/YOUR_ORG/YOUR_REPO/actions/workflows/claude-analysis.yml/badge.svg?branch=main)](https://github.com/YOUR_ORG/YOUR_REPO/actions/workflows/claude-analysis.yml)
+[![Claude Analysis](https://github.com/crichalchemist/Sequence/actions/workflows/claude-analysis.yml/badge.svg?branch=main)](https://github.com/crichalchemist/Sequence/actions/workflows/claude-analysis.yml)
 
 
 **Sequence** is a comprehensive deep learning toolkit for multi-asset market forecasting and algorithmic trading,
